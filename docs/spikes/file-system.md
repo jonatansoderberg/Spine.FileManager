@@ -54,7 +54,7 @@ Run it yourself: build `spikes/FileSystem` for the platform and read `probe-repo
 - File Providers under `~/Library/CloudStorage` look like folders but can be slow or refuse writes. This depends on the provider and is behaviour the model must tolerate (time-outs, read-only).
 - **A testing trap:** started as a child of another process (a shell, an IDE, Claude), the app inherits *that* process's TCC grants and never prompts. The first run looked fully open for that reason. Test TCC through `open` or Finder.
 
-**Which to ship on the Mac:** without the sandbox, a file manager behaves like Finder after a few prompts. In the sandbox it needs the user to pick every root. Both work technically. The sandbox means the Mac App Store; no sandbox means Developer ID, notarised and distributed outside the store. **Decision needed** — see below.
+**Which to ship on the Mac:** without the sandbox, a file manager behaves like Finder after a few prompts. In the sandbox it needs the user to pick every root. Both work technically. The sandbox means the Mac App Store; no sandbox means Developer ID, notarised and distributed outside the store. **Decided: Developer ID** — see below.
 
 ## iOS
 
@@ -117,9 +117,11 @@ Not run. The Windows code compiles (checked on the Mac with WinUI's App.xaml lef
 - [ ] iPhone (device): the real sandbox, iCloud Drive, a third-party provider, a USB drive through the Files app.
 - [ ] Android device: an SD card and a USB OTG drive (paths under `/storage/<id>`, with and without All files access, and through SAF).
 
-## Open decision
+## Decision: Mac distribution
 
-**Mac distribution: sandboxed Mac App Store build, or Developer ID without the sandbox?** Developer ID gives the Finder-like experience: home, iCloud Drive and volumes with one-time prompts. The store build must start with "give access to your home folder" and can never see a folder the user did not pick. The storage model handles both (a granted root is just a location with a persisted grant), so this does not block #2, but it decides the Mac onboarding. Android has the same split: *All files access* needs Play's declaration; without it the app is SAF-only.
+**Developer ID without the App Sandbox** (2026-10-14, recorded in the [plan](../plan.md#decisions)). The app gets the Finder-like behaviour above, with the TCC prompts gathered in a first-launch step and Full Disk Access as the one-step alternative. The Mac App Store stays open: iOS is App Store–only and always sandboxed, so the storage model carries persisted grants anyway, and a sandboxed Mac build becomes a variant with a "give access to your home folder" step.
+
+Android has the same split and is not decided yet: *All files access* needs Play's declaration; without it the app is SAF-only.
 
 ## Decisions for the storage abstraction (#2)
 

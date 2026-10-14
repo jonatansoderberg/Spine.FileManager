@@ -2,7 +2,7 @@
 
 **GitHub:** https://github.com/jonatansoderberg/Spine.FileManager/issues/1
 **Branch:** issue/1-spike-file-system-capabilities
-**Status:** In Progress — automated runs done; Windows and real-hardware pass outstanding, Mac distribution decision open
+**Status:** In Progress — automated runs done; Windows and real-hardware pass outstanding
 
 ## Plan
 A throwaway probe app, `spikes/FileSystem` (Spine, one page), that runs the same steps against every location a platform offers and writes a report:
@@ -26,5 +26,6 @@ Output: `docs/spikes/file-system.md` (matrix, limits, API decisions) and the `St
 ## Decisions
 - Raw probe reports are not committed: they hold the user's file names and paths, and the repository is public. The findings document summarises them.
 - SAF watching needs an open children cursor; the probe keeps one open while it waits (observers on the URIs alone got nothing from ExternalStorageProvider).
+- Mac distribution: Developer ID without the sandbox, prompts gathered at first launch, the Mac App Store kept open through persisted grants (Jonatan, 2026-10-14).
 - TCC must be tested through LaunchServices (`open`); a child process inherits its parent's grants and never prompts.
 - The spike app stays in the repository under `spikes/` (in the solution's `/spikes/` folder) so the Windows and hardware passes can be rerun; its UI is English only and is not part of the product.

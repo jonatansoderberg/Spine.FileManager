@@ -1,6 +1,6 @@
 # Spine File Manager — Requirements and Plan
 
-**Last updated:** 2026-10-14 — Spike 1 run on Mac, iOS simulator and Android emulator (`docs/spikes/file-system.md`); Windows and hardware pass outstanding.
+**Last updated:** 2026-10-14 — Spike 1 run on Mac, iOS simulator and Android emulator (`docs/spikes/file-system.md`); Mac ships with Developer ID, no sandbox; Windows and hardware pass outstanding.
 
 A living plan. Each step links its GitHub issue once it has one; update the status, the decisions and the line above in the same PR as the work.
 
@@ -397,5 +397,7 @@ Or workspace "Spine": pane 1 Maui.Spine, pane 2 Spine.FileManager, pane 3 build 
 - **2026-10-14 — Three projects to start** (App, Core, Tests); the other boundaries in §3 become projects when their code arrives.
 - **2026-10-14 — App id `se.cosmomedia.filemanager`, title "Spine File Manager"** — placeholders until a product name is chosen; an App ID cannot be renamed once registered with Apple, so decide before the first device build.
 - **2026-10-14 — English and Swedish from the start** through Spine's `ISpineStrings` (XML documents per culture, Spine 0.1.12+); English is the neutral fallback. `[NavigableRegion(Title = …)]` takes literal text and navigation writes it to the view model's `Title`, so a page sets its localised title in `OnAppearingAsync` until Spine accepts a string key there (see the capability map).
-- **2026-10-14 — Mac means Mac Catalyst.** Spike 1: in the sandbox, picked folders work fully through System.IO and security-scoped bookmarks survive restarts; without it, the user's folders work after one TCC prompt each. Sandbox (Mac App Store) versus Developer ID is **open** — see `docs/spikes/file-system.md`.
+- **2026-10-14 — Mac means Mac Catalyst.** Spike 1: in the sandbox, picked folders work fully through System.IO and security-scoped bookmarks survive restarts; without it, the user's folders work after one TCC prompt each.
+- **2026-10-14 — The Mac app ships with Developer ID, without the App Sandbox** (notarised download). It then works like Finder: home, iCloud Drive, volumes and shares through plain paths, after one TCC prompt per protected folder (Documents, Desktop, Downloads, iCloud Drive, removable and network volumes). The prompts are gathered in a first-launch step that touches those folders on purpose, with Full Disk Access offered as the one-step alternative. It also keeps the embedded terminal possible (a shell started from a sandboxed app inherits the sandbox) and MTP over libusb simple (#11). Updates (e.g. Sparkle) when someone besides Jonatan uses it.
+  **The Mac App Store stays open:** iOS is App Store–only and always sandboxed, so the storage model carries persisted grants (security-scoped bookmarks) from the start. A sandboxed Mac build is then a build variant with a "give access to your home folder" onboarding step, not a rewrite. Rules that keep it open: no code assumes a path is reachable without its provider's grant; no private APIs; process launching and USB access go through their own services, so a sandboxed variant can switch them off.
 - **2026-10-14 — Android needs All files access** (`MANAGE_EXTERNAL_STORAGE`) for a real file manager: without it the app cannot see other apps' files at all (Spike 1). SAF stays as the path for SD/USB volumes and a build without the permission.
