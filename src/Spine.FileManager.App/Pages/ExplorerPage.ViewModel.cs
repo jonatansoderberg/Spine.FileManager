@@ -117,6 +117,10 @@ public sealed partial class ItemRow(StorageItem item, RowFormat format) : Observ
     public ImageSource Icon => Item.IsFolder ? FolderIcon : FileIcon;
     public double Dimmed => Item.IsHidden ? 0.5 : 1;
 
+    /// <summary>A folder row a dragged item is over.</summary>
+    [ObservableProperty]
+    public partial bool IsDropTarget { get; set; }
+
     [ObservableProperty]
     public partial bool IsSelected { get; set; }
 }
@@ -569,8 +573,20 @@ public partial class ExplorerPageViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(ShowsSidebar))]
     public partial bool IsWide { get; set; } = true;
 
+    /// <summary>Whether the list is wide enough for the Date modified and Kind columns; in Dual Pane each pane decides.</summary>
+    [ObservableProperty]
+    public partial bool HasColumns { get; set; } = true;
+
     /// <summary>The second pane of Dual Pane: no sidebar, no strips, not part of the saved session.</summary>
-    public bool IsSecondary { get; set; }
+    public bool IsSecondary
+    {
+        get;
+        set
+        {
+            field = value;
+            OnPropertyChanged(nameof(IsPaneOfTwo));
+        }
+    }
 
     /// <summary>The other pane of Dual Pane, while it is open.</summary>
     public ExplorerPageViewModel? Partner { get; set; }
@@ -578,14 +594,16 @@ public partial class ExplorerPageViewModel : ViewModelBase
     public bool ShowsSidebar => IsWide && !IsSecondary;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(MarksFocus))]
+    [NotifyPropertyChangedFor(nameof(MarksFocus), nameof(IsPaneOfTwo))]
     public partial bool IsSplit { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(MarksFocus))]
     public partial bool IsFocusedPane { get; private set; } = true;
 
-    public bool MarksFocus => IsFocusedPane && (IsSplit || IsSecondary);
+    public bool MarksFocus => IsFocusedPane && IsPaneOfTwo;
+
+    public bool IsPaneOfTwo => IsSplit || IsSecondary;
 
     /// <summary>This pane takes the menus and the sidebar; the other pane lets go.</summary>
     public void Focus()
@@ -614,6 +632,27 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     [RelayCommand]
     private void MoveToOtherPane() => ToOtherPane(OperationKind.Move);
+
+    /// <summary>The items a drag from <paramref name="row"/> takes: the selection when the row is in it, else the row alone.</summary>
+    public IReadOnlyList<StorageLocation> DragItems(ItemRow row)
+    {
+        if (!row.IsSelected)
+            Pick(row);
+        return [.. SelectedItems.Select(i => i.Location)];
+    }
+
+    public DropAction DropActionFor(IReadOnlyList<StorageLocation> items, StorageLocation target) =>
+        DropRule.Choose(items, target, l => _providers[l].GetParent(l), Volumes.Of, ModifierKeys.CopyKey, ModifierKeys.MoveKey);
+
+    /// <summary>Copies or moves dropped items into <paramref name="target"/>; when that is the folder shown, they are selected after.</summary>
+    public void DropFiles(IReadOnlyList<StorageLocation> items, StorageLocation target, DropAction action)
+    {
+        if (action == DropAction.None || items.Count == 0)
+            return;
+        var operation = _operations.Enqueue(action == DropAction.Move ? OperationKind.Move : OperationKind.Copy, items, target);
+        if (target.Equals(Current))
+            _pasteSelects = operation;
+    }
 
     private void ToOtherPane(OperationKind kind)
     {
@@ -844,8 +883,9 @@ public partial class ExplorerPageViewModel : ViewModelBase
         {
             // Moved or restored tabs replace the window's first, empty tab.
             var initial = _tabs.Tabs[0];
+            // In their order: Add would put each one right after the first.
             foreach (var tab in startTabs)
-                _tabs.Add(tab, activate: false);
+                _tabs.Drop(tab, _tabs.Tabs.Count);
             _tabs.Close(initial);
             _tabs.Activate(startTabs[Math.Clamp(_startActive, 0, startTabs.Count - 1)]);
             _startTabs = null;
