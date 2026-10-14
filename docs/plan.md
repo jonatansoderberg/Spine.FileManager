@@ -1,6 +1,6 @@
 # Spine File Manager — Requirements and Plan
 
-**Last updated:** 2026-10-14 — **Milestone A done on the Mac** (#2, #4–#9); Windows provider (#3) compiled only, Spike 1's Windows and hardware pass open (#1).
+**Last updated:** 2026-10-14 — B1 operations journal and Operation Center (#20); milestone A done on the Mac; Windows (#3) compiled only.
 
 A living plan. Each step links its GitHub issue once it has one; update the status, the decisions and the line above in the same PR as the work.
 
@@ -82,16 +82,16 @@ Result: a usable desktop file manager. **Done on the Mac 2026-10-14;** Windows h
 ### Milestone B — Power User Desktop
 Result: Explorer/Finder plus Edge/Commander productivity.
 
-| # | Step | Status |
-|---|---|---|
-| B1 | Operations engine + Operation Center (§10–12) | ⬜ |
-| B2 | Tabs (§13) | ⬜ |
-| B3 | Spike 4 — multi-window + tab detach (§14) | ⬜ |
-| B4 | Multiple windows | ⬜ |
-| B5 | Split panes (§15) | ⬜ |
-| B6 | Drag tabs between windows | ⬜ |
-| B7 | Terminal integration (§17) | ⬜ |
-| B8 | Workspaces (§18) | ⬜ |
+| # | Step | Status | Issue |
+|---|---|---|---|
+| B1 | Operations engine + Operation Center (§10–12) | ✅ | [#20](https://github.com/jonatansoderberg/Spine.FileManager/issues/20) |
+| B2 | Tabs (§13) | ⬜ | [#21](https://github.com/jonatansoderberg/Spine.FileManager/issues/21) |
+| B3 | Spike 4 — multi-window + tab detach (§14) | ⬜ | [#22](https://github.com/jonatansoderberg/Spine.FileManager/issues/22) |
+| B4 | Multiple windows | ⬜ | with #22 |
+| B5 | Split panes (§15) | ⬜ | [#23](https://github.com/jonatansoderberg/Spine.FileManager/issues/23) |
+| B6 | Drag tabs between windows | ⬜ | with #22 |
+| B7 | Terminal integration (§17) | ⬜ | [#24](https://github.com/jonatansoderberg/Spine.FileManager/issues/24) |
+| B8 | Workspaces (§18) | ⬜ | [#25](https://github.com/jonatansoderberg/Spine.FileManager/issues/25) |
 
 ### Milestone C — Device Fabric
 Result: AirDrop-like transfer with robust resume.

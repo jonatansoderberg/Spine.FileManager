@@ -76,6 +76,7 @@ public static class AppMenu
             new MenuFlyoutSeparator(),
             Item("Menu.ShowHidden", vm.ToggleHiddenCommand, mac ? command | KeyboardAcceleratorModifiers.Shift : command, mac ? "." : "H"),
             Item("Menu.Refresh", vm.RefreshCommand, mac ? command : KeyboardAcceleratorModifiers.None, mac ? "R" : "F5"),
+            Item("Menu.Operations", vm.ShowOperationsCommand, mac ? command | KeyboardAcceleratorModifiers.Alt : command | KeyboardAcceleratorModifiers.Shift, mac ? "L" : "J"),
             new MenuFlyoutSeparator(),
             Item("Menu.SortName", vm.SortByCommand, KeyboardAcceleratorModifiers.None, null, "Name"),
             Item("Menu.SortModified", vm.SortByCommand, KeyboardAcceleratorModifiers.None, null, "Modified"),

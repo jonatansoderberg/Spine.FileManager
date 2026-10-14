@@ -19,7 +19,7 @@ public sealed class OperationQueueTests : IDisposable
     private async Task<FileOperation> Run(OperationKind kind, StorageLocation target, params string[] sources)
     {
         var operation = _queue.Enqueue(kind, sources.Select(L), target);
-        await _queue.WaitAsync(operation);
+        await _queue.WaitAsync(operation).WaitAsync(TimeSpan.FromSeconds(30));
         return operation;
     }
 
@@ -167,9 +167,10 @@ public sealed class OperationQueueTests : IDisposable
         };
         var operation = queue.Enqueue(OperationKind.Copy, [L(big)], target);
 
-        await queue.WaitAsync(operation);
+        await queue.WaitAsync(operation).WaitAsync(TimeSpan.FromSeconds(30));
 
         Assert.Equal(OperationState.Cancelled, operation.State);
+        Assert.Empty(Directory.GetFiles(Path.Combine(_temp.Path, "dst")));
     }
 
     [Fact]
@@ -185,7 +186,7 @@ public sealed class OperationQueueTests : IDisposable
         var target = L(_temp.Folder("dst"));
         var operations = Enumerable.Range(0, 5).Select(i => _queue.Enqueue(OperationKind.Copy, [L(_temp.File($"f{i}.txt"))], target)).ToList();
         foreach (var operation in operations)
-            await _queue.WaitAsync(operation);
+            await _queue.WaitAsync(operation).WaitAsync(TimeSpan.FromSeconds(30));
         Assert.Equal(5, finished.Count);
     }
 }
