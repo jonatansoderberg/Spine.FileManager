@@ -389,7 +389,12 @@ public partial class ExplorerPageViewModel : ViewModelBase
     private async Task OpenFavorite(FavoriteRow row)
     {
         if (await IsReachable(row.Favorite.Location))
-            await Navigate(row.Favorite.Location);
+        {
+            if (Target == this)
+                await Navigate(row.Favorite.Location);
+            else
+                await Target.OpenLocationCommand.ExecuteAsync(row.Favorite.Location);
+        }
         else
         {
             row.IsAvailable = false;
@@ -466,7 +471,61 @@ public partial class ExplorerPageViewModel : ViewModelBase
     public bool CanGoUp => Current is not null && _providers[Current].GetParent(Current) is not null;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsSidebar))]
     public partial bool IsWide { get; set; } = true;
+
+    /// <summary>The second pane of Dual Pane: no sidebar, no strips, not part of the saved session.</summary>
+    public bool IsSecondary { get; set; }
+
+    /// <summary>The other pane of Dual Pane, while it is open.</summary>
+    public ExplorerPageViewModel? Partner { get; set; }
+
+    public bool ShowsSidebar => IsWide && !IsSecondary;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MarksFocus))]
+    public partial bool IsSplit { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MarksFocus))]
+    public partial bool IsFocusedPane { get; private set; } = true;
+
+    public bool MarksFocus => IsFocusedPane && (IsSplit || IsSecondary);
+
+    /// <summary>This pane takes the menus and the sidebar; the other pane lets go.</summary>
+    public void Focus()
+    {
+        IsFocusedPane = true;
+        if (Partner is { } partner)
+            partner.IsFocusedPane = false;
+        AppMenu.Explorer = this;
+    }
+
+    // The sidebar belongs to the first pane but opens its places in the pane in focus.
+    private ExplorerPageViewModel Target => Partner is { IsFocusedPane: true } partner ? partner : this;
+
+    [RelayCommand]
+    private void ToggleSplit()
+    {
+        var primary = IsSecondary ? Partner! : this;
+        primary.IsSplit = !primary.IsSplit;
+    }
+
+    [RelayCommand]
+    private void CopyToOtherPane() => ToOtherPane(OperationKind.Copy);
+
+    [RelayCommand]
+    private void MoveToOtherPane() => ToOtherPane(OperationKind.Move);
+
+    private void ToOtherPane(OperationKind kind)
+    {
+        if (Partner?.Current is { } target && SelectedItems.Select(i => i.Location).ToList() is { Count: > 0 } items)
+            _operations.Enqueue(kind, items, target);
+    }
+
+    public bool ShowsOperation => HasOperation && !IsSecondary;
+
+    public bool ShowsInterrupted => HasInterrupted && !IsSecondary;
 
     [ObservableProperty]
     public partial bool IsLoading { get; private set; }
@@ -512,7 +571,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
         if (Places.Count > 0)
             return;
         var session = IPlatformApplication.Current!.Services.GetRequiredService<SessionTracker>();
-        if (_startTabs is null && await session.RestoreAsync() is { Count: > 0 } windows)
+        if (_startTabs is null && !IsSecondary && await session.RestoreAsync() is { Count: > 0 } windows)
         {
             // The first explorer brings back the last session: its own tabs, and the other windows.
             _startTabs = [.. windows[0].Tabs.Select(Tab)];
@@ -531,7 +590,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
             _startTabs = null;
         }
         SyncTabs();
-        session.Register(this);
+        if (!IsSecondary)
+            session.Register(this);
         UpdateInterrupted();
         await LoadFavorites();
         foreach (var provider in _providers.All)
@@ -542,12 +602,12 @@ public partial class ExplorerPageViewModel : ViewModelBase
         else if ((_startLocation ?? Places.FirstOrDefault()?.Root.Location) is { } start)
             await Navigate(start);
         // Presented from the root page's first appearance the sheet never showed; after the first folder it does.
-        if (FirstRunPageViewModel.IsNeeded)
+        if (FirstRunPageViewModel.IsNeeded && !IsSecondary)
             MainThread.BeginInvokeOnMainThread(async () => await _navigation.ShowAsync<FirstRunPage>());
     }
 
     [RelayCommand]
-    private Task OpenPlace(PlaceRow place) => Navigate(place.Root.Location);
+    private Task OpenPlace(PlaceRow place) => Target == this ? Navigate(place.Root.Location) : Target.OpenLocationCommand.ExecuteAsync(place.Root.Location);
 
     [RelayCommand]
     private Task OpenLocation(StorageLocation location) => location.Equals(Current) ? Task.CompletedTask : Navigate(location);
@@ -708,7 +768,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     /// <summary>Operations the app found unfinished in its journal, waiting to be resumed from the Operation Center.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasInterrupted))]
+    [NotifyPropertyChangedFor(nameof(HasInterrupted), nameof(ShowsInterrupted))]
     public partial string? InterruptedText { get; private set; }
 
     public bool HasInterrupted => InterruptedText is not null && !HasOperation;
@@ -724,7 +784,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
     public bool HasSelection => _selection.Count > 0;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasOperation))]
+    [NotifyPropertyChangedFor(nameof(HasOperation), nameof(ShowsOperation), nameof(ShowsInterrupted))]
     public partial string? OperationText { get; private set; }
 
     [ObservableProperty]

@@ -54,10 +54,10 @@
         </Style>
     </ContentPage.Resources>
 
-    <Grid ColumnDefinitions="Auto,*">
+    <Grid x:Name="Root" ColumnDefinitions="Auto,*,Auto,Auto">
 
         <!-- Sidebar: favorites (reorderable, right-click to remove), then the places. -->
-        <Grid WidthRequest="210" IsVisible="{Binding IsWide}" RowDefinitions="Auto,Auto,Auto,Auto,*"
+        <Grid WidthRequest="210" IsVisible="{Binding ShowsSidebar}" RowDefinitions="Auto,Auto,Auto,Auto,*"
               BackgroundColor="{AppThemeBinding Light=#F3F4F6, Dark=#1E1F22}">
             <Label Text="{String Explorer.Favorites}" FontSize="12" Opacity="0.6" Padding="16,12,16,4" />
             <CollectionView Grid.Row="1" ItemsSource="{Binding Favorites}" SelectionMode="None" HeightRequest="{Binding FavoritesHeight}"
@@ -103,8 +103,13 @@
         </Grid>
 
         <Grid Grid.Column="1" RowDefinitions="Auto,Auto,Auto,*,Auto">
+            <Grid.GestureRecognizers>
+                <PointerGestureRecognizer PointerPressed="OnPanePressed" />
+            </Grid.GestureRecognizers>
 
             <VerticalStackLayout>
+            <!-- In Dual Pane, a line marks the pane the menus and the sidebar act on. -->
+            <BoxView HeightRequest="2" IsVisible="{Binding MarksFocus}" Color="{AppThemeBinding Light=#2F6FEB, Dark=#5B8DEF}" />
             <!-- Tabs: from the second tab on; a click shows the tab, × closes it. -->
             <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never" IsVisible="{Binding HasTabs}"
                         BackgroundColor="{AppThemeBinding Light=#E9EAEE, Dark=#16171A}">
@@ -253,14 +258,14 @@
             </Grid>
 
             <!-- Operations the app found unfinished at start, waiting to be resumed. -->
-            <Grid Grid.Row="4" ColumnDefinitions="*,Auto" Padding="16,4" IsVisible="{Binding HasInterrupted}"
+            <Grid Grid.Row="4" ColumnDefinitions="*,Auto" Padding="16,4" IsVisible="{Binding ShowsInterrupted}"
                   BackgroundColor="{AppThemeBinding Light=#FFF4E5, Dark=#3A2C14}">
                 <Label Text="{Binding InterruptedText}" FontSize="12" VerticalTextAlignment="Center" />
                 <Button Grid.Column="1" Text="{String Operations.Open}" Command="{Binding ShowOperationsCommand}" FontSize="12" Padding="8,0" HeightRequest="24" />
             </Grid>
 
             <!-- The running copy or move; a click opens the Operation Center. -->
-            <Grid Grid.Row="4" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Padding="16,4" IsVisible="{Binding HasOperation}"
+            <Grid Grid.Row="4" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Padding="16,4" IsVisible="{Binding ShowsOperation}"
                   BackgroundColor="{AppThemeBinding Light=#F3F4F6, Dark=#1E1F22}">
                 <Grid.GestureRecognizers>
                     <TapGestureRecognizer Command="{Binding ShowOperationsCommand}" />
@@ -270,6 +275,15 @@
                 <Button Grid.Column="2" Text="{String Operation.Cancel}" Command="{Binding CancelOperationCommand}" FontSize="12" Padding="8,0" HeightRequest="24" />
             </Grid>
         </Grid>
+
+        <!-- Dual Pane: a splitter to drag, and the second pane (an explorer of its own, without a sidebar). -->
+        <BoxView x:Name="Splitter" Grid.Column="2" WidthRequest="5" IsVisible="{Binding IsSplit}"
+                 Color="{AppThemeBinding Light=#E2E4E8, Dark=#2A2C30}">
+            <BoxView.GestureRecognizers>
+                <PanGestureRecognizer PanUpdated="OnSplitterPanned" />
+            </BoxView.GestureRecognizers>
+        </BoxView>
+        <ContentView x:Name="SecondPane" Grid.Column="3" IsVisible="{Binding IsSplit}" />
     </Grid>
 
 </SpinePage>

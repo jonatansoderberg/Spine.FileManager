@@ -129,4 +129,7 @@
   <s key="Explorer.Error.Terminal">Det gick inte att öppna en terminal här.</s>
   <s key="Menu.NewWindow">Nytt fönster</s>
   <s key="Menu.MoveTabToNewWindow">Flytta flik till nytt fönster</s>
+  <s key="Menu.DualPane">Dubbla paneler</s>
+  <s key="Menu.CopyToOtherPane">Kopiera till andra panelen</s>
+  <s key="Menu.MoveToOtherPane">Flytta till andra panelen</s>
 </strings>

@@ -129,4 +129,7 @@
   <s key="Explorer.Error.Terminal">No terminal could be opened here.</s>
   <s key="Menu.NewWindow">New Window</s>
   <s key="Menu.MoveTabToNewWindow">Move Tab to New Window</s>
+  <s key="Menu.DualPane">Dual Pane</s>
+  <s key="Menu.CopyToOtherPane">Copy to Other Pane</s>
+  <s key="Menu.MoveToOtherPane">Move to Other Pane</s>
 </strings>
