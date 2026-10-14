@@ -27,6 +27,27 @@ public sealed partial class PlaceRow(StorageRoot root) : ObservableObject
     public partial bool IsCurrent { get; set; }
 }
 
+/// <summary>One tab of a pane: its folder, history, order, view and what was selected when it was left.</summary>
+public sealed partial class ExplorerTab : ObservableObject
+{
+    public NavigationHistory History { get; } = new();
+    public StorageLocation? Location { get; set; }
+    public ItemSort Sort { get; set; } = new();
+    public bool ShowHidden { get; set; }
+    public bool IsIcons { get; set; }
+
+    /// <summary>The folder's items as last read, shown at once when the tab is chosen again.</summary>
+    public List<StorageItem>? Items { get; set; }
+
+    public HashSet<StorageLocation> Selected { get; set; } = [];
+
+    [ObservableProperty]
+    public partial string Title { get; set; } = "";
+
+    [ObservableProperty]
+    public partial bool IsActive { get; set; }
+}
+
 public sealed partial class FavoriteRow(Favorite favorite) : ObservableObject
 {
     private static readonly ImageSource FolderIcon = "folder.png";
@@ -103,7 +124,9 @@ public partial class ExplorerPageViewModel : ViewModelBase
 {
     private readonly ISpineStrings _strings;
     private readonly StorageProviders _providers;
-    private readonly NavigationHistory _history = new();
+    private readonly TabList<ExplorerTab> _tabs = new(new ExplorerTab { IsActive = true });
+
+    private NavigationHistory _history => _tabs.Active.History;
     private readonly Selection _selection = new();
     private List<StorageItem> _items = [];
     private CancellationTokenSource? _loading;
@@ -133,6 +156,100 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     public ObservableCollection<FavoriteRow> Favorites { get; } = [];
 
+    public ObservableCollection<ExplorerTab> Tabs { get; } = [];
+
+    /// <summary>The tab bar shows from the second tab on, as in Finder.</summary>
+    public bool HasTabs => Tabs.Count > 1;
+
+    private void SyncTabs()
+    {
+        Tabs.Clear();
+        foreach (var tab in _tabs.Tabs)
+        {
+            tab.IsActive = tab == _tabs.Active;
+            Tabs.Add(tab);
+        }
+        OnPropertyChanged(nameof(HasTabs));
+    }
+
+    [RelayCommand]
+    private Task NewTab() => OpenTab(Current, activate: true);
+
+    [RelayCommand]
+    private async Task OpenInNewTab()
+    {
+        foreach (var folder in SelectedItems.Where(i => i.IsFolder).ToList())
+            await OpenTab(folder.Location, activate: true);
+    }
+
+    [RelayCommand]
+    private Task RowOpenInNewTab(ItemRow row) => row.Item.IsFolder ? OpenTab(row.Item.Location, activate: true) : Task.CompletedTask;
+
+    private async Task OpenTab(StorageLocation? location, bool activate)
+    {
+        if (location is null)
+            return;
+        Remember();
+        var tab = new ExplorerTab { Sort = Sort, ShowHidden = ShowHidden, IsIcons = IsIcons, Title = Path.GetFileName(location.DisplayPath.TrimEnd(Path.DirectorySeparatorChar)) };
+        tab.History.Navigate(location);
+        _tabs.Add(tab, activate);
+        SyncTabs();
+        if (activate)
+            await Show(tab);
+    }
+
+    [RelayCommand]
+    private async Task CloseTab(ExplorerTab? tab)
+    {
+        var closing = tab ?? _tabs.Active;
+        var wasActive = closing == _tabs.Active;
+        if (!_tabs.Close(closing))
+            return;
+        SyncTabs();
+        if (wasActive)
+            await Show(_tabs.Active);
+    }
+
+    [RelayCommand]
+    private async Task SelectTab(ExplorerTab tab)
+    {
+        if (tab == _tabs.Active)
+            return;
+        Remember();
+        _tabs.Activate(tab);
+        SyncTabs();
+        await Show(tab);
+    }
+
+    [RelayCommand]
+    private async Task StepTab(string direction)
+    {
+        if (_tabs.Tabs.Count < 2)
+            return;
+        Remember();
+        _tabs.Step(int.Parse(direction));
+        SyncTabs();
+        await Show(_tabs.Active);
+    }
+
+    // What the tab being left had selected, so it comes back as it was.
+    private void Remember() => _tabs.Active.Selected = SelectedItems.Select(i => i.Location).ToHashSet();
+
+    private async Task Show(ExplorerTab tab)
+    {
+        Sort = tab.Sort;
+        ShowHidden = tab.ShowHidden;
+        IsIcons = tab.IsIcons;
+        if (tab.History.Current is { } location)
+            await Load(location, cached: tab.Items, keep: tab.Selected);
+    }
+
+    partial void OnSortChanged(ItemSort value) => _tabs.Active.Sort = value;
+
+    partial void OnShowHiddenChanged(bool value) => _tabs.Active.ShowHidden = value;
+
+    partial void OnIsIconsChanged(bool value) => _tabs.Active.IsIcons = value;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasNoFavorites))]
     public partial double FavoritesHeight { get; private set; }
@@ -153,6 +270,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
             new MenuSection
             {
                 new MenuAction(strings["Menu.Open"], null, RowOpenCommand),
+                new MenuAction(strings["Menu.OpenInNewTab"], null, RowOpenInNewTabCommand),
                 new MenuAction(strings["Menu.AddFavorite"], "Star.svg", RowFavoriteCommand),
             },
             new MenuSection
@@ -321,6 +439,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
     {
         if (Places.Count > 0)
             return;
+        SyncTabs();
         UpdateInterrupted();
         await LoadFavorites();
         foreach (var provider in _providers.All)
@@ -615,13 +734,18 @@ public partial class ExplorerPageViewModel : ViewModelBase
         await Load(location);
     }
 
-    private async Task Load(StorageLocation location, bool keepSelection = false)
+    private async Task Load(StorageLocation location, bool keepSelection = false, List<StorageItem>? cached = null, HashSet<StorageLocation>? keep = null)
     {
         _loading?.Cancel();
         var cancel = _loading = new CancellationTokenSource();
         var provider = _providers[location];
-        var keep = keepSelection ? SelectedItems.Select(i => i.Location).ToHashSet() : null;
-        var changedFolder = !location.Equals(Current);
+        keep ??= keepSelection ? SelectedItems.Select(i => i.Location).ToHashSet() : null;
+        // A tab switch always rebuilds the bar and the watcher, even onto the same folder.
+        var changedFolder = !location.Equals(Current) || cached is not null || keep is { Count: > 0 } && !keepSelection;
+        var tab = _tabs.Active;
+        tab.Location = location;
+        if (string.IsNullOrEmpty(tab.Title) || !location.Equals(Current))
+            tab.Title = Path.GetFileName(location.DisplayPath.TrimEnd(Path.DirectorySeparatorChar)) is { Length: > 0 } name ? name : location.DisplayPath;
 
         Current = location;
         if (changedFolder)
@@ -637,9 +761,11 @@ public partial class ExplorerPageViewModel : ViewModelBase
         if (changedFolder)
         {
             _selection.Clear();
-            _items = [];
+            _items = cached ?? [];
             Rows = [];
             Watch(provider, location);
+            if (cached is not null)
+                Show(BuildRows(cached), keep);
         }
 
         try
@@ -652,7 +778,10 @@ public partial class ExplorerPageViewModel : ViewModelBase
                     items.Add(item);
                 return (items, BuildRows(items));
             }, cancel.Token);
+            if (tab != _tabs.Active)
+                return;
             _items = items;
+            tab.Items = items;
             Show(rows, keep);
         }
         catch (OperationCanceledException)
@@ -678,6 +807,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
             .Select(l => new BreadcrumbSegment(l, Path.GetFileName(l.DisplayPath.TrimEnd(Path.DirectorySeparatorChar)) is { Length: > 0 } name ? name : l.DisplayPath))
             .ToList();
         Segments = segments;
+        var tab = _tabs.Active;
         foreach (var segment in segments)
         {
             if (!location.Equals(Current))
@@ -685,6 +815,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
             try
             {
                 segment.Name = (await provider.GetItemAsync(segment.Location)).DisplayName;
+                if (segment == segments[^1] && tab.Location?.Equals(location) == true)
+                    tab.Title = segment.Name;
                 var menu = new Plugin.Maui.Spine.Core.MenuItems();
                 foreach (var folder in await Breadcrumb.SubfoldersAsync(provider, segment.Location, ShowHidden))
                     menu.Add(new Plugin.Maui.Spine.Core.MenuAction(folder.DisplayName, "folder.svg", OpenLocationCommand) { CommandParameter = folder.Location });

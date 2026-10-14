@@ -104,7 +104,34 @@
 
         <Grid Grid.Column="1" RowDefinitions="Auto,Auto,Auto,*,Auto">
 
-            <!-- Toolbar: history, up, refresh, the path (the breadcrumb in #6), hidden files. -->
+            <VerticalStackLayout>
+            <!-- Tabs: from the second tab on; a click shows the tab, × closes it. -->
+            <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never" IsVisible="{Binding HasTabs}"
+                        BackgroundColor="{AppThemeBinding Light=#E9EAEE, Dark=#16171A}">
+                <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Tabs}" Padding="8,4,8,0" Spacing="2">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="ExplorerTab">
+                            <Grid ColumnDefinitions="*,Auto" WidthRequest="180" HeightRequest="28" Padding="10,0,2,0"
+                                  BackgroundColor="Transparent">
+                                <Grid.Triggers>
+                                    <DataTrigger TargetType="Grid" Binding="{Binding IsActive}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#FFFFFF, Dark=#232427}" />
+                                    </DataTrigger>
+                                </Grid.Triggers>
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SelectTabCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
+                                </Grid.GestureRecognizers>
+                                <Label Text="{Binding Title}" FontSize="12" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
+                                <Button Grid.Column="1" Text="×" FontSize="14" Padding="6,0" HeightRequest="24" MinimumWidthRequest="0" BackgroundColor="Transparent"
+                                        TextColor="{AppThemeBinding Light=#555, Dark=#BBB}" SemanticProperties.Description="{String Menu.CloseTab}"
+                                        Command="{Binding CloseTabCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
+                            </Grid>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </HorizontalStackLayout>
+            </ScrollView>
+
+            <!-- Toolbar: history, up, refresh, the breadcrumb, view and hidden files. -->
             <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="2" Padding="8,6">
                 <ImageButton Style="{StaticResource ToolButton}" SvgImageSource.Svg="ChevronLeft.svg" Command="{Binding BackCommand}" IsEnabled="{Binding CanGoBack}"
                              SemanticProperties.Description="{String Explorer.Back}" ToolTipProperties.Text="{String Explorer.Back}" />
@@ -145,6 +172,7 @@
                     </ImageButton.Triggers>
                 </ImageButton>
             </Grid>
+            </VerticalStackLayout>
 
             <Label Grid.Row="1" Text="{Binding Error}" IsVisible="{Binding HasError}" FontSize="13" Padding="16,8"
                    TextColor="{AppThemeBinding Light=#B3261E, Dark=#F2B8B5}" BackgroundColor="{AppThemeBinding Light=#FDECEA, Dark=#3B1F1E}" />

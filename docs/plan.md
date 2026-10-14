@@ -1,6 +1,6 @@
 # Spine File Manager — Requirements and Plan
 
-**Last updated:** 2026-10-14 — B1 operations journal and Operation Center (#20); milestone A done on the Mac; Windows (#3) compiled only.
+**Last updated:** 2026-10-14 — B2 tabs (#21) and B1 operations journal (#20); milestone A done on the Mac; Windows (#3) compiled only.
 
 A living plan. Each step links its GitHub issue once it has one; update the status, the decisions and the line above in the same PR as the work.
 
@@ -85,7 +85,7 @@ Result: Explorer/Finder plus Edge/Commander productivity.
 | # | Step | Status | Issue |
 |---|---|---|---|
 | B1 | Operations engine + Operation Center (§10–12) | ✅ | [#20](https://github.com/jonatansoderberg/Spine.FileManager/issues/20) |
-| B2 | Tabs (§13) | ⬜ | [#21](https://github.com/jonatansoderberg/Spine.FileManager/issues/21) |
+| B2 | Tabs (§13) | ✅ | [#21](https://github.com/jonatansoderberg/Spine.FileManager/issues/21) |
 | B3 | Spike 4 — multi-window + tab detach (§14) | ⬜ | [#22](https://github.com/jonatansoderberg/Spine.FileManager/issues/22) |
 | B4 | Multiple windows | ⬜ | with #22 |
 | B5 | Split panes (§15) | ⬜ | [#23](https://github.com/jonatansoderberg/Spine.FileManager/issues/23) |

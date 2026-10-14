@@ -54,6 +54,10 @@ public static class AppMenu
 
         host.MenuBarItems.Clear();
         host.MenuBarItems.Add(Menu("Menu.File",
+            Item("Menu.NewTab", vm.NewTabCommand, command, "T"),
+            Item("Menu.OpenInNewTab", vm.OpenInNewTabCommand, mac ? command | KeyboardAcceleratorModifiers.Ctrl : command | KeyboardAcceleratorModifiers.Shift, mac ? "O" : "T"),
+            Item("Menu.CloseTab", vm.CloseTabCommand, command, "W"),
+            new MenuFlyoutSeparator(),
             Item("Menu.NewFolder", vm.NewFolderCommand, command | KeyboardAcceleratorModifiers.Shift, "N"),
             Item("Menu.Open", vm.ActivateCommand, mac ? command : KeyboardAcceleratorModifiers.None, mac ? "O" : "Enter"),
             Item("Menu.Rename", vm.RenameCommand, KeyboardAcceleratorModifiers.None, mac ? "Enter" : "F2"),
@@ -87,6 +91,9 @@ public static class AppMenu
             Item("Menu.Forward", vm.ForwardCommand, mac ? command : KeyboardAcceleratorModifiers.Alt, mac ? "]" : "Right"),
             Item("Menu.Up", vm.UpCommand, mac ? command : KeyboardAcceleratorModifiers.Alt, "Up"),
             Item("Menu.OpenSelected", vm.ActivateCommand, mac ? command : KeyboardAcceleratorModifiers.Alt, "Down"),
+            new MenuFlyoutSeparator(),
+            Item("Menu.NextTab", vm.StepTabCommand, mac ? command | KeyboardAcceleratorModifiers.Shift : KeyboardAcceleratorModifiers.Ctrl, mac ? "]" : "Tab", "1"),
+            Item("Menu.PreviousTab", vm.StepTabCommand, mac ? command | KeyboardAcceleratorModifiers.Shift : KeyboardAcceleratorModifiers.Ctrl | KeyboardAcceleratorModifiers.Shift, mac ? "[" : "Tab", "-1"),
             new MenuFlyoutSeparator(),
             Item("Menu.NextItem", vm.StepCommand, KeyboardAcceleratorModifiers.None, "Down", "1"),
             Item("Menu.PreviousItem", vm.StepCommand, KeyboardAcceleratorModifiers.None, "Up", "-1"),
