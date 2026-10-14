@@ -204,7 +204,8 @@
             </Grid>
 
             <!-- Every row is one height; measuring only the first keeps a 100 000-row list from measuring them all. -->
-            <FileListView x:Name="List" Grid.Row="3" ItemsSource="{Binding Rows}" SelectionMode="None" ItemSizingStrategy="MeasureFirstItem" IsVisible="{Binding IsList}">
+            <FileListView x:Name="List" Grid.Row="3" ItemsSource="{Binding Rows}" SelectionMode="None" ItemSizingStrategy="MeasureFirstItem" IsVisible="{Binding IsList}"
+                          ContextMenu.Items="{Binding BackgroundMenu}">
                 <FileListView.GestureRecognizers>
                     <PointerGestureRecognizer PointerPressed="OnListPressed" />
                 </FileListView.GestureRecognizers>
@@ -235,7 +236,8 @@
             </FileListView>
 
             <!-- Icons: a second list rather than a new ItemsLayout, which a shown CollectionView ignores on iOS. -->
-            <FileListView x:Name="Icons" Grid.Row="2" Grid.RowSpan="2" ItemsSource="{Binding Rows}" SelectionMode="None" ItemSizingStrategy="MeasureFirstItem" IsVisible="{Binding IsIcons}" Margin="8,8,8,0">
+            <FileListView x:Name="Icons" Grid.Row="2" Grid.RowSpan="2" ItemsSource="{Binding Rows}" SelectionMode="None" ItemSizingStrategy="MeasureFirstItem" IsVisible="{Binding IsIcons}" Margin="8,8,8,0"
+                          ContextMenu.Items="{Binding BackgroundMenu}">
                 <FileListView.GestureRecognizers>
                     <PointerGestureRecognizer PointerPressed="OnListPressed" />
                 </FileListView.GestureRecognizers>

@@ -195,9 +195,12 @@ public partial class ExplorerPageViewModel : ViewModelBase
         [.. _tabs.Tabs.Where(t => t.Location is not null).Select(t => new TabState(t.Location!, t.Sort, t.ShowHidden, t.IsIcons))],
         Math.Max(0, _tabs.Tabs.Where(t => t.Location is not null).ToList().IndexOf(_tabs.Active)));
 
+    private static string TabTitle(StorageLocation location) =>
+        Path.GetFileName(location.DisplayPath.TrimEnd(Path.DirectorySeparatorChar)) is { Length: > 0 } name ? name : location.DisplayPath;
+
     private static ExplorerTab Tab(TabState state)
     {
-        var tab = new ExplorerTab { Sort = state.Sort, ShowHidden = state.ShowHidden, IsIcons = state.IsIcons };
+        var tab = new ExplorerTab { Sort = state.Sort, ShowHidden = state.ShowHidden, IsIcons = state.IsIcons, Title = TabTitle(state.Location) };
         tab.History.Navigate(state.Location);
         return tab;
     }
@@ -330,6 +333,33 @@ public partial class ExplorerPageViewModel : ViewModelBase
     [ObservableProperty]
     public partial MenuItems TabMenu { get; private set; } = [];
 
+    /// <summary>The right-click menu of the list's empty space: the folder shown, not a row.</summary>
+    [ObservableProperty]
+    public partial MenuItems BackgroundMenu { get; private set; } = [];
+
+    [RelayCommand]
+    private void BackgroundFavorite()
+    {
+        _selection.Clear();
+        ApplySelection();
+        AddFavorite();
+    }
+
+    [RelayCommand]
+    private void BackgroundTerminal()
+    {
+        _selection.Clear();
+        ApplySelection();
+        OpenInTerminal(null);
+    }
+
+    [RelayCommand]
+    private void BackgroundPaste()
+    {
+        Focus();
+        Paste();
+    }
+
     private void BuildMenus(ISpineStrings strings)
     {
         RowMenu =
@@ -349,6 +379,26 @@ public partial class ExplorerPageViewModel : ViewModelBase
                 new MenuAction(strings["Menu.Duplicate"], null, RowDuplicateCommand),
             },
             new MenuAction(strings["Menu.Delete"], "Trashcan.svg", RowDeleteCommand) { IsDestructive = true },
+        ];
+        BackgroundMenu =
+        [
+            new MenuSection
+            {
+                new MenuAction(strings["Menu.NewFolder"], null, NewFolderCommand),
+                new MenuAction(strings["Menu.Paste"], null, BackgroundPasteCommand),
+            },
+            new MenuSection
+            {
+                new MenuAction(strings["Explorer.AsList"], "List.svg", ShowAsCommand) { CommandParameter = "List" },
+                new MenuAction(strings["Explorer.AsIcons"], "Grid.svg", ShowAsCommand) { CommandParameter = "Icons" },
+                new MenuAction(strings["Menu.ShowHidden"], null, ToggleHiddenCommand),
+                new MenuAction(strings["Menu.Refresh"], "Refresh.svg", RefreshCommand),
+            },
+            new MenuSection
+            {
+                new MenuAction(strings["Menu.AddFavorite"], "Star.svg", BackgroundFavoriteCommand),
+                new MenuAction(strings["Menu.OpenInTerminal"], null, BackgroundTerminalCommand) { IsVisible = TerminalLauncher.IsSupported },
+            },
         ];
         TabMenu =
         [
@@ -502,8 +552,11 @@ public partial class ExplorerPageViewModel : ViewModelBase
         AppMenu.Explorer = this;
     }
 
+    /// <summary>The pane of this window the menus and the sidebar act on.</summary>
+    public ExplorerPageViewModel FocusedPane => Partner is { IsFocusedPane: true } partner ? partner : this;
+
     // The sidebar belongs to the first pane but opens its places in the pane in focus.
-    private ExplorerPageViewModel Target => Partner is { IsFocusedPane: true } partner ? partner : this;
+    private ExplorerPageViewModel Target => FocusedPane;
 
     [RelayCommand]
     private void ToggleSplit()
@@ -731,11 +784,10 @@ public partial class ExplorerPageViewModel : ViewModelBase
         var session = IPlatformApplication.Current!.Services.GetRequiredService<SessionTracker>();
         if (_startTabs is null && !IsSecondary && await session.RestoreAsync() is { Count: > 0 } windows)
         {
-            // The first explorer brings back the last session: its own tabs, and the other windows.
-            _startTabs = [.. windows[0].Tabs.Select(Tab)];
+            // The first explorer brings back the last session. The other windows' tabs come back as tabs here: a window
+            // opened while the app was still starting laid its content out shifted under the title bar (Mac Catalyst).
+            _startTabs = [.. windows.SelectMany(w => w.Tabs).Select(Tab)];
             _startActive = windows[0].Active;
-            foreach (var window in windows.Skip(1))
-                ExplorerWindows.Open([.. window.Tabs.Select(Tab)], window.Active);
         }
         if (_startTabs is { Count: > 0 } startTabs)
         {
@@ -801,6 +853,9 @@ public partial class ExplorerPageViewModel : ViewModelBase
     [RelayCommand]
     private void Tap(ItemRow row)
     {
+        // A click in a list makes its pane and window the one the menus and ⌘C/⌘V act on.
+        if (AppMenu.Explorer != this)
+            Focus();
         var index = IndexOf(row);
         if (index < 0)
             return;
@@ -1058,7 +1113,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
         tab.Location = location;
         SessionChanged();
         if (string.IsNullOrEmpty(tab.Title) || !location.Equals(Current))
-            tab.Title = Path.GetFileName(location.DisplayPath.TrimEnd(Path.DirectorySeparatorChar)) is { Length: > 0 } name ? name : location.DisplayPath;
+            tab.Title = TabTitle(location);
 
         Current = location;
         if (changedFolder)
@@ -1143,17 +1198,29 @@ public partial class ExplorerPageViewModel : ViewModelBase
         }
     }
 
+    // Started off the UI thread: on the Mac creating the watcher opens the folder, and for a protected folder (Desktop,
+    // Documents) that open waits for the TCC prompt — on the UI thread it froze every window until it was answered.
     private void Watch(IStorageProvider provider, StorageLocation folder)
     {
         _watch?.Dispose();
         _watch = null;
-        try
+        _ = Task.Run(() =>
         {
-            _watch = provider.Watch(folder, _ => ScheduleReload());
-        }
-        catch (Exception e) when (e is StorageException or IOException or ArgumentException)
-        {
-        }
+            try
+            {
+                var watch = provider.Watch(folder, _ => ScheduleReload());
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    if (folder.Equals(Current) && _watch is null)
+                        _watch = watch;
+                    else
+                        watch.Dispose();
+                });
+            }
+            catch (Exception e) when (e is StorageException or IOException or ArgumentException)
+            {
+            }
+        });
     }
 
     // A copy of a hundred files raises a hundred events; one reload after they settle is enough.

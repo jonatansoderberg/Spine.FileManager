@@ -25,7 +25,17 @@ public static class AppMenu
     {
         Explorer ??= vm;
         if (page.Window is { } window)
-            window.Activated += (_, _) => Explorer = vm;
+        {
+            window.Activated += (_, _) => Explorer = vm.FocusedPane;
+#if MACCATALYST
+            // MAUI's Activated does not come reliably for windows opened as scenes; the key window does.
+            UIKit.UIWindow.Notifications.ObserveDidBecomeKey((_, e) =>
+            {
+                if (e.Notification.Object is UIKit.UIWindow key && ReferenceEquals(key, window.Handler?.PlatformView))
+                    Explorer = vm.FocusedPane;
+            });
+#endif
+        }
         if (DeviceInfo.Idiom != DeviceIdiom.Desktop || page.Window?.Page is not Page host)
             return;
         var strings = SpineStrings.Current;

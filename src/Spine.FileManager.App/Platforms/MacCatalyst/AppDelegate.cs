@@ -9,6 +9,14 @@ public class AppDelegate : MauiUIApplicationDelegate
 {
 	protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();
 
+	// The app restores its own windows and tabs (SessionTracker); macOS keeping and restoring the scenes as well gave
+	// windows twice, so the system's keeping is turned off.
+	public override bool FinishedLaunching(UIApplication application, NSDictionary? launchOptions)
+	{
+		NSUserDefaults.StandardUserDefaults.SetBool(false, "NSQuitAlwaysKeepsWindows");
+		return base.FinishedLaunching(application, launchOptions);
+	}
+
 	// The app's own File and View menus (AppMenu) replace the system's; the system's Edit menu stays for text fields,
 	// and its commands that reach the end of the responder chain act on the explorer instead.
 	// MAUI lets an app menu titled exactly "File" or "View" take the system menu's place (English), and adds it beside

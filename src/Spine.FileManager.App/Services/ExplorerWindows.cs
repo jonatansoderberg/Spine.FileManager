@@ -13,8 +13,12 @@ public static class ExplorerWindows
     /// <summary>Opens a window with <paramref name="tabs"/> (moved or restored, <paramref name="active"/> shown), or at <paramref name="from"/>.</summary>
     public static void Open(IReadOnlyList<ExplorerTab>? tabs = null, int active = 0, StorageLocation? from = null)
     {
-        if (!IsSupported || Application.Current is not { } app)
-            return;
+        if (IsSupported && Application.Current is { } app)
+            app.OpenWindow(Create(tabs, active, from));
+    }
+
+    public static Window Create(IReadOnlyList<ExplorerTab>? tabs = null, int active = 0, StorageLocation? from = null)
+    {
         var explorer = new ExplorerPage();
         var vm = (ExplorerPageViewModel)explorer.BindingContext;
         vm.Start(tabs, active, from);
@@ -27,6 +31,6 @@ public static class ExplorerWindows
             // A window the user closes is not part of the next session.
             IPlatformApplication.Current?.Services.GetService<SessionTracker>()?.Unregister(vm);
         };
-        app.OpenWindow(window);
+        return window;
     }
 }
