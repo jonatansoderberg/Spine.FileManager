@@ -24,6 +24,7 @@ public static class ExplorerWindows
         vm.Start(tabs, active, from);
         var window = new Window(new ContentPage { Content = explorer, Title = AppInfo.Name }) { Title = AppInfo.Name };
         window.Created += (_, _) => _ = vm.OnAppearingAsync(NavigationDirection.NavigateTo);
+        SettleLayout(window);
         window.Destroying += (_, _) =>
         {
             if (AppMenu.Explorer == vm)
@@ -32,5 +33,24 @@ public static class ExplorerWindows
             IPlatformApplication.Current?.Services.GetService<SessionTracker>()?.Unregister(vm);
         };
         return window;
+    }
+
+    /// <summary>
+    /// A window opened while the app runs is laid out before macOS gives it its size and drawn shifted up under its
+    /// title bar until it is resized (Mac Catalyst); resizing it by a point and back once it is on screen draws it right.
+    /// </summary>
+    private static void SettleLayout(Window window)
+    {
+#if MACCATALYST
+        window.Created += (_, _) => window.Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(250), () =>
+        {
+            if (window.Handler?.PlatformView is not UIKit.UIWindow { WindowScene: { } scene })
+                return;
+            var frame = scene.EffectiveGeometry.SystemFrame;
+            scene.RequestGeometryUpdate(new UIKit.UIWindowSceneGeometryPreferencesMac(new CoreGraphics.CGRect(frame.X, frame.Y, frame.Width, frame.Height + 1)), null);
+            window.Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(100), () =>
+                scene.RequestGeometryUpdate(new UIKit.UIWindowSceneGeometryPreferencesMac(frame), null));
+        });
+#endif
     }
 }

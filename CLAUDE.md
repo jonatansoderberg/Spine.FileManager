@@ -35,6 +35,8 @@ dotnet build src/Spine.FileManager.App -f net10.0-ios -r iossimulator-arm64 -p:C
 dotnet build src/Spine.FileManager.App -f net10.0-android
 ```
 
+On the Mac, an ad hoc signed build is a new app to macOS each time, so it asks for folder access (Desktop, Documents, Downloads) after every build. Sign with your development certificate and it asks once: `dotnet build … -f net10.0-maccatalyst -p:CodesignKey="Apple Development"`.
+
 ## GitHub issue workflow
 - Branch `issue/<id>-<kebab-case-title>`.
 - `issues/<id>-<slug>.md` is the living changelog: header with the issue URL, branch and status, then **Plan** (written before code), **Changes**, **Decisions**.

@@ -160,8 +160,33 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     public ObservableCollection<ExplorerTab> Tabs { get; } = [];
 
-    /// <summary>The tab bar shows from the second tab on, as in Finder.</summary>
-    public bool HasTabs => Tabs.Count > 1;
+    /// <summary>A tab dropped on this pane's bar before the tab at <paramref name="index"/>, from this pane or another.</summary>
+    public async Task ReceiveTab(ExplorerPageViewModel from, ExplorerTab tab, int index)
+    {
+        if (from == this)
+        {
+            _tabs.Drop(tab, index);
+            SyncTabs();
+            return;
+        }
+        if (!await from.Release(tab))
+            return;
+        Remember();
+        _tabs.Drop(tab, index);
+        SyncTabs();
+        await Show(tab);
+    }
+
+    // The tab leaves this pane, for another window or a window of its own; the pane's last tab stays.
+    private async Task<bool> Release(ExplorerTab tab)
+    {
+        if (_tabs.Tabs.Count < 2)
+            return false;
+        if (tab == _tabs.Active)
+            Remember();
+        await CloseTab(tab);
+        return true;
+    }
 
     private void SyncTabs()
     {
@@ -172,7 +197,6 @@ public partial class ExplorerPageViewModel : ViewModelBase
             tab.IsActive = tab == _tabs.Active;
             Tabs.Add(tab);
         }
-        OnPropertyChanged(nameof(HasTabs));
     }
 
     [RelayCommand]
@@ -191,9 +215,12 @@ public partial class ExplorerPageViewModel : ViewModelBase
     }
 
     /// <summary>This window's tabs as the session saves them.</summary>
-    public WindowState Snapshot() => new(
-        [.. _tabs.Tabs.Where(t => t.Location is not null).Select(t => new TabState(t.Location!, t.Sort, t.ShowHidden, t.IsIcons))],
-        Math.Max(0, _tabs.Tabs.Where(t => t.Location is not null).ToList().IndexOf(_tabs.Active)));
+    // A tab opened in the background or restored and never shown has its folder only in its history.
+    public WindowState Snapshot()
+    {
+        var tabs = _tabs.Tabs.Where(t => (t.Location ?? t.History.Current) is not null).ToList();
+        return new([.. tabs.Select(t => new TabState((t.Location ?? t.History.Current)!, t.Sort, t.ShowHidden, t.IsIcons))], Math.Max(0, tabs.IndexOf(_tabs.Active)));
+    }
 
     private static string TabTitle(StorageLocation location) =>
         Path.GetFileName(location.DisplayPath.TrimEnd(Path.DirectorySeparatorChar)) is { Length: > 0 } name ? name : location.DisplayPath;
@@ -213,11 +240,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
     private async Task MoveTabToNewWindow(ExplorerTab? tab)
     {
         var moving = tab ?? _tabs.Active;
-        if (_tabs.Tabs.Count < 2)
+        if (!await Release(moving))
             return;
-        if (moving == _tabs.Active)
-            Remember();
-        await CloseTab(moving);
         moving.IsActive = true;
         ExplorerWindows.Open([moving]);
     }

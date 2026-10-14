@@ -63,4 +63,32 @@ public sealed class TabListTests
         tabs.Move(tabs.Active, 0);
         Assert.Equal("[c],a,b", Names(tabs));
     }
+
+    [Fact]
+    public void A_dropped_tab_lands_before_the_tab_it_was_dropped_on()
+    {
+        var a = new Tab("a");
+        var tabs = new TabList<Tab>(a);
+        var b = new Tab("b");
+        var c = new Tab("c");
+        tabs.Add(b);
+        tabs.Add(c);
+        tabs.Drop(a, 2);
+        Assert.Equal("b,a,[c]", Names(tabs));
+        tabs.Drop(c, 0);
+        Assert.Equal("[c],b,a", Names(tabs));
+        tabs.Drop(c, 3);
+        Assert.Equal("b,a,[c]", Names(tabs));
+    }
+
+    [Fact]
+    public void A_tab_from_another_bar_joins_where_it_was_dropped_and_becomes_active()
+    {
+        var tabs = new TabList<Tab>(new("a"));
+        tabs.Add(new("b"), activate: false);
+        tabs.Drop(new("x"), 1);
+        Assert.Equal("a,[x],b", Names(tabs));
+        tabs.Drop(new("y"), 9);
+        Assert.Equal("a,x,b,[y]", Names(tabs));
+    }
 }

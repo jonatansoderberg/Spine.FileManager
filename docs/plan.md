@@ -1,6 +1,6 @@
 # Spine File Manager — Requirements and Plan
 
-**Last updated:** 2026-10-14 — Spike 5 identity and pairing (#36); preview (#34), filter (#32), Dual Pane (#23 part 1), last session (#25 part 1), windows (#22), terminal (#24), tabs (#21), journal (#20); milestone A done on the Mac; Windows (#3) compiled only.
+**Last updated:** 2026-10-14 — tab drag (#41); Spike 5 identity and pairing (#36); preview (#34), filter (#32), Dual Pane (#23 part 1), last session (#25 part 1), windows (#22), terminal (#24), tabs (#21), journal (#20); milestone A done on the Mac; Windows (#3) compiled only.
 
 A living plan. Each step links its GitHub issue once it has one; update the status, the decisions and the line above in the same PR as the work.
 
@@ -89,7 +89,7 @@ Result: Explorer/Finder plus Edge/Commander productivity.
 | B3 | Spike 4 — multi-window + tab detach (§14) | ✅ | [#22](https://github.com/jonatansoderberg/Spine.FileManager/issues/22) |
 | B4 | Multiple windows | ✅ Mac | with #22 |
 | B5 | Split panes (§15) | 🔄 Dual Pane | [#23](https://github.com/jonatansoderberg/Spine.FileManager/issues/23) |
-| B6 | Drag tabs between windows | ⬜ with drag and drop (§38) | |
+| B6 | Drag tabs between windows | ✅ Mac | [#41](https://github.com/jonatansoderberg/Spine.FileManager/issues/41) |
 | B7 | Terminal integration (§17) | ✅ Open in Terminal | [#24](https://github.com/jonatansoderberg/Spine.FileManager/issues/24) |
 | B8 | Workspaces (§18) | 🔄 last session restored | [#25](https://github.com/jonatansoderberg/Spine.FileManager/issues/25) |
 

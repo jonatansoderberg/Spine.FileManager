@@ -55,6 +55,10 @@
     </ContentPage.Resources>
 
     <Grid x:Name="Root" ColumnDefinitions="Auto,*,Auto,Auto">
+        <Grid.GestureRecognizers>
+            <!-- Takes nothing; tells a dragged tab it is still over a window (Services/TabDrag). -->
+            <DropGestureRecognizer DragOver="OnWindowDragOver" DragLeave="OnWindowDragLeave" />
+        </Grid.GestureRecognizers>
 
         <!-- Sidebar: favorites (reorderable, right-click to remove), then the places. -->
         <Grid WidthRequest="210" IsVisible="{Binding ShowsSidebar}" RowDefinitions="Auto,Auto,Auto,Auto,*"
@@ -111,9 +115,14 @@
             <VerticalStackLayout Grid.ColumnSpan="2">
             <!-- In Dual Pane, a line marks the pane the menus and the sidebar act on. -->
             <BoxView HeightRequest="2" IsVisible="{Binding MarksFocus}" Color="{AppThemeBinding Light=#2F6FEB, Dark=#5B8DEF}" />
-            <!-- Tabs: from the second tab on; a click shows the tab, × closes it. -->
-            <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never" IsVisible="{Binding HasTabs}"
+            <!-- Tabs, always at least one: a click shows the tab, × closes it, a drag moves it within the bar, to
+                 another window or, let go outside the app's windows, to a window of its own. A fixed height: measured
+                 while still empty, a horizontal ScrollView keeps that height when the tabs arrive. -->
+            <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never" HeightRequest="32"
                         BackgroundColor="{AppThemeBinding Light=#E9EAEE, Dark=#16171A}">
+                <ScrollView.GestureRecognizers>
+                    <DropGestureRecognizer DragOver="OnTabDragOver" DragLeave="OnWindowDragLeave" Drop="OnTabDrop" />
+                </ScrollView.GestureRecognizers>
                 <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Tabs}" Padding="8,4,8,0" Spacing="2">
                     <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="ExplorerTab">
@@ -126,6 +135,8 @@
                                     </DataTrigger>
                                 </Grid.Triggers>
                                 <Grid.GestureRecognizers>
+                                    <DragGestureRecognizer DragStarting="OnTabDragStarting" DropCompleted="OnTabDropCompleted" />
+                                    <DropGestureRecognizer DragOver="OnTabDragOver" DragLeave="OnWindowDragLeave" Drop="OnTabDrop" />
                                     <TapGestureRecognizer Command="{Binding SelectTabCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
                                 </Grid.GestureRecognizers>
                                 <Label Text="{Binding Title}" FontSize="12" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
