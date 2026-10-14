@@ -6,6 +6,7 @@
 
     <services:NotConverter x:Key="Not" />
     <services:StrengthConverter x:Key="Strength" />
+    <services:IsNullConverter x:Key="IsNull" />
 
     <Style TargetType="Label">
         <Setter Property="TextColor" Value="{AppThemeBinding Light=#1B1B1B, Dark=White}" />
