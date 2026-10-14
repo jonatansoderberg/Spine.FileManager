@@ -177,10 +177,12 @@
                 <Entry x:Name="FilterField" Grid.Column="8" Text="{Binding Filter}" Placeholder="{String Explorer.Filter}" FontSize="13" WidthRequest="170"
                        ClearButtonVisibility="WhileEditing" IsVisible="{Binding IsWide}" VerticalOptions="Center" Margin="6,0,0,0"
                        SemanticProperties.Description="{String Explorer.Filter}" />
-                <ImageButton Grid.Column="5" Style="{StaticResource ToolButton}" SvgImageSource.Svg="List.svg" Command="{Binding ShowAsCommand}" CommandParameter="List" Opacity="{Binding IsList, Converter={StaticResource Strength}}"
-                             SemanticProperties.Description="{String Explorer.AsList}" ToolTipProperties.Text="{String Explorer.AsList}" />
-                <ImageButton Grid.Column="6" Style="{StaticResource ToolButton}" SvgImageSource.Svg="Grid.svg" Command="{Binding ShowAsCommand}" CommandParameter="Icons" Opacity="{Binding IsIcons, Converter={StaticResource Strength}}"
-                             SemanticProperties.Description="{String Explorer.AsIcons}" ToolTipProperties.Text="{String Explorer.AsIcons}" />
+                <!-- Icons only, as in Finder: a segment with a title shows it as text too. -->
+                <SegmentedControl Grid.Column="5" Grid.ColumnSpan="2" SelectedIndex="{Binding ViewIndex}" VerticalOptions="Center" Margin="4,0"
+                                  ToolTipProperties.Text="{String Explorer.View}" SemanticProperties.Description="{String Explorer.View}">
+                    <Segment Svg="List.svg" />
+                    <Segment Svg="Grid.svg" />
+                </SegmentedControl>
                 <ImageButton Grid.Column="7" Style="{StaticResource ToolButton}" Command="{Binding ToggleHiddenCommand}"
                              SemanticProperties.Description="{String Explorer.ShowHidden}" ToolTipProperties.Text="{String Explorer.ShowHidden}">
                     <ImageButton.Triggers>

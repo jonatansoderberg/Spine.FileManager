@@ -67,6 +67,7 @@
   <s key="Explorer.Subfolders">Subfolders</s>
   <s key="Explorer.AsList">Show as list</s>
   <s key="Explorer.AsIcons">Show as icons</s>
+  <s key="Explorer.View">View: list or icons</s>
   <s key="Menu.AsList">as List</s>
   <s key="Menu.AsIcons">as Icons</s>
   <s key="Menu.Duplicate">Duplicate</s>

@@ -802,10 +802,17 @@ public partial class ExplorerPageViewModel : ViewModelBase
     private void Find() => FilterRequested?.Invoke();
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsList))]
+    [NotifyPropertyChangedFor(nameof(IsList), nameof(ViewIndex))]
     public partial bool IsIcons { get; private set; }
 
     public bool IsList => !IsIcons;
+
+    /// <summary>The view as the toolbar's segmented control picks it: 0 list, 1 icons.</summary>
+    public int ViewIndex
+    {
+        get => IsIcons ? 1 : 0;
+        set => IsIcons = value == 1;
+    }
 
     /// <summary>Columns of the icon grid, from the list's width.</summary>
     [ObservableProperty]
