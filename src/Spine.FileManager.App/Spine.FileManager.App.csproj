@@ -43,6 +43,8 @@
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" />
 		<PackageReference Include="Plugin.Maui.Spine" />
 		<PackageReference Include="Plugin.Maui.Spine.Svg.Icons" />
+		<PackageReference Include="Plugin.Maui.Spine.Barcodes" />
+		<PackageReference Include="Plugin.Maui.Spine.Scanner" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -75,6 +77,13 @@
 		</MauiXaml>
 		<Compile Include="Pages\FirstRunPage.ViewModel.cs">
 			<DependentUpon>FirstRunPage.cs</DependentUpon>
+		</Compile>
+		<MauiXaml Update="Pages\LinkDevicePage.View.xaml">
+			<Generator>MSBuild:Compile</Generator>
+			<DependentUpon>LinkDevicePage.cs</DependentUpon>
+		</MauiXaml>
+		<Compile Include="Pages\LinkDevicePage.ViewModel.cs">
+			<DependentUpon>LinkDevicePage.cs</DependentUpon>
 		</Compile>
 	</ItemGroup>
 

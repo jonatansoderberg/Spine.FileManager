@@ -11,6 +11,8 @@
 	<ItemGroup>
 		<PackageVersion Include="Plugin.Maui.Spine" Version="$(SpineVersion)" />
 		<PackageVersion Include="Plugin.Maui.Spine.Svg.Icons" Version="$(SpineVersion)" />
+		<PackageVersion Include="Plugin.Maui.Spine.Barcodes" Version="$(SpineVersion)" />
+		<PackageVersion Include="Plugin.Maui.Spine.Scanner" Version="$(SpineVersion)" />
 	</ItemGroup>
 
 	<!-- The app -->

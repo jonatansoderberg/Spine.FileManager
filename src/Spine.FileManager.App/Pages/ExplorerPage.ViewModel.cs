@@ -50,6 +50,19 @@ public sealed partial class ExplorerTab : ObservableObject
     public partial bool IsActive { get; set; }
 }
 
+/// <summary>A linked device in the sidebar's Other Devices; files dropped on it are sent there.</summary>
+public sealed partial class DeviceRow(DeviceLink.TrustedNode node, string lifetime) : ObservableObject
+{
+    public DeviceLink.TrustedNode Node { get; } = node;
+
+    public string Name => Node.DisplayName;
+
+    public string Lifetime { get; } = lifetime;
+
+    [ObservableProperty]
+    public partial bool IsDropTarget { get; set; }
+}
+
 public sealed partial class FavoriteRow(Favorite favorite) : ObservableObject
 {
     private static readonly ImageSource FolderIcon = "folder.png";
@@ -146,8 +159,11 @@ public partial class ExplorerPageViewModel : ViewModelBase
     private readonly OperationQueue _operations;
     private readonly FavoritesStore _favorites;
 
-    public ExplorerPageViewModel(ISpineStrings strings, StorageProviders providers, INavigationService navigation, OperationQueue operations, FavoritesStore favorites)
+    public ExplorerPageViewModel(ISpineStrings strings, StorageProviders providers, INavigationService navigation, OperationQueue operations, FavoritesStore favorites, DeviceService devices)
     {
+        _devices = devices;
+        _devices.Trust.Changed += () => MainThread.BeginInvokeOnMainThread(LoadDevices);
+        _devices.Received += (from, path) => MainThread.BeginInvokeOnMainThread(() => DeviceActivity = _strings.Get("Devices.Received", Path.GetFileName(path), from));
         _favorites = favorites;
         // Created with the first explorer, so the first finished operation is already recorded.
         _ = Undo;
@@ -164,6 +180,67 @@ public partial class ExplorerPageViewModel : ViewModelBase
     }
 
     public ObservableCollection<PlaceRow> Places { get; } = [];
+
+    private readonly DeviceService _devices;
+
+    public ObservableCollection<DeviceRow> Devices { get; } = [];
+
+    [ObservableProperty]
+    public partial double DevicesHeight { get; private set; }
+
+    [ObservableProperty]
+    public partial double PlacesHeight { get; private set; }
+
+    /// <summary>The last device transfer, in the status bar: sending, sent, received or why it failed.</summary>
+    [ObservableProperty]
+    public partial string DeviceActivity { get; private set; } = "";
+
+    [ObservableProperty]
+    public partial MenuItems DeviceMenu { get; private set; } = [];
+
+    private void LoadDevices()
+    {
+        Devices.Clear();
+        foreach (var node in _devices.Trust.All.OrderBy(n => n.DisplayName, StringComparer.CurrentCultureIgnoreCase))
+            Devices.Add(new DeviceRow(node, _strings[$"Devices.Lifetime.{node.Lifetime}"]));
+        DevicesHeight = Devices.Count * 30;
+    }
+
+    [RelayCommand]
+    private Task LinkDevice() => _navigation.ShowAsync<LinkDevicePage>();
+
+    [RelayCommand]
+    private async Task RenameDevice(DeviceRow row)
+    {
+        if (await Prompt("Devices.Rename.Title", "Devices.Rename.Message", row.Name) is { } name)
+            _devices.Trust.Rename(row.Node.NodeId, name);
+    }
+
+    [RelayCommand]
+    private async Task ForgetDevice(DeviceRow row)
+    {
+        if (await Confirm(_strings.Get("Devices.Forget.Title", row.Name), _strings["Devices.Forget.Message"], _strings["Devices.Forget"]))
+            _devices.Trust.Revoke(row.Node.NodeId);
+    }
+
+    /// <summary>Sends files and folders to a linked device; the status bar shows how far it has come.</summary>
+    public async Task SendToDevice(DeviceRow row, IReadOnlyList<string> paths)
+    {
+        if (paths.Count == 0)
+            return;
+        var name = row.Name;
+        try
+        {
+            DeviceActivity = _strings.Get("Devices.Sending", name, 0);
+            await _devices.SendAsync(row.Node.NodeId, paths, (sent, total) =>
+                MainThread.BeginInvokeOnMainThread(() => DeviceActivity = _strings.Get("Devices.Sending", name, total > 0 ? sent * 100 / total : 100)));
+            DeviceActivity = _strings.Get("Devices.Sent", name);
+        }
+        catch (Exception e) when (e is IOException or System.Net.Sockets.SocketException or Transfer.ChannelException)
+        {
+            DeviceActivity = _strings.Get("Devices.SendFailed", name, e.Message);
+        }
+    }
 
     public ObservableCollection<FavoriteRow> Favorites { get; } = [];
 
@@ -455,6 +532,11 @@ public partial class ExplorerPageViewModel : ViewModelBase
         [
             new MenuAction(strings["Menu.MoveTabToNewWindow"], null, MoveTabToNewWindowCommand) { IsVisible = ExplorerWindows.IsSupported },
             new MenuAction(strings["Menu.CloseTab"], null, CloseTabCommand),
+        ];
+        DeviceMenu =
+        [
+            new MenuAction(strings["Devices.Rename"], "Edit.svg", RenameDeviceCommand),
+            new MenuAction(strings["Devices.Forget"], "Trashcan.svg", ForgetDeviceCommand) { IsDestructive = true },
         ];
         FavoriteMenu =
         [
@@ -915,6 +997,10 @@ public partial class ExplorerPageViewModel : ViewModelBase
         foreach (var provider in _providers.All)
             foreach (var root in await provider.GetRootsAsync())
                 Places.Add(new(root));
+        PlacesHeight = Places.Count * 30;
+        LoadDevices();
+        if (!IsSecondary)
+            _devices.StartIfLinked();
         if (_tabs.Active.History.Current is { } kept)
             await Show(_tabs.Active);
         else if ((_startLocation ?? Places.FirstOrDefault()?.Root.Location) is { } start)

@@ -4,3 +4,4 @@
 [assembly: XmlnsDefinition("http://schemas.microsoft.com/dotnet/maui/global", "Plugin.Maui.Spine.Svg", AssemblyName = "Plugin.Maui.Spine.Svg")]
 [assembly: XmlnsDefinition("http://schemas.microsoft.com/dotnet/maui/global", "Spine.FileManager.Pages")]
 [assembly: XmlnsDefinition("http://schemas.microsoft.com/dotnet/maui/global", "Spine.FileManager.Controls")]
+[assembly: XmlnsDefinition("http://schemas.microsoft.com/dotnet/maui/global", "Plugin.Maui.Spine.Barcodes", AssemblyName = "Plugin.Maui.Spine.Barcodes")]

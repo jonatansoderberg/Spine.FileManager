@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<SpinePage
+    xmlns="http://schemas.microsoft.com/dotnet/maui/global"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="Spine.FileManager.Pages.LinkDevicePage"
+    x:TypeArguments="LinkDevicePageViewModel"
+    x:DataType="LinkDevicePageViewModel">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="{x:Static HeaderBarConstants.PagePadding}" Spacing="14">
+            <Label Text="{String Link.Intro}" FontSize="15" />
+            <BarcodeView Value="{Binding Link}" Options="{Binding QrOptions}" HeightRequest="300" WidthRequest="300" HorizontalOptions="Center" />
+            <Label Text="{Binding Status}" FontSize="14" HorizontalTextAlignment="Center" />
+            <Label Text="{String Link.Keep}" FontSize="13" Opacity="0.7" />
+            <SegmentedControl SelectedIndex="{Binding LifetimeIndex}">
+                <Segment Title="{String Link.Quick}" />
+                <Segment Title="{String Link.Session}" />
+                <Segment Title="{String Link.Remember}" />
+            </SegmentedControl>
+            <Button Text="{String Link.CopyLink}" Command="{Binding CopyLinkCommand}" HorizontalOptions="Start" />
+
+            <Label Text="{String Link.JoinHeader}" FontSize="15" FontAttributes="Bold" Margin="0,12,0,0" />
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <Entry Text="{Binding JoinLink}" Placeholder="{String Link.JoinPlaceholder}" FontSize="13" />
+                <Button Grid.Column="1" Text="{String Link.Join}" Command="{Binding JoinCommand}" />
+            </Grid>
+            <Button Text="{String Link.Scan}" Command="{Binding ScanCommand}" IsVisible="{Binding CanScan}" HorizontalOptions="Start" />
+        </VerticalStackLayout>
+    </ScrollView>
+
+</SpinePage>
