@@ -9,7 +9,10 @@ public partial class ExplorerPage
         SizeChanged += (_, _) =>
         {
             if (BindingContext is ExplorerPageViewModel vm)
+            {
                 vm.IsWide = Width >= 640;
+                vm.GridSpan = Math.Max(2, (int)((Width - (vm.IsWide ? 210 : 0)) / 104));
+            }
         };
         Loaded += (_, _) =>
         {

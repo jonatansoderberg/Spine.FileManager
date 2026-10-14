@@ -83,7 +83,7 @@
         <Grid Grid.Column="1" RowDefinitions="Auto,Auto,Auto,*,Auto">
 
             <!-- Toolbar: history, up, refresh, the path (the breadcrumb in #6), hidden files. -->
-            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto" ColumnSpacing="2" Padding="8,6">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="2" Padding="8,6">
                 <ImageButton Style="{StaticResource ToolButton}" SvgImageSource.Svg="ChevronLeft.svg" Command="{Binding BackCommand}" IsEnabled="{Binding CanGoBack}"
                              SemanticProperties.Description="{String Explorer.Back}" ToolTipProperties.Text="{String Explorer.Back}" />
                 <ImageButton Grid.Column="1" Style="{StaticResource ToolButton}" SvgImageSource.Svg="ChevronRight.svg" Command="{Binding ForwardCommand}" IsEnabled="{Binding CanGoForward}"
@@ -107,7 +107,11 @@
                         </BindableLayout.ItemTemplate>
                     </HorizontalStackLayout>
                 </ScrollView>
-                <ImageButton Grid.Column="5" Style="{StaticResource ToolButton}" Command="{Binding ToggleHiddenCommand}"
+                <ImageButton Grid.Column="5" Style="{StaticResource ToolButton}" SvgImageSource.Svg="List.svg" Command="{Binding ShowAsCommand}" CommandParameter="List" Opacity="{Binding IsList, Converter={StaticResource Strength}}"
+                             SemanticProperties.Description="{String Explorer.AsList}" ToolTipProperties.Text="{String Explorer.AsList}" />
+                <ImageButton Grid.Column="6" Style="{StaticResource ToolButton}" SvgImageSource.Svg="Grid.svg" Command="{Binding ShowAsCommand}" CommandParameter="Icons" Opacity="{Binding IsIcons, Converter={StaticResource Strength}}"
+                             SemanticProperties.Description="{String Explorer.AsIcons}" ToolTipProperties.Text="{String Explorer.AsIcons}" />
+                <ImageButton Grid.Column="7" Style="{StaticResource ToolButton}" Command="{Binding ToggleHiddenCommand}"
                              SemanticProperties.Description="{String Explorer.ShowHidden}" ToolTipProperties.Text="{String Explorer.ShowHidden}">
                     <ImageButton.Triggers>
                         <DataTrigger TargetType="ImageButton" Binding="{Binding ShowHidden}" Value="True">
@@ -124,7 +128,7 @@
                    TextColor="{AppThemeBinding Light=#B3261E, Dark=#F2B8B5}" BackgroundColor="{AppThemeBinding Light=#FDECEA, Dark=#3B1F1E}" />
 
             <!-- Column headers: a click sorts, a second click reverses. -->
-            <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto,Auto" Padding="8,0">
+            <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto,Auto" Padding="8,0" IsVisible="{Binding IsList}">
                 <Label Text="{Binding NameHeader}" Style="{StaticResource ColumnHeader}" Padding="38,6,8,6">
                     <Label.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Name" /></Label.GestureRecognizers>
                 </Label>
@@ -139,8 +143,9 @@
                 </Label>
             </Grid>
 
-            <CollectionView Grid.Row="3" ItemsSource="{Binding Rows}" SelectionMode="None">
-                <CollectionView.ItemTemplate>
+            <!-- Every row is one height; measuring only the first keeps a 100 000-row list from measuring them all. -->
+            <FileListView Grid.Row="3" ItemsSource="{Binding Rows}" SelectionMode="None" ItemSizingStrategy="MeasureFirstItem" IsVisible="{Binding IsList}">
+                <FileListView.ItemTemplate>
                     <DataTemplate x:DataType="ItemRow">
                         <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" HeightRequest="28" Padding="16,0,8,0" Opacity="{Binding Dimmed}">
                             <Grid.Triggers>
@@ -159,11 +164,35 @@
                             <Label Grid.Column="4" Text="{Binding Kind}" Style="{StaticResource Cell}" Opacity="0.7" WidthRequest="130" IsVisible="{Binding IsWide, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" />
                         </Grid>
                     </DataTemplate>
-                </CollectionView.ItemTemplate>
-                <CollectionView.EmptyView>
+                </FileListView.ItemTemplate>
+                <FileListView.EmptyView>
                     <Label Text="{String Explorer.Empty}" IsVisible="{Binding IsLoading, Converter={StaticResource Not}}" Opacity="0.5" HorizontalTextAlignment="Center" Padding="24" />
-                </CollectionView.EmptyView>
-            </CollectionView>
+                </FileListView.EmptyView>
+            </FileListView>
+
+            <!-- Icons: a second list rather than a new ItemsLayout, which a shown CollectionView ignores on iOS. -->
+            <FileListView Grid.Row="2" Grid.RowSpan="2" ItemsSource="{Binding Rows}" SelectionMode="None" ItemSizingStrategy="MeasureFirstItem" IsVisible="{Binding IsIcons}" Margin="8,8,8,0">
+                <FileListView.ItemsLayout>
+                    <GridItemsLayout Orientation="Vertical" Span="{Binding GridSpan}" VerticalItemSpacing="4" HorizontalItemSpacing="4" />
+                </FileListView.ItemsLayout>
+                <FileListView.ItemTemplate>
+                    <DataTemplate x:DataType="ItemRow">
+                        <Grid RowDefinitions="56,34" WidthRequest="96" Padding="4" Opacity="{Binding Dimmed}">
+                            <Grid.Triggers>
+                                <DataTrigger TargetType="Grid" Binding="{Binding IsSelected}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SelectionLight}, Dark={StaticResource SelectionDark}}" />
+                                </DataTrigger>
+                            </Grid.Triggers>
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer NumberOfTapsRequired="2" Command="{Binding ActivateCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
+                                <TapGestureRecognizer Command="{Binding TapCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
+                            </Grid.GestureRecognizers>
+                            <Image Source="{Binding Icon}" WidthRequest="48" HeightRequest="48" />
+                            <Label Grid.Row="1" Text="{Binding Name}" FontSize="12" HorizontalTextAlignment="Center" MaxLines="2" LineBreakMode="MiddleTruncation" />
+                        </Grid>
+                    </DataTemplate>
+                </FileListView.ItemTemplate>
+            </FileListView>
 
             <Grid Grid.Row="4" ColumnDefinitions="*,Auto" Padding="16,4">
                 <Label Text="{Binding Status}" FontSize="12" Opacity="0.6" />

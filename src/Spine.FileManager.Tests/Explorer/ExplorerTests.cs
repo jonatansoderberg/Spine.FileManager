@@ -50,6 +50,33 @@ public sealed class ExplorerTests
         Assert.Equal("alpha,Zeta,a10.txt,a2.txt,b.txt", Names(new(SortColumn.Modified)));
     }
 
+    [Theory]
+    [InlineData(SortColumn.Name, false)]
+    [InlineData(SortColumn.Name, true)]
+    [InlineData(SortColumn.Kind, false)]
+    [InlineData(SortColumn.Size, true)]
+    public void Keyed_sort_orders_exactly_as_the_comparer(SortColumn column, bool descending)
+    {
+        var random = new Random(7);
+        string[] stems = ["file", "File", "ärende", "apa", "Zebra", "item 2", "item 10", "a01", "a1", "x", "", "Å", "äpple", "v1.2.10", "v1.2.9"];
+        string[] extensions = ["", ".txt", ".PDF", ".jpg", ".tar.gz"];
+        var items = Enumerable.Range(0, 400).Select(i =>
+        {
+            var name = $"{stems[random.Next(stems.Length)]}{(random.Next(3) == 0 ? random.Next(200).ToString() : "")}{extensions[random.Next(extensions.Length)]}";
+            if (name.Length == 0)
+                name = "z";
+            return random.Next(5) == 0 ? Folder(name) : File(name, random.Next(10), random.Next(1, 28));
+        }).ToArray();
+        var sort = new ItemSort(column, descending);
+        var names = new NaturalComparer(CultureInfo.GetCultureInfo("sv-SE"));
+
+        var expected = items.Order(sort.Comparer(names)).Select(i => i.Name).ToArray();
+        var keyed = (StorageItem[])items.Clone();
+        sort.Sort(keyed, names);
+
+        Assert.Equal(expected, keyed.Select(i => i.Name));
+    }
+
     [Fact]
     public void Clicking_a_column_again_reverses_it_and_a_new_column_starts_in_its_natural_order()
     {

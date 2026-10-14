@@ -13,6 +13,14 @@ public static class AppMenu
     /// <summary>The explorer the menu acts on; on the Mac also the end of the responder chain for the Edit menu.</summary>
     public static ExplorerPageViewModel? Explorer { get; private set; }
 
+    /// <summary>Whether a menu with these item titles is one of the app's own (Mac: telling them from the system's).</summary>
+    public static bool Owns(IEnumerable<string> titles)
+    {
+        var strings = SpineStrings.Current;
+        string[] own = [strings["Menu.NewFolder"], strings["Menu.AsList"]];
+        return titles.Any(own.Contains);
+    }
+
     public static void Install(ExplorerPage page, ExplorerPageViewModel vm)
     {
         Explorer = vm;
@@ -57,6 +65,9 @@ public static class AppMenu
             host.MenuBarItems.Add(Menu("Menu.Edit",
                 Item("Menu.SelectAll", vm.SelectAllCommand, command, "A")));
         host.MenuBarItems.Add(Menu("Menu.View",
+            Item("Menu.AsList", vm.ShowAsCommand, mac ? command : command | KeyboardAcceleratorModifiers.Shift, mac ? "1" : "6", "List"),
+            Item("Menu.AsIcons", vm.ShowAsCommand, mac ? command : command | KeyboardAcceleratorModifiers.Shift, mac ? "2" : "2", "Icons"),
+            new MenuFlyoutSeparator(),
             Item("Menu.ShowHidden", vm.ToggleHiddenCommand, mac ? command | KeyboardAcceleratorModifiers.Shift : command, mac ? "." : "H"),
             Item("Menu.Refresh", vm.RefreshCommand, mac ? command : KeyboardAcceleratorModifiers.None, mac ? "R" : "F5"),
             new MenuFlyoutSeparator(),
@@ -75,7 +86,10 @@ public static class AppMenu
             Item("Menu.ExtendDown", vm.StepCommand, KeyboardAcceleratorModifiers.Shift, "Down", "+1"),
             Item("Menu.ExtendUp", vm.StepCommand, KeyboardAcceleratorModifiers.Shift, "Up", "+-1")));
 #if MACCATALYST
+        // Asked again a moment later: a rebuild asked while the window was still coming up was sometimes skipped,
+        // leaving the bar without the app's menus.
         UIKit.UIMenuSystem.MainSystem.SetNeedsRebuild();
+        host.Dispatcher.DispatchDelayed(TimeSpan.FromSeconds(1), UIKit.UIMenuSystem.MainSystem.SetNeedsRebuild);
 #endif
     }
 }

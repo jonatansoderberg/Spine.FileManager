@@ -22,6 +22,11 @@ public static class MauiProgram
                 options.Windows.PersistWindowPosition = true;
             });
 
+#if IOS || MACCATALYST
+        // MAUI 10's CollectionViewHandler2 lays out every row up front (compositional layout): 100 000 rows held the
+        // window for 1.75 s and a jump to the end for 1.6 s; the flow-layout handler took 0.47 s and 0.08 s (Spike 2).
+        builder.ConfigureMauiHandlers(h => h.AddHandler<Controls.FileListView, Microsoft.Maui.Controls.Handlers.Items.CollectionViewHandler>());
+#endif
         builder.Services.AddSingleton<IFileSystemPlatform>(
 #if MACCATALYST
             new MacFileSystemPlatform()
