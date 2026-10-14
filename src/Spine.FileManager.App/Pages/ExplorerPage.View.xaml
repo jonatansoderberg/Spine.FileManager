@@ -223,9 +223,19 @@
                 <ActivityIndicator Grid.Column="1" IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}" HeightRequest="14" WidthRequest="14" />
             </Grid>
 
-            <!-- The running copy or move; the full Operation Center is milestone B. -->
+            <!-- Operations the app found unfinished at start, waiting to be resumed. -->
+            <Grid Grid.Row="4" ColumnDefinitions="*,Auto" Padding="16,4" IsVisible="{Binding HasInterrupted}"
+                  BackgroundColor="{AppThemeBinding Light=#FFF4E5, Dark=#3A2C14}">
+                <Label Text="{Binding InterruptedText}" FontSize="12" VerticalTextAlignment="Center" />
+                <Button Grid.Column="1" Text="{String Operations.Open}" Command="{Binding ShowOperationsCommand}" FontSize="12" Padding="8,0" HeightRequest="24" />
+            </Grid>
+
+            <!-- The running copy or move; a click opens the Operation Center. -->
             <Grid Grid.Row="4" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Padding="16,4" IsVisible="{Binding HasOperation}"
                   BackgroundColor="{AppThemeBinding Light=#F3F4F6, Dark=#1E1F22}">
+                <Grid.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding ShowOperationsCommand}" />
+                </Grid.GestureRecognizers>
                 <ProgressBar Progress="{Binding OperationProgress}" WidthRequest="160" VerticalOptions="Center" />
                 <Label Grid.Column="1" Text="{Binding OperationText}" FontSize="12" LineBreakMode="MiddleTruncation" VerticalTextAlignment="Center" />
                 <Button Grid.Column="2" Text="{String Operation.Cancel}" Command="{Binding CancelOperationCommand}" FontSize="12" Padding="8,0" HeightRequest="24" />

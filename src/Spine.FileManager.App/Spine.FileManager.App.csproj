@@ -62,6 +62,13 @@
 		<Compile Include="Pages\ExplorerPage.ViewModel.cs">
 			<DependentUpon>ExplorerPage.cs</DependentUpon>
 		</Compile>
+		<MauiXaml Update="Pages\OperationsPage.View.xaml">
+			<Generator>MSBuild:Compile</Generator>
+			<DependentUpon>OperationsPage.cs</DependentUpon>
+		</MauiXaml>
+		<Compile Include="Pages\OperationsPage.ViewModel.cs">
+			<DependentUpon>OperationsPage.cs</DependentUpon>
+		</Compile>
 		<MauiXaml Update="Pages\FirstRunPage.View.xaml">
 			<Generator>MSBuild:Compile</Generator>
 			<DependentUpon>FirstRunPage.cs</DependentUpon>

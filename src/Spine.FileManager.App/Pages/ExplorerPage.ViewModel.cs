@@ -321,6 +321,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
     {
         if (Places.Count > 0)
             return;
+        UpdateInterrupted();
         await LoadFavorites();
         foreach (var provider in _providers.All)
             foreach (var root in await provider.GetRootsAsync())
@@ -489,6 +490,22 @@ public partial class ExplorerPageViewModel : ViewModelBase
     [RelayCommand]
     private void CancelOperation() => _activeOperation?.Cancel();
 
+    [RelayCommand]
+    private Task ShowOperations() => _navigation.ShowAsync<OperationsPage>();
+
+    /// <summary>Operations the app found unfinished in its journal, waiting to be resumed from the Operation Center.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasInterrupted))]
+    public partial string? InterruptedText { get; private set; }
+
+    public bool HasInterrupted => InterruptedText is not null && !HasOperation;
+
+    private void UpdateInterrupted()
+    {
+        var count = _operations.Operations.Count(o => o.State == OperationState.Interrupted);
+        InterruptedText = count == 0 ? null : _strings.Get("Operations.Interrupted", count);
+    }
+
     public bool CanPaste => FileClipboard.HasItems;
 
     public bool HasSelection => _selection.Count > 0;
@@ -507,6 +524,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     private void OnOperationChanged(FileOperation operation)
     {
+        UpdateInterrupted();
+        OnPropertyChanged(nameof(HasInterrupted));
         if (!operation.IsFinished)
         {
             _activeOperation = operation;
@@ -527,7 +546,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
             OperationText = null;
         }
         if (operation.Errors.Count > 0)
-            Error = $"{_strings.Get("Operation.Errors", operation.Errors.Count)} {operation.Errors[0].Error}";
+            Error = $"{_strings.Get("Operation.Errors", operation.Errors.Count)} {operation.Errors[0].Message}";
         if (operation == _pasteSelects && Current is { } folder && operation.Target.Equals(folder))
         {
             var results = operation.Results.ToHashSet();

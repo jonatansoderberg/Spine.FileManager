@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<SpinePage
+    xmlns="http://schemas.microsoft.com/dotnet/maui/global"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="Spine.FileManager.Pages.OperationsPage"
+    x:TypeArguments="OperationsPageViewModel"
+    x:DataType="OperationsPageViewModel">
+
+    <ContentPage.Resources>
+        <Style x:Key="Action" TargetType="Button">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="HeightRequest" Value="26" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+        </Style>
+    </ContentPage.Resources>
+
+    <Grid>
+        <CollectionView ItemsSource="{Binding Rows}" SelectionMode="None" SafeArea.PageMargin="True">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="OperationRow">
+                    <VerticalStackLayout Padding="0,10" Spacing="4">
+                        <Label Text="{Binding Title}" FontSize="14" FontAttributes="Bold" LineBreakMode="MiddleTruncation" />
+                        <ProgressBar Progress="{Binding Progress}" IsVisible="{Binding ShowsProgress}" />
+                        <Label Text="{Binding Detail}" FontSize="12" Opacity="0.65" />
+                        <HorizontalStackLayout>
+                            <Button Text="{String Operations.Pause}" Style="{StaticResource Action}" IsVisible="{Binding CanPause}"
+                                    Command="{Binding PauseCommand, Source={RelativeSource AncestorType={x:Type OperationsPageViewModel}}}" CommandParameter="{Binding .}" />
+                            <Button Text="{String Operations.Continue}" Style="{StaticResource Action}" IsVisible="{Binding CanContinue}"
+                                    Command="{Binding ContinueCommand, Source={RelativeSource AncestorType={x:Type OperationsPageViewModel}}}" CommandParameter="{Binding .}" />
+                            <Button Text="{Binding ResumeText}" Style="{StaticResource Action}" IsVisible="{Binding CanResume}"
+                                    Command="{Binding ResumeCommand, Source={RelativeSource AncestorType={x:Type OperationsPageViewModel}}}" CommandParameter="{Binding .}" />
+                            <Button Text="{String Operations.Up}" Style="{StaticResource Action}" IsVisible="{Binding CanReorder}"
+                                    Command="{Binding MoveUpCommand, Source={RelativeSource AncestorType={x:Type OperationsPageViewModel}}}" CommandParameter="{Binding .}" />
+                            <Button Text="{String Operations.Down}" Style="{StaticResource Action}" IsVisible="{Binding CanReorder}"
+                                    Command="{Binding MoveDownCommand, Source={RelativeSource AncestorType={x:Type OperationsPageViewModel}}}" CommandParameter="{Binding .}" />
+                            <Button Text="{String Operations.Cancel}" Style="{StaticResource Action}" IsVisible="{Binding CanCancel}"
+                                    Command="{Binding CancelCommand, Source={RelativeSource AncestorType={x:Type OperationsPageViewModel}}}" CommandParameter="{Binding .}" />
+                            <Button Text="{String Operations.Show}" Style="{StaticResource Action}"
+                                    Command="{Binding ShowCommand, Source={RelativeSource AncestorType={x:Type OperationsPageViewModel}}}" CommandParameter="{Binding .}" />
+                            <Button Text="{String Operations.Remove}" Style="{StaticResource Action}" IsVisible="{Binding CanRemove}"
+                                    Command="{Binding RemoveCommand, Source={RelativeSource AncestorType={x:Type OperationsPageViewModel}}}" CommandParameter="{Binding .}" />
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+        <Label Text="{String Operations.Empty}" IsVisible="{Binding IsEmpty}" Opacity="0.5" HorizontalTextAlignment="Center" VerticalTextAlignment="Center" />
+    </Grid>
+
+</SpinePage>

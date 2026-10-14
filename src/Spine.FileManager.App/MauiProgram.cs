@@ -39,7 +39,8 @@ public static class MauiProgram
         );
         builder.Services.AddSingleton<IStorageProvider, FileSystemStorageProvider>();
         builder.Services.AddSingleton<StorageProviders>();
-        builder.Services.AddSingleton<Operations.OperationQueue>();
+        builder.Services.AddSingleton(services => new Operations.OperationQueue(
+            services.GetRequiredService<StorageProviders>(), new Operations.OperationJournal(Path.Combine(AppPaths.Data, "operations"))));
         builder.Services.AddSingleton(new Favorites.FavoritesStore(Path.Combine(AppPaths.Data, "favorites.json")));
 
 #if DEBUG
