@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Plugin.Maui.Spine.Extensions;
+using Spine.FileManager.Services;
 using Spine.FileManager.Storage.FileSystem;
 
 namespace Spine.FileManager;
@@ -39,6 +40,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IStorageProvider, FileSystemStorageProvider>();
         builder.Services.AddSingleton<StorageProviders>();
         builder.Services.AddSingleton<Operations.OperationQueue>();
+        builder.Services.AddSingleton(new Favorites.FavoritesStore(Path.Combine(AppPaths.Data, "favorites.json")));
 
 #if DEBUG
         builder.Logging.AddDebug();

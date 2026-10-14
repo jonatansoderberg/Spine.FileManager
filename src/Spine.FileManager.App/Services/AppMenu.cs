@@ -58,6 +58,7 @@ public static class AppMenu
             Item("Menu.Open", vm.ActivateCommand, mac ? command : KeyboardAcceleratorModifiers.None, mac ? "O" : "Enter"),
             Item("Menu.Rename", vm.RenameCommand, KeyboardAcceleratorModifiers.None, mac ? "Enter" : "F2"),
             Item("Menu.Duplicate", vm.DuplicateCommand, command, mac ? "D" : null),
+            Item("Menu.AddFavorite", vm.AddFavoriteCommand, command | KeyboardAcceleratorModifiers.Ctrl, mac ? "T" : null),
             new MenuFlyoutSeparator(),
             Item("Menu.Delete", vm.DeleteCommand, mac ? command : KeyboardAcceleratorModifiers.None, mac ? "Back" : "Delete"),
             Item("Menu.DeletePermanently", vm.DeletePermanentlyCommand, mac ? command | KeyboardAcceleratorModifiers.Alt : KeyboardAcceleratorModifiers.Shift, mac ? "Back" : "Delete")));

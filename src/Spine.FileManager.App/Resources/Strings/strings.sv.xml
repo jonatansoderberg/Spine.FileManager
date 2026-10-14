@@ -88,4 +88,9 @@
   <s key="Conflict.KeepBothAll">Behåll båda för alla</s>
   <s key="Conflict.SkipAll">Hoppa över alla</s>
   <s key="Conflict.Stop">Stoppa</s>
+  <s key="Explorer.Favorites">Favoriter</s>
+  <s key="Explorer.FavoritesHint">Högerklicka på en mapp och välj Lägg till i favoriter.</s>
+  <s key="Menu.AddFavorite">Lägg till i favoriter</s>
+  <s key="Menu.RemoveFavorite">Ta bort från favoriter</s>
+  <s key="Explorer.Error.FavoriteFolder">Bara mappar kan vara favoriter.</s>
 </strings>

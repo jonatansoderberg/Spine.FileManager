@@ -1,7 +1,11 @@
 using System.Collections.ObjectModel;
 using Plugin.Maui.Spine.Common;
 using Spine.FileManager.Explorer;
+using Spine.FileManager.Favorites;
 using Spine.FileManager.Operations;
+using MenuAction = Plugin.Maui.Spine.Core.MenuAction;
+using MenuItems = Plugin.Maui.Spine.Core.MenuItems;
+using MenuSection = Plugin.Maui.Spine.Core.MenuSection;
 using Spine.FileManager.Services;
 
 namespace Spine.FileManager.Pages;
@@ -18,6 +22,27 @@ public sealed partial class PlaceRow(StorageRoot root) : ObservableObject
         StorageRootKind.Volume or StorageRootKind.RemovableVolume or StorageRootKind.NetworkVolume => "drive.png",
         _ => "folder.png",
     };
+
+    [ObservableProperty]
+    public partial bool IsCurrent { get; set; }
+}
+
+public sealed partial class FavoriteRow(Favorite favorite) : ObservableObject
+{
+    private static readonly ImageSource FolderIcon = "folder.png";
+
+    public Favorite Favorite { get; } = favorite;
+
+    public string Name => Favorite.Name;
+
+    public ImageSource Icon => FolderIcon;
+
+    /// <summary>False while the folder is gone, offline or unreachable; the row stays, dimmed.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Dimmed))]
+    public partial bool IsAvailable { get; set; } = true;
+
+    public double Dimmed => IsAvailable ? 1 : 0.4;
 
     [ObservableProperty]
     public partial bool IsCurrent { get; set; }
@@ -87,9 +112,14 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     private readonly INavigationService _navigation;
     private readonly OperationQueue _operations;
+    private readonly FavoritesStore _favorites;
 
-    public ExplorerPageViewModel(ISpineStrings strings, StorageProviders providers, INavigationService navigation, OperationQueue operations)
+    public ExplorerPageViewModel(ISpineStrings strings, StorageProviders providers, INavigationService navigation, OperationQueue operations, FavoritesStore favorites)
     {
+        _favorites = favorites;
+        _favorites.Changed += () => MainThread.BeginInvokeOnMainThread(() => _ = LoadFavorites());
+        BuildMenus(strings);
+        strings.Changed += (_, _) => BuildMenus(strings);
         _strings = strings;
         _providers = providers;
         _navigation = navigation;
@@ -100,6 +130,130 @@ public partial class ExplorerPageViewModel : ViewModelBase
     }
 
     public ObservableCollection<PlaceRow> Places { get; } = [];
+
+    public ObservableCollection<FavoriteRow> Favorites { get; } = [];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNoFavorites))]
+    public partial double FavoritesHeight { get; private set; }
+
+    public bool HasNoFavorites => FavoritesHeight == 0;
+
+    /// <summary>The right-click (long-press) menu of a row in the list; the row is its parameter.</summary>
+    [ObservableProperty]
+    public partial MenuItems RowMenu { get; private set; } = [];
+
+    [ObservableProperty]
+    public partial MenuItems FavoriteMenu { get; private set; } = [];
+
+    private void BuildMenus(ISpineStrings strings)
+    {
+        RowMenu =
+        [
+            new MenuSection
+            {
+                new MenuAction(strings["Menu.Open"], null, RowOpenCommand),
+                new MenuAction(strings["Menu.AddFavorite"], "Star.svg", RowFavoriteCommand),
+            },
+            new MenuSection
+            {
+                new MenuAction(strings["Menu.Rename"], "Edit.svg", RowRenameCommand),
+                new MenuAction(strings["Menu.Copy"], "Copy.svg", RowCopyCommand),
+                new MenuAction(strings["Menu.Cut"], null, RowCutCommand),
+                new MenuAction(strings["Menu.Duplicate"], null, RowDuplicateCommand),
+            },
+            new MenuAction(strings["Menu.Delete"], "Trashcan.svg", RowDeleteCommand) { IsDestructive = true },
+        ];
+        FavoriteMenu =
+        [
+            new MenuAction(strings["Menu.Open"], null, OpenFavoriteCommand),
+            new MenuAction(strings["Menu.RemoveFavorite"], "Unpin.svg", RemoveFavoriteCommand) { IsDestructive = true },
+        ];
+    }
+
+    private async Task LoadFavorites()
+    {
+        Favorites.Clear();
+        foreach (var favorite in _favorites.Items)
+            Favorites.Add(new FavoriteRow(favorite) { IsCurrent = favorite.Location.Equals(Current) });
+        FavoritesHeight = Favorites.Count * 30;
+        foreach (var row in Favorites.ToList())
+            row.IsAvailable = await IsReachable(row.Favorite.Location);
+    }
+
+    private async Task<bool> IsReachable(StorageLocation location)
+    {
+        try
+        {
+            // A share or a cloud folder that hangs counts as unavailable rather than holding the sidebar.
+            var item = await _providers[location].GetItemAsync(location).WaitAsync(TimeSpan.FromSeconds(3));
+            return item.IsFolder;
+        }
+        catch (Exception e) when (e is StorageException or TimeoutException)
+        {
+            return false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenFavorite(FavoriteRow row)
+    {
+        if (await IsReachable(row.Favorite.Location))
+            await Navigate(row.Favorite.Location);
+        else
+        {
+            row.IsAvailable = false;
+            Error = _strings.Get("Explorer.Error.Unavailable", row.Favorite.Location.DisplayPath);
+        }
+    }
+
+    [RelayCommand]
+    private void RemoveFavorite(FavoriteRow row) => _favorites.Remove(row.Favorite.Location);
+
+    [RelayCommand]
+    private void SaveFavoriteOrder() => _favorites.Reorder(Favorites.Select(f => f.Favorite.Location));
+
+    [RelayCommand]
+    private void AddFavorite()
+    {
+        var items = SelectedItems.ToList();
+        var folders = items.Count > 0 ? items.Where(i => i.IsFolder).ToList() : Current is { } here ? [new StorageItem(here, Path.GetFileName(here.DisplayPath.TrimEnd(Path.DirectorySeparatorChar)), StorageItemKind.Folder) { DisplayName = Segments.LastOrDefault()?.Name ?? here.DisplayPath }] : [];
+        if (folders.Count == 0)
+        {
+            Error = _strings["Explorer.Error.FavoriteFolder"];
+            return;
+        }
+        foreach (var folder in folders)
+            _favorites.Add(folder.Location, folder.DisplayName);
+    }
+
+    // A right-click on a row that is not selected selects it alone first, as Finder and Explorer do.
+    private void Pick(ItemRow row)
+    {
+        if (!row.IsSelected)
+            Tap(row);
+    }
+
+    [RelayCommand]
+    private Task RowOpen(ItemRow row) { Pick(row); return Activate(row); }
+
+    [RelayCommand]
+    private void RowFavorite(ItemRow row) { Pick(row); AddFavorite(); }
+
+    [RelayCommand]
+    private Task RowRename(ItemRow row) { Pick(row); return Rename(); }
+
+    [RelayCommand]
+    private void RowCopy(ItemRow row) { Pick(row); Copy(); }
+
+    [RelayCommand]
+    private void RowCut(ItemRow row) { Pick(row); Cut(); }
+
+    [RelayCommand]
+    private void RowDuplicate(ItemRow row) { Pick(row); Duplicate(); }
+
+    [RelayCommand]
+    private Task RowDelete(ItemRow row) { Pick(row); return Delete(); }
 
     [ObservableProperty]
     public partial IReadOnlyList<BreadcrumbSegment> Segments { get; private set; } = [];
@@ -167,6 +321,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
     {
         if (Places.Count > 0)
             return;
+        await LoadFavorites();
         foreach (var provider in _providers.All)
             foreach (var root in await provider.GetRootsAsync())
                 Places.Add(new(root));
@@ -456,6 +611,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
         CanGoForward = _history.CanGoForward;
         foreach (var place in Places)
             place.IsCurrent = place.Root.Location.Equals(location);
+        foreach (var favorite in Favorites)
+            favorite.IsCurrent = favorite.Favorite.Location.Equals(location);
         Error = null;
         IsLoading = true;
         if (changedFolder)
