@@ -36,4 +36,18 @@ public sealed class BreadcrumbTests : IDisposable
         var withHidden = await Breadcrumb.SubfoldersAsync(_provider, root, includeHidden: true);
         Assert.Equal(3, withHidden.Count);
     }
+
+    [Fact]
+    public void A_bar_keeps_the_segments_the_next_folder_shares_with_it()
+    {
+        var b = Breadcrumb.Segments(_provider, FileSystemStorageProvider.Location(_temp.Folder("a/b")));
+        var c = Breadcrumb.Segments(_provider, FileSystemStorageProvider.Location(_temp.Folder("a/c")));
+        var deeper = Breadcrumb.Segments(_provider, FileSystemStorageProvider.Location(_temp.Folder("a/b/d")));
+
+        Assert.Equal(b.Count - 1, Breadcrumb.Shared(b, c));
+        Assert.Equal(b.Count, Breadcrumb.Shared(b, deeper));
+        Assert.Equal(b.Count, Breadcrumb.Shared(deeper, b));
+        Assert.Equal(b.Count, Breadcrumb.Shared(b, b));
+        Assert.Equal(0, Breadcrumb.Shared([], b));
+    }
 }

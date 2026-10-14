@@ -21,6 +21,7 @@ Plan step B6. MAUI's drag and drop gestures on the tab bar, with the dragged tab
 - The tab bar always shows, at a fixed height.
 - New windows are resized by a point and back once on screen, which makes them draw right (`ExplorerWindows.SettleLayout`).
 - Restored and background tabs keep their folder in the saved session; before, every restart dropped all tabs but the active one's window state.
+- Breadcrumb (asked for during testing): the bar keeps the segments the new folder shares with it, from the root down, and replaces only the rest; only new segments, and drop-downs read with the other hidden-files setting, are read again (`Breadcrumb.Shared`, one test).
 
 ## Decisions
 - **The tab drags an empty `NSItemProvider`.** By default MAUI makes a picture of the view, which Finder would accept as an image file. Nothing outside the app can take the tab.

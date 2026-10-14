@@ -84,6 +84,9 @@ public sealed partial class BreadcrumbSegment(StorageLocation location, string n
     /// </summary>
     [ObservableProperty]
     public partial Plugin.Maui.Spine.Core.MenuItems? Children { get; set; }
+
+    /// <summary>Whether <see cref="Children"/> lists hidden folders.</summary>
+    public bool ChildrenWithHidden { get; set; }
 }
 
 /// <summary>How a list's rows are worded: the culture and the kind names, shared by every row of one listing.</summary>
@@ -543,8 +546,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
     [RelayCommand]
     private Task RowDelete(ItemRow row) { Pick(row); return Delete(); }
 
-    [ObservableProperty]
-    public partial IReadOnlyList<BreadcrumbSegment> Segments { get; private set; } = [];
+    public ObservableCollection<BreadcrumbSegment> Segments { get; } = [];
 
     [ObservableProperty]
     public partial IReadOnlyList<ItemRow> Rows { get; private set; } = [];
@@ -1212,26 +1214,35 @@ public partial class ExplorerPageViewModel : ViewModelBase
         }
     }
 
-    // The segments show at once with their file names; display names and each segment's subfolders follow.
+    // Only the segments that differ change: the bar keeps those the new location shares with it, from the root down,
+    // names and drop-downs already read. New segments show at once with their file names; their display names and
+    // subfolders follow, as do the drop-downs not read yet or read with the other hidden-files setting.
     private async Task BuildBreadcrumb(IStorageProvider provider, StorageLocation location)
     {
-        var segments = Breadcrumb.Segments(provider, location)
-            .Select(l => new BreadcrumbSegment(l, Path.GetFileName(l.DisplayPath.TrimEnd(Path.DirectorySeparatorChar)) is { Length: > 0 } name ? name : l.DisplayPath))
-            .ToList();
-        Segments = segments;
+        var locations = Breadcrumb.Segments(provider, location);
+        var kept = Breadcrumb.Shared([.. Segments.Select(s => s.Location)], locations);
+        while (Segments.Count > kept)
+            Segments.RemoveAt(Segments.Count - 1);
+        foreach (var added in locations.Skip(kept))
+            Segments.Add(new(added, Path.GetFileName(added.DisplayPath.TrimEnd(Path.DirectorySeparatorChar)) is { Length: > 0 } name ? name : added.DisplayPath));
         var tab = _tabs.Active;
-        foreach (var segment in segments)
+        var last = Segments[^1];
+        if (last.Children is not null)
+            tab.Title = last.Name;
+        var showHidden = ShowHidden;
+        foreach (var segment in Segments.Where(s => s.Children is null || s.ChildrenWithHidden != showHidden).ToList())
         {
             if (!location.Equals(Current))
                 return;
             try
             {
                 segment.Name = (await provider.GetItemAsync(segment.Location)).DisplayName;
-                if (segment == segments[^1] && tab.Location?.Equals(location) == true)
+                if (segment == last && tab.Location?.Equals(location) == true)
                     tab.Title = segment.Name;
                 var menu = new Plugin.Maui.Spine.Core.MenuItems();
-                foreach (var folder in await Breadcrumb.SubfoldersAsync(provider, segment.Location, ShowHidden))
+                foreach (var folder in await Breadcrumb.SubfoldersAsync(provider, segment.Location, showHidden))
                     menu.Add(new Plugin.Maui.Spine.Core.MenuAction(folder.DisplayName, "folder.svg", OpenLocationCommand) { CommandParameter = folder.Location });
+                segment.ChildrenWithHidden = showHidden;
                 segment.Children = menu;
             }
             catch (StorageException)
