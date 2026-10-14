@@ -1,6 +1,6 @@
 # Spine File Manager — Requirements and Plan
 
-**Last updated:** 2026-10-14 — tab drag (#41); Spike 5 identity and pairing (#36); preview (#34), filter (#32), Dual Pane (#23 part 1), last session (#25 part 1), windows (#22), terminal (#24), tabs (#21), journal (#20); milestone A done on the Mac; Windows (#3) compiled only.
+**Last updated:** 2026-10-14 — Spike 6 transport (#37); tab drag (#41); Spike 5 identity and pairing (#36); preview (#34), filter (#32), Dual Pane (#23 part 1), last session (#25 part 1), windows (#22), terminal (#24), tabs (#21), journal (#20); milestone A done on the Mac; Windows (#3) compiled only.
 
 A living plan. Each step links its GitHub issue once it has one; update the status, the decisions and the line above in the same PR as the work.
 
@@ -96,7 +96,7 @@ Result: Explorer/Finder plus Edge/Commander productivity.
 ### Milestone C — Device Fabric
 Result: AirDrop-like transfer with robust resume.
 
-Node identity (§19) ✅ · Spike 5 — QR pairing (§20) ✅ [#36](https://github.com/jonatansoderberg/Spine.FileManager/issues/36) · Spike 6 — transport [#37](https://github.com/jonatansoderberg/Spine.FileManager/issues/37) · Other Devices UI [#38](https://github.com/jonatansoderberg/Spine.FileManager/issues/38) · LAN discovery [#39](https://github.com/jonatansoderberg/Spine.FileManager/issues/39) · Other Devices (§21) · connection lifetime · names/aliases · LAN discovery (§22) · Spike 6 — transport (§23) · transfer engine · retry/resume (§27) · distributed Operation Center (§26).
+Node identity (§19) ✅ · Spike 5 — QR pairing (§20) ✅ [#36](https://github.com/jonatansoderberg/Spine.FileManager/issues/36) · Spike 6 — transport ✅ [#37](https://github.com/jonatansoderberg/Spine.FileManager/issues/37) · Other Devices UI [#38](https://github.com/jonatansoderberg/Spine.FileManager/issues/38) · LAN discovery [#39](https://github.com/jonatansoderberg/Spine.FileManager/issues/39) · Other Devices (§21) · connection lifetime · names/aliases · LAN discovery (§22) · Spike 6 — transport (§23) · transfer engine · retry/resume (§27) · distributed Operation Center (§26).
 
 ### Milestone D — Remote Explorer
 Result: other computers feel like more storage providers.
@@ -430,3 +430,4 @@ Or workspace "Spine": pane 1 Maui.Spine, pane 2 Spine.FileManager, pane 3 build 
 - **2026-10-14 — Working mode while Jonatan is away:** Claude merges its own PRs once a step builds and is verified on the platforms it can run; Jonatan reviews afterwards and fixes go in new PRs. Spine gaps are solved in this repository first and noted in the capability map as Spine candidates; Maui.Spine is not touched.
 - **2026-10-14 — The explorer's default view is a details list with a sidebar**, like Windows Explorer: sidebar with Favorites and locations, breadcrumb on top, columns Name, Date modified, Size and Kind; an icon grid as the alternative view.
 - **2026-10-14 — Delete moves to the system's Trash / Recycle Bin;** Shift+Delete deletes permanently after a confirmation. Where a provider has no trash (SAF, MTP, network shares without one) the app asks first and says it is permanent.
+- **2026-10-14 — Device transfer runs over TCP + TLS 1.3 with mutual node-key certificates, not QUIC** (Spike 6, `docs/spikes/transport.md`): `System.Net.Quic` is not supported on the Mac, iOS or Android. Files go as offer / accept-from-offset / bytes / verified, with part files and SHA-256, so a cut transfer resumes.
