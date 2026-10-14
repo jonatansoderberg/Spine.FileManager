@@ -16,13 +16,21 @@ public partial class ExplorerPage
     public ExplorerPage()
     {
         InitializeComponent();
+#if MACCATALYST
+        // With the window's material the sidebar shows the desktop through it; the files keep a solid background.
+        if (WindowMaterial.IsOn)
+        {
+            Sidebar.BackgroundColor = Colors.Transparent;
+            Pane.SetAppThemeColor(BackgroundColorProperty, Colors.White, Color.FromArgb("#1E1E1E"));
+        }
+#endif
         SizeChanged += (_, _) =>
         {
             if (BindingContext is ExplorerPageViewModel vm)
             {
                 vm.IsWide = Width >= 640;
                 var paneWidth = vm.IsSplit ? Root.ColumnDefinitions[3].Width.Value : 0;
-                vm.GridSpan = Math.Max(2, (int)((Width - (vm.ShowsSidebar ? 210 : 0) - paneWidth) / 104));
+                vm.GridSpan = Math.Max(2, (int)((Width - (vm.ShowsSidebar ? vm.SidebarWidth : 0) - paneWidth) / 104));
             }
         };
         Loaded += (_, _) =>
@@ -299,7 +307,7 @@ public partial class ExplorerPage
             vm.Partner = partner;
             partner.Start(null, 0, vm.Current);
             partner.TitleBarHeight = vm.TitleBarHeight;
-            Root.ColumnDefinitions[3].Width = new GridLength(Math.Max(320, (Width - (vm.ShowsSidebar ? 210 : 0)) / 2));
+            Root.ColumnDefinitions[3].Width = new GridLength(Math.Max(320, (Width - (vm.ShowsSidebar ? vm.SidebarWidth : 0)) / 2));
             SecondPane.Content = second;
             _ = partner.OnAppearingAsync(NavigationDirection.NavigateTo);
             partner.Focus();
@@ -321,6 +329,29 @@ public partial class ExplorerPage
 
     // A click in the list gives it the keyboard (arrows, Return, Space, typing); a click in a text field takes it back.
     private void OnListPressed(object? sender, PointerEventArgs e) => Keys.Activate();
+
+    private double _gripStart;
+
+    // A grip resizes the part its ClassId names: the sidebar, the preview (its left edge, so it grows to the left) or
+    // a list column. The width is kept when the drag ends.
+    private void OnGripPanned(object? sender, PanUpdatedEventArgs e)
+    {
+        if (sender is not Element { ClassId: { } part } || BindingContext is not ExplorerPageViewModel vm)
+            return;
+        var direction = part == nameof(ExplorerPageViewModel.PreviewWidth) ? -1 : 1;
+        switch (e.StatusType)
+        {
+            case GestureStatus.Started:
+                _gripStart = vm.Width(part);
+                break;
+            case GestureStatus.Running:
+                vm.Resize(part, _gripStart + direction * e.TotalX, keep: false);
+                break;
+            case GestureStatus.Completed:
+                vm.Resize(part, vm.Width(part), keep: true);
+                break;
+        }
+    }
 
     private void OnSplitterPanned(object? sender, PanUpdatedEventArgs e)
     {

@@ -179,4 +179,8 @@
   <s key="Menu.Icons.Spine">Spine</s>
   <s key="Menu.Icons.System">Systemets</s>
   <s key="Menu.Icons.OpenThemes">Öppna mappen för ikonteman</s>
+  <s key="Menu.Appearance">Utseende</s>
+  <s key="Menu.Appearance.System">Som systemet</s>
+  <s key="Menu.Appearance.Light">Ljust</s>
+  <s key="Menu.Appearance.Dark">Mörkt</s>
 </strings>

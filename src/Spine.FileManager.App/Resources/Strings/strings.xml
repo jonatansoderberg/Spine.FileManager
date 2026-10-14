@@ -179,4 +179,8 @@
   <s key="Menu.Icons.Spine">Spine</s>
   <s key="Menu.Icons.System">System</s>
   <s key="Menu.Icons.OpenThemes">Open Icon Themes Folder</s>
+  <s key="Menu.Appearance">Appearance</s>
+  <s key="Menu.Appearance.System">Match System</s>
+  <s key="Menu.Appearance.Light">Light</s>
+  <s key="Menu.Appearance.Dark">Dark</s>
 </strings>

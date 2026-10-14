@@ -73,6 +73,24 @@ public static class AppMenu
             return item;
         }
 
+        // View › Appearance: light, dark or the system's, through Spine's theme service, which keeps the choice.
+        MenuFlyoutSubItem Appearance()
+        {
+            var appearance = new MenuFlyoutSubItem { Text = strings["Menu.Appearance"] };
+            var theme = IPlatformApplication.Current!.Services.GetRequiredService<IThemeService>();
+            foreach (var (key, choice) in new[] { ("Menu.Appearance.System", AppTheme.Unspecified), ("Menu.Appearance.Light", AppTheme.Light), ("Menu.Appearance.Dark", AppTheme.Dark) })
+                appearance.Add(new MenuFlyoutItem
+                {
+                    Text = (theme.Current == choice ? "✓ " : "") + strings[key],
+                    Command = new Command(() =>
+                    {
+                        theme.Current = choice;
+                        Build(host, vm, strings);
+                    }),
+                });
+            return appearance;
+        }
+
         // View › Icons: Spine's, the system's, and the icon themes the user has added; the one in use has a check mark.
         MenuFlyoutSubItem Icons()
         {
@@ -150,6 +168,7 @@ public static class AppMenu
             Item("Menu.SortSize", x => x.SortByCommand, KeyboardAcceleratorModifiers.None, null, "Size"),
             Item("Menu.SortKind", x => x.SortByCommand, KeyboardAcceleratorModifiers.None, null, "Kind"),
             new MenuFlyoutSeparator(),
+            Appearance(),
             Icons()));
         host.MenuBarItems.Add(Menu("Menu.Go",
             Item("Menu.Back", x => x.BackCommand, mac ? command : KeyboardAcceleratorModifiers.Alt, mac ? "[" : "Left"),

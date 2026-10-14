@@ -22,6 +22,19 @@ public static class MauiProgram
                 options.Windows.MinWidth = 480;
                 options.Windows.MinHeight = 360;
                 options.Windows.PersistWindowPosition = true;
+                // Windows 11's Mica behind the window, following light and dark (the Mac's material: WindowMaterial).
+                options.Windows.Backdrop = WindowBackdrop.Mica;
+                // A tray icon with the shortcuts (ShortcutHandler). Closing the window keeps the app running in the
+                // background, so other devices can still send files and transfers go on.
+                options.Shortcuts.UseHandler<ShortcutHandler>();
+                options.MacOS.ShowTrayIcon = true;
+                options.MacOS.TrayIconSvg = "tray.svg";
+                options.MacOS.TrayIconTooltip = "Spine File Manager";
+                options.MacOS.CloseToBackground = true;
+                options.Windows.ShowTrayIcon = true;
+                options.Windows.TrayIconSvg = "tray.svg";
+                options.Windows.TrayIconTooltip = "Spine File Manager";
+                options.Windows.CloseToBackground = true;
             })
             .ConfigureLifecycleEvents(events =>
             {

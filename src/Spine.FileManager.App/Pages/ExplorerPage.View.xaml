@@ -47,6 +47,29 @@
             <Setter Property="SvgImageSource.LightTintColor" Value="{StaticResource Accent}" />
             <Setter Property="SvgImageSource.DarkTintColor" Value="{StaticResource AccentDark}" />
         </Style>
+        <Style x:Key="SortChevron" TargetType="ImageButton">
+            <Setter Property="WidthRequest" Value="18" />
+            <Setter Property="HeightRequest" Value="18" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="BackgroundColor" Value="Transparent" />
+            <Setter Property="InputTransparent" Value="True" />
+            <Setter Property="VerticalOptions" Value="Center" />
+            <Setter Property="Opacity" Value="0.65" />
+            <Setter Property="SvgImageSource.EnableSvg" Value="True" />
+            <Setter Property="SvgImageSource.LightTintColor" Value="#1B1B1B" />
+            <Setter Property="SvgImageSource.DarkTintColor" Value="#E8E8E8" />
+        </Style>
+        <!-- A thin line to drag, with a wider transparent edge to hit. -->
+        <Style x:Key="Grip" TargetType="Grid">
+            <Setter Property="WidthRequest" Value="8" />
+            <Setter Property="BackgroundColor" Value="Transparent" />
+        </Style>
+        <Style x:Key="GripLine" TargetType="BoxView">
+            <Setter Property="WidthRequest" Value="1" />
+            <Setter Property="Margin" Value="0,7" />
+            <Setter Property="HorizontalOptions" Value="Center" />
+            <Setter Property="Color" Value="{AppThemeBinding Light=#D5D7DB, Dark=#3A3C40}" />
+        </Style>
         <Style x:Key="Crumb" TargetType="Button">
             <Setter Property="FontSize" Value="13" />
             <Setter Property="Padding" Value="6,0" />
@@ -77,7 +100,7 @@
         </Grid.GestureRecognizers>
 
         <!-- Sidebar: favorites (reorderable, right-click to remove), then the places. -->
-        <Grid WidthRequest="210" IsVisible="{Binding ShowsSidebar}" Padding="{Binding SidebarPadding}" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*"
+        <Grid x:Name="Sidebar" WidthRequest="{Binding SidebarWidth}" IsVisible="{Binding ShowsSidebar}" Padding="{Binding SidebarPadding}" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*"
               BackgroundColor="{AppThemeBinding Light=#F3F4F6, Dark=#1E1F22}">
             <Label Text="{String Explorer.Favorites}" FontSize="12" Opacity="0.6" Padding="16,12,16,4" />
             <CollectionView Grid.Row="1" ItemsSource="{Binding Favorites}" SelectionMode="None" HeightRequest="{Binding FavoritesHeight}"
@@ -155,7 +178,12 @@
                     HorizontalOptions="Start" BackgroundColor="Transparent" TextColor="{AppThemeBinding Light=#2F6FEB, Dark=#7FA6F5}" />
         </Grid>
 
-        <Grid Grid.Column="1" RowDefinitions="Auto,Auto,Auto,*,Auto" ColumnDefinitions="*,Auto">
+        <!-- The sidebar's right edge resizes it. -->
+        <Grid Style="{StaticResource Grip}" HorizontalOptions="End" Margin="0,0,-4,0" ZIndex="1" IsVisible="{Binding ShowsSidebar}" ClassId="SidebarWidth">
+            <Grid.GestureRecognizers><PanGestureRecognizer PanUpdated="OnGripPanned" /></Grid.GestureRecognizers>
+        </Grid>
+
+        <Grid x:Name="Pane" Grid.Column="1" RowDefinitions="Auto,Auto,Auto,*,Auto" ColumnDefinitions="*,Auto">
             <Grid.GestureRecognizers>
                 <PointerGestureRecognizer PointerPressed="OnPanePressed" />
                 <!-- Files dropped anywhere else in the pane go to the folder shown; a CollectionView takes no drop itself. -->
@@ -263,19 +291,49 @@
                    TextColor="{AppThemeBinding Light=#B3261E, Dark=#F2B8B5}" BackgroundColor="{AppThemeBinding Light=#FDECEA, Dark=#3B1F1E}" />
 
             <!-- Column headers: a click sorts, a second click reverses. -->
+            <!-- Column headers: a click sorts, a second click reverses; the sorted column shows a chevron. The grip on a
+                 column's right edge resizes it; Name takes what is left. -->
             <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto,Auto" Padding="8,0" IsVisible="{Binding IsList}">
-                <Label Text="{Binding NameHeader}" Style="{StaticResource ColumnHeader}" Padding="38,6,8,6">
-                    <Label.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Name" /></Label.GestureRecognizers>
-                </Label>
-                <Label Grid.Column="1" Text="{Binding ModifiedHeader}" Style="{StaticResource ColumnHeader}" WidthRequest="160" IsVisible="{Binding HasColumns}">
-                    <Label.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Modified" /></Label.GestureRecognizers>
-                </Label>
-                <Label Grid.Column="2" Text="{Binding SizeHeader}" Style="{StaticResource ColumnHeader}" WidthRequest="90" HorizontalTextAlignment="End">
-                    <Label.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Size" /></Label.GestureRecognizers>
-                </Label>
-                <Label Grid.Column="3" Text="{Binding KindHeader}" Style="{StaticResource ColumnHeader}" WidthRequest="130" IsVisible="{Binding HasColumns}">
-                    <Label.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Kind" /></Label.GestureRecognizers>
-                </Label>
+                <Grid  Padding="38,0,0,0" ColumnDefinitions="*,Auto">
+                    <Grid.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Name" /></Grid.GestureRecognizers>
+                    <HorizontalStackLayout Spacing="0">
+                        <Label Text="{String Explorer.Column.Name}" Style="{StaticResource ColumnHeader}" Padding="8,6,2,6" />
+                        <ImageButton Style="{StaticResource SortChevron}" SvgImageSource.Svg="{Binding NameChevron}" IsVisible="{Binding NameChevron, Converter={StaticResource HasValue}}" />
+                    </HorizontalStackLayout>
+                </Grid>
+                <Grid Grid.Column="1" WidthRequest="{Binding ModifiedWidth}" IsVisible="{Binding HasColumns}" ColumnDefinitions="*,Auto">
+                    <Grid.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Modified" /></Grid.GestureRecognizers>
+                    <HorizontalStackLayout Spacing="0">
+                        <Label Text="{String Explorer.Column.Modified}" Style="{StaticResource ColumnHeader}" Padding="8,6,2,6" />
+                        <ImageButton Style="{StaticResource SortChevron}" SvgImageSource.Svg="{Binding ModifiedChevron}" IsVisible="{Binding ModifiedChevron, Converter={StaticResource HasValue}}" />
+                    </HorizontalStackLayout>
+                    <Grid Grid.Column="1" Style="{StaticResource Grip}" ClassId="ModifiedWidth">
+                        <Grid.GestureRecognizers><PanGestureRecognizer PanUpdated="OnGripPanned" /></Grid.GestureRecognizers>
+                        <BoxView Style="{StaticResource GripLine}" />
+                    </Grid>
+                </Grid>
+                <Grid Grid.Column="2" WidthRequest="{Binding SizeWidth}" ColumnDefinitions="*,Auto">
+                    <Grid.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Size" /></Grid.GestureRecognizers>
+                    <HorizontalStackLayout Spacing="0" HorizontalOptions="End">
+                        <Label Text="{String Explorer.Column.Size}" Style="{StaticResource ColumnHeader}" Padding="8,6,2,6" />
+                        <ImageButton Style="{StaticResource SortChevron}" SvgImageSource.Svg="{Binding SizeChevron}" IsVisible="{Binding SizeChevron, Converter={StaticResource HasValue}}" />
+                    </HorizontalStackLayout>
+                    <Grid Grid.Column="1" Style="{StaticResource Grip}" ClassId="SizeWidth">
+                        <Grid.GestureRecognizers><PanGestureRecognizer PanUpdated="OnGripPanned" /></Grid.GestureRecognizers>
+                        <BoxView Style="{StaticResource GripLine}" />
+                    </Grid>
+                </Grid>
+                <Grid Grid.Column="3" WidthRequest="{Binding KindWidth}" IsVisible="{Binding HasColumns}" ColumnDefinitions="*,Auto">
+                    <Grid.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Kind" /></Grid.GestureRecognizers>
+                    <HorizontalStackLayout Spacing="0">
+                        <Label Text="{String Explorer.Column.Kind}" Style="{StaticResource ColumnHeader}" Padding="8,6,2,6" />
+                        <ImageButton Style="{StaticResource SortChevron}" SvgImageSource.Svg="{Binding KindChevron}" IsVisible="{Binding KindChevron, Converter={StaticResource HasValue}}" />
+                    </HorizontalStackLayout>
+                    <Grid Grid.Column="1" Style="{StaticResource Grip}" ClassId="KindWidth">
+                        <Grid.GestureRecognizers><PanGestureRecognizer PanUpdated="OnGripPanned" /></Grid.GestureRecognizers>
+                        <BoxView Style="{StaticResource GripLine}" />
+                    </Grid>
+                </Grid>
             </Grid>
 
             <!-- Every row is one height; measuring only the first keeps a 100 000-row list from measuring them all. -->
@@ -304,9 +362,9 @@
                             </Grid.GestureRecognizers>
                             <Image Source="{Binding Icon}" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
                             <Label Grid.Column="1" Text="{Binding Name}" Style="{StaticResource Cell}" />
-                            <Label Grid.Column="2" Text="{Binding Modified}" Style="{StaticResource Cell}" Opacity="0.7" WidthRequest="160" IsVisible="{Binding HasColumns, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" />
-                            <Label Grid.Column="3" Text="{Binding Size}" Style="{StaticResource Cell}" Opacity="0.7" WidthRequest="90" HorizontalTextAlignment="End" />
-                            <Label Grid.Column="4" Text="{Binding Kind}" Style="{StaticResource Cell}" Opacity="0.7" WidthRequest="130" IsVisible="{Binding HasColumns, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" />
+                            <Label Grid.Column="2" Text="{Binding Modified}" Style="{StaticResource Cell}" Opacity="0.7" WidthRequest="{Binding ModifiedWidth, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" IsVisible="{Binding HasColumns, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" />
+                            <Label Grid.Column="3" Text="{Binding Size}" Style="{StaticResource Cell}" Opacity="0.7" WidthRequest="{Binding SizeWidth, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" HorizontalTextAlignment="End" />
+                            <Label Grid.Column="4" Text="{Binding Kind}" Style="{StaticResource Cell}" Opacity="0.7" WidthRequest="{Binding KindWidth, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" IsVisible="{Binding HasColumns, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" />
                         </Grid>
                     </DataTemplate>
                 </FileListView.ItemTemplate>
@@ -358,7 +416,7 @@
             </Grid>
 
             <!-- Preview: the selected item's picture (the system's thumbnail), its text and its facts. -->
-            <ScrollView Grid.Row="2" Grid.RowSpan="2" Grid.Column="1" WidthRequest="300" IsVisible="{Binding ShowsPreview}"
+            <ScrollView Grid.Row="2" Grid.RowSpan="2" Grid.Column="1" WidthRequest="{Binding PreviewWidth}" IsVisible="{Binding ShowsPreview}"
                         BackgroundColor="{AppThemeBinding Light=#F7F7F8, Dark=#1B1C1F}">
                 <VerticalStackLayout Padding="16" Spacing="10">
                     <Image Source="{Binding PreviewImage}" HeightRequest="220" Aspect="AspectFit" />
@@ -370,6 +428,11 @@
                     <Label Text="{String Preview.None}" IsVisible="{Binding PreviewTitle, Converter={StaticResource IsNull}}" FontSize="12" Opacity="0.5" HorizontalTextAlignment="Center" />
                 </VerticalStackLayout>
             </ScrollView>
+            <!-- The preview's left edge resizes it. -->
+            <Grid Grid.Row="2" Grid.RowSpan="2" Grid.Column="1" Style="{StaticResource Grip}" HorizontalOptions="Start" Margin="-4,0,0,0" IsVisible="{Binding ShowsPreview}" ClassId="PreviewWidth">
+                <Grid.GestureRecognizers><PanGestureRecognizer PanUpdated="OnGripPanned" /></Grid.GestureRecognizers>
+                <BoxView Style="{StaticResource GripLine}" Margin="0" />
+            </Grid>
 
             <!-- Operations the app found unfinished at start, waiting to be resumed. -->
             <Grid Grid.Row="4" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" Padding="16,4" IsVisible="{Binding ShowsInterrupted}"

@@ -786,7 +786,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
     public partial string Status { get; private set; } = "";
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(NameHeader), nameof(ModifiedHeader), nameof(SizeHeader), nameof(KindHeader))]
+    [NotifyPropertyChangedFor(nameof(NameChevron), nameof(ModifiedChevron), nameof(SizeChevron), nameof(KindChevron))]
     public partial ItemSort Sort { get; private set; } = new();
 
     [ObservableProperty]
@@ -966,15 +966,66 @@ public partial class ExplorerPageViewModel : ViewModelBase
     [ObservableProperty]
     public partial int GridSpan { get; set; } = 6;
 
-    public string NameHeader => Header("Explorer.Column.Name", SortColumn.Name);
-    public string ModifiedHeader => Header("Explorer.Column.Modified", SortColumn.Modified);
-    public string SizeHeader => Header("Explorer.Column.Size", SortColumn.Size);
-    public string KindHeader => Header("Explorer.Column.Kind", SortColumn.Kind);
+    // The column the list is sorted by shows a chevron: up ascending, down descending.
+    public string? NameChevron => Chevron(SortColumn.Name);
+    public string? ModifiedChevron => Chevron(SortColumn.Modified);
+    public string? SizeChevron => Chevron(SortColumn.Size);
+    public string? KindChevron => Chevron(SortColumn.Kind);
+
+    private string? Chevron(SortColumn column) =>
+        Sort.Column != column ? null : Sort.Descending ? "ChevronDown.svg" : "ChevronUp.svg";
+
+    /// <summary>The widths of the parts a user resizes, kept between runs; Name takes what the other columns leave.</summary>
+    [ObservableProperty]
+    public partial double SidebarWidth { get; set; } = Preferences.Get(nameof(SidebarWidth), 210.0);
+
+    [ObservableProperty]
+    public partial double PreviewWidth { get; set; } = Preferences.Get(nameof(PreviewWidth), 300.0);
+
+    [ObservableProperty]
+    public partial double ModifiedWidth { get; set; } = Preferences.Get(nameof(ModifiedWidth), 160.0);
+
+    [ObservableProperty]
+    public partial double SizeWidth { get; set; } = Preferences.Get(nameof(SizeWidth), 90.0);
+
+    [ObservableProperty]
+    public partial double KindWidth { get; set; } = Preferences.Get(nameof(KindWidth), 130.0);
+
+    /// <summary>Resizes one of the parts by the width's name, within its limits; <paramref name="keep"/> saves it for the next run.</summary>
+    public void Resize(string part, double width, bool keep)
+    {
+        var (min, max) = part switch
+        {
+            nameof(SidebarWidth) => (150.0, 400.0),
+            nameof(PreviewWidth) => (200.0, 600.0),
+            _ => (50.0, 400.0),
+        };
+        width = Math.Clamp(width, min, max);
+        switch (part)
+        {
+            case nameof(SidebarWidth): SidebarWidth = width; break;
+            case nameof(PreviewWidth): PreviewWidth = width; break;
+            case nameof(ModifiedWidth): ModifiedWidth = width; break;
+            case nameof(SizeWidth): SizeWidth = width; break;
+            case nameof(KindWidth): KindWidth = width; break;
+            default: return;
+        }
+        if (keep)
+            Preferences.Set(part, width);
+    }
+
+    public double Width(string part) => part switch
+    {
+        nameof(SidebarWidth) => SidebarWidth,
+        nameof(PreviewWidth) => PreviewWidth,
+        nameof(ModifiedWidth) => ModifiedWidth,
+        nameof(SizeWidth) => SizeWidth,
+        nameof(KindWidth) => KindWidth,
+        _ => 0,
+    };
 
     public IEnumerable<StorageItem> SelectedItems => _selection.Indices.Where(i => i < Rows.Count).Select(i => Rows[i].Item);
 
-    private string Header(string key, SortColumn column) =>
-        Sort.Column == column ? $"{_strings[key]} {(Sort.Descending ? "▼" : "▲")}" : _strings[key];
 
     public override async Task OnAppearingAsync(NavigationDirection navigationDirection)
     {
