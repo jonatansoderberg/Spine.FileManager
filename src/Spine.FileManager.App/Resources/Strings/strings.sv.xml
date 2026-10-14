@@ -125,4 +125,6 @@
   <s key="Menu.CloseTab">Stäng flik</s>
   <s key="Menu.NextTab">Visa nästa flik</s>
   <s key="Menu.PreviousTab">Visa föregående flik</s>
+  <s key="Menu.OpenInTerminal">Öppna i Terminal</s>
+  <s key="Explorer.Error.Terminal">Det gick inte att öppna en terminal här.</s>
 </strings>

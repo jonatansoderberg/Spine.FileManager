@@ -125,4 +125,6 @@
   <s key="Menu.CloseTab">Close Tab</s>
   <s key="Menu.NextTab">Show Next Tab</s>
   <s key="Menu.PreviousTab">Show Previous Tab</s>
+  <s key="Menu.OpenInTerminal">Open in Terminal</s>
+  <s key="Explorer.Error.Terminal">No terminal could be opened here.</s>
 </strings>
