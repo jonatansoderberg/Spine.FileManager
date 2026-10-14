@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<SpinePage
+    xmlns="http://schemas.microsoft.com/dotnet/maui/global"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="Spine.FileManager.Pages.HomePage"
+    x:TypeArguments="HomePageViewModel"
+    x:DataType="HomePageViewModel">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="{x:Static HeaderBarConstants.PagePadding}" Spacing="8">
+            <Label Text="{String Home.Placeholder}" FontSize="17" />
+            <Label Text="{Binding Version}" FontSize="13" Opacity="0.6" />
+        </VerticalStackLayout>
+    </ScrollView>
+
+</SpinePage>

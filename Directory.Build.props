@@ -1,0 +1,27 @@
+<Project>
+
+	<PropertyGroup>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<LangVersion>preview</LangVersion>
+	</PropertyGroup>
+
+	<!--
+		The TFM set the MAUI app targets. The project opts in with
+		<TargetFrameworks>$(MauiTargetFrameworks)</TargetFrameworks>; a net10.0-only project
+		must not get it, so it is not assigned here.
+	-->
+	<PropertyGroup>
+		<MauiTargetFrameworks>net10.0-android;net10.0-ios;net10.0-maccatalyst</MauiTargetFrameworks>
+		<MauiTargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(MauiTargetFrameworks);net10.0-windows10.0.19041.0</MauiTargetFrameworks>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
+		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
+	</PropertyGroup>
+
+</Project>

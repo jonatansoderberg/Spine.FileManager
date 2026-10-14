@@ -1,0 +1,30 @@
+<Project>
+
+	<PropertyGroup>
+		<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+	</PropertyGroup>
+
+	<!-- Spine — every Plugin.Maui.Spine* package at the same version -->
+	<PropertyGroup>
+		<SpineVersion>0.1.14</SpineVersion>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageVersion Include="Plugin.Maui.Spine" Version="$(SpineVersion)" />
+		<PackageVersion Include="Plugin.Maui.Spine.Svg.Icons" Version="$(SpineVersion)" />
+	</ItemGroup>
+
+	<!-- The app -->
+	<ItemGroup>
+		<PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+		<PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.50" />
+		<PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="10.0.5" />
+	</ItemGroup>
+
+	<!-- Spine.FileManager.Tests -->
+	<ItemGroup>
+		<PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+		<PackageVersion Include="xunit" Version="2.9.3" />
+		<PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+	</ItemGroup>
+
+</Project>

@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>$(MauiTargetFrameworks)</TargetFrameworks>
+		<OutputType>Exe</OutputType>
+		<RootNamespace>Spine.FileManager</RootNamespace>
+		<UseMaui>true</UseMaui>
+		<SingleProject>true</SingleProject>
+		<MauiXamlInflator>SourceGen</MauiXamlInflator>
+
+		<ApplicationTitle>Spine File Manager</ApplicationTitle>
+		<ApplicationId>se.cosmomedia.filemanager</ApplicationId>
+		<ApplicationDisplayVersion>0.1</ApplicationDisplayVersion>
+		<ApplicationVersion>1</ApplicationVersion>
+
+		<WindowsPackageType>None</WindowsPackageType>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#2F6FEB" />
+		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#2F6FEB" BaseSize="128,128" />
+		<!-- English is the neutral document, Swedish strings.sv.xml (ISpineStrings). WithCulture="false" keeps the
+		     .sv. files out of a satellite assembly, where Spine does not look. -->
+		<EmbeddedResource Include="Resources\Strings\*.xml" WithCulture="false" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="CommunityToolkit.Mvvm" />
+		<PackageReference Include="Microsoft.Maui.Controls" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Debug" />
+		<PackageReference Include="Plugin.Maui.Spine" />
+		<PackageReference Include="Plugin.Maui.Spine.Svg.Icons" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Spine.FileManager.Core\Spine.FileManager.Core.csproj" />
+	</ItemGroup>
+
+	<!-- Spine pages: the ViewModel half of each page is compiled through its DependentUpon entry below. -->
+	<ItemGroup>
+		<Compile Remove="**\*.ViewModel.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<MauiXaml Update="Pages\HomePage.View.xaml">
+			<Generator>MSBuild:Compile</Generator>
+			<DependentUpon>HomePage.cs</DependentUpon>
+		</MauiXaml>
+		<Compile Include="Pages\HomePage.ViewModel.cs">
+			<DependentUpon>HomePage.cs</DependentUpon>
+		</Compile>
+	</ItemGroup>
+
+</Project>

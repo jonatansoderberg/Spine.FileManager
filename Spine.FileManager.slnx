@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/Spine.FileManager.App/Spine.FileManager.App.csproj">
+    <Deploy />
+  </Project>
+  <Project Path="src/Spine.FileManager.Core/Spine.FileManager.Core.csproj" />
+  <Project Path="src/Spine.FileManager.Tests/Spine.FileManager.Tests.csproj" />
+</Solution>
