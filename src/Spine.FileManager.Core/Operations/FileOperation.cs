@@ -19,6 +19,8 @@ public sealed record ConflictAnswer(ConflictChoice Choice, bool ForAll = false);
 
 public sealed record OperationError(StorageLocation Item, string Message);
 
+public sealed record Placed(StorageLocation From, StorageLocation To);
+
 /// <summary>How far an operation has come. Byte totals cover files; folders count as items.</summary>
 public sealed record OperationProgress(long BytesDone, long BytesTotal, int ItemsDone, int ItemsTotal, string? Current, double BytesPerSecond)
 {
@@ -63,6 +65,9 @@ public sealed class FileOperation
 
     /// <summary>The top-level items as they ended up in the target, for selecting them when the operation is done.</summary>
     public List<StorageLocation> Results { get; } = [];
+
+    /// <summary>Each top-level item's source and where it ended up, for undoing the operation. Not journaled: undo is for this run.</summary>
+    public List<Placed> Placed { get; } = [];
 
     /// <summary>Target items finished, file by file and folder by folder: a resume skips them.</summary>
     internal HashSet<string> Done { get; } = [];

@@ -246,7 +246,10 @@ public sealed class OperationQueue
                     continue;
                 }
                 if (await Transfer(item, operation.Target, targetProvider, keepBoth: sameFolder && !_resuming) is { } result && !operation.Results.Contains(result))
+                {
                     operation.Results.Add(result);
+                    operation.Placed.Add(new(item.Location, result));
+                }
             }
             Report(force: true);
             operation.State = operation.Errors.Count > 0 && operation.Results.Count == 0 ? OperationState.Failed : OperationState.Completed;
