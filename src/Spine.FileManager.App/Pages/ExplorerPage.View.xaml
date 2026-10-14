@@ -138,7 +138,7 @@
             </ScrollView>
 
             <!-- Toolbar: history, up, refresh, the breadcrumb, view and hidden files. -->
-            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="2" Padding="8,6">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="2" Padding="8,6">
                 <ImageButton Style="{StaticResource ToolButton}" SvgImageSource.Svg="ChevronLeft.svg" Command="{Binding BackCommand}" IsEnabled="{Binding CanGoBack}"
                              SemanticProperties.Description="{String Explorer.Back}" ToolTipProperties.Text="{String Explorer.Back}" />
                 <ImageButton Grid.Column="1" Style="{StaticResource ToolButton}" SvgImageSource.Svg="ChevronRight.svg" Command="{Binding ForwardCommand}" IsEnabled="{Binding CanGoForward}"
@@ -162,6 +162,9 @@
                         </BindableLayout.ItemTemplate>
                     </HorizontalStackLayout>
                 </ScrollView>
+                <Entry x:Name="FilterField" Grid.Column="8" Text="{Binding Filter}" Placeholder="{String Explorer.Filter}" FontSize="13" WidthRequest="170"
+                       ClearButtonVisibility="WhileEditing" IsVisible="{Binding IsWide}" VerticalOptions="Center" Margin="6,0,0,0"
+                       SemanticProperties.Description="{String Explorer.Filter}" />
                 <ImageButton Grid.Column="5" Style="{StaticResource ToolButton}" SvgImageSource.Svg="List.svg" Command="{Binding ShowAsCommand}" CommandParameter="List" Opacity="{Binding IsList, Converter={StaticResource Strength}}"
                              SemanticProperties.Description="{String Explorer.AsList}" ToolTipProperties.Text="{String Explorer.AsList}" />
                 <ImageButton Grid.Column="6" Style="{StaticResource ToolButton}" SvgImageSource.Svg="Grid.svg" Command="{Binding ShowAsCommand}" CommandParameter="Icons" Opacity="{Binding IsIcons, Converter={StaticResource Strength}}"

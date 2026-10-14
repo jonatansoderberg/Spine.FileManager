@@ -132,4 +132,10 @@
   <s key="Menu.DualPane">Dual Pane</s>
   <s key="Menu.CopyToOtherPane">Copy to Other Pane</s>
   <s key="Menu.MoveToOtherPane">Move to Other Pane</s>
+  <s key="Explorer.Filter">Filter</s>
+  <s key="Menu.Find">Filter This Folder</s>
+  <s key="Explorer.Matches.one">{0} match</s>
+  <s key="Explorer.Matches.other">{0} matches</s>
+  <s key="Explorer.OfItems.one">of {0} item</s>
+  <s key="Explorer.OfItems.other">of {0} items</s>
 </strings>

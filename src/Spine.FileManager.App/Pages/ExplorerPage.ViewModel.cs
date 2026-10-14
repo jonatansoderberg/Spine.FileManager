@@ -546,6 +546,18 @@ public partial class ExplorerPageViewModel : ViewModelBase
     [ObservableProperty]
     public partial bool ShowHidden { get; private set; }
 
+    /// <summary>The text the list is filtered by, cleared when the folder changes.</summary>
+    [ObservableProperty]
+    public partial string Filter { get; set; } = "";
+
+    partial void OnFilterChanged(string value) => Rebuild(keepSelection: true);
+
+    /// <summary>Raised by ⌘F / Ctrl+F; the page puts the cursor in the filter field.</summary>
+    public event Action? FilterRequested;
+
+    [RelayCommand]
+    private void Find() => FilterRequested?.Invoke();
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsList))]
     public partial bool IsIcons { get; private set; }
@@ -918,6 +930,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
             _selection.Clear();
             _items = cached ?? [];
             Rows = [];
+            // A filter belongs to the folder it was typed in, as in Finder.
+            Filter = "";
             Watch(provider, location);
             if (cached is not null)
                 Show(BuildRows(cached), keep);
@@ -1018,7 +1032,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
     private ItemRow[] BuildRows(List<StorageItem> items)
     {
         var format = new RowFormat(_strings);
-        var visible = ShowHidden ? [.. items] : items.Where(i => !i.IsHidden).ToArray();
+        var filter = Filter;
+        var visible = items.Where(i => (ShowHidden || !i.IsHidden) && NameFilter.Matches(i.DisplayName, filter)).ToArray();
         Sort.Sort(visible);
         return Array.ConvertAll(visible, item => new ItemRow(item, format));
     }
@@ -1058,7 +1073,9 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     private void UpdateStatus()
     {
-        var count = _strings.Get("Explorer.Items", Rows.Count);
+        var count = string.IsNullOrWhiteSpace(Filter)
+            ? _strings.Get("Explorer.Items", Rows.Count)
+            : _strings.Get("Explorer.Matches", Rows.Count) + " " + _strings.Get("Explorer.OfItems", _items.Count(i => ShowHidden || !i.IsHidden));
         Status = _selection.Count == 0 ? count : $"{count} · {_strings.Get("Explorer.Selected", _selection.Count)}";
     }
 

@@ -132,4 +132,10 @@
   <s key="Menu.DualPane">Dubbla paneler</s>
   <s key="Menu.CopyToOtherPane">Kopiera till andra panelen</s>
   <s key="Menu.MoveToOtherPane">Flytta till andra panelen</s>
+  <s key="Explorer.Filter">Filtrera</s>
+  <s key="Menu.Find">Filtrera mappen</s>
+  <s key="Explorer.Matches.one">{0} träff</s>
+  <s key="Explorer.Matches.other">{0} träffar</s>
+  <s key="Explorer.OfItems.one">av {0} objekt</s>
+  <s key="Explorer.OfItems.other">av {0} objekt</s>
 </strings>
