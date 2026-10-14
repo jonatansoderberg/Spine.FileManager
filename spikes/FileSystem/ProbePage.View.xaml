@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<SpinePage
+    xmlns="http://schemas.microsoft.com/dotnet/maui/global"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="FileSystemSpike.ProbePage"
+    x:TypeArguments="ProbePageViewModel"
+    x:DataType="ProbePageViewModel">
+
+    <Grid RowDefinitions="Auto,*">
+        <FlexLayout Wrap="Wrap" Padding="{x:Static HeaderBarConstants.PagePadding}">
+            <Button Text="Probe again" Command="{Binding ProbeCommand}" Margin="0,0,8,8" />
+            <Button Text="Pick folder" Command="{Binding PickCommand}" Margin="0,0,8,8" />
+            <Button Text="Photos" Command="{Binding PhotosCommand}" IsVisible="{Binding HasPhotos}" Margin="0,0,8,8" />
+            <Button Text="All files access" Command="{Binding AllFilesCommand}" IsVisible="{Binding IsAndroid}" Margin="0,0,8,8" />
+            <Button Text="Forget picks" Command="{Binding ForgetCommand}" Margin="0,0,8,8" />
+        </FlexLayout>
+        <ScrollView Grid.Row="1">
+            <Label Text="{Binding Text}" FontFamily="{OnPlatform iOS=Menlo, MacCatalyst=Menlo, Android=monospace, WinUI=Consolas}" FontSize="11"
+                   Padding="{x:Static HeaderBarConstants.PagePadding}" />
+        </ScrollView>
+    </Grid>
+
+</SpinePage>
