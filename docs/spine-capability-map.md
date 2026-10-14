@@ -54,6 +54,7 @@ Actions: **Use** as is · **Extend** in Spine (PR in Maui.Spine, release, bump `
 Solved in this repository for now (decision 2026-10-14); each could move into Spine later.
 
 - **Key commands and a menu bar.** The explorer's shortcuts ride on MAUI's `MenuBarItems` (`Services/AppMenu.cs`); on the Mac the system's File/Format/View menus are removed in `AppDelegate.BuildMenu` and Edit's Select All is caught as `selectAll:` at the end of the responder chain. A Spine menu-bar builder with per-platform shortcuts would serve every desktop app.
+- **Keys for a list.** Menu shortcuts without a modifier take keys from text fields on the Mac, so the list's arrows, Return, Space and type-to-select come from a first responder of its own (`Controls/KeySink`, `Platforms/MacCatalyst/KeySinkHandler.cs`). A Spine key-command API scoped to a view would replace it.
 - **Modifier keys for clicks.** MAUI's tap events carry no modifiers; `Services/ModifierKeys.cs` reads GCKeyboard (Mac) and InputKeyboardSource (Windows).
 - **A host per window.** Further explorer windows are plain MAUI pages outside Spine's host (Spike 4, `docs/spikes/multi-window.md`); Spine sheets then still open in the main window.
 - **Middle-click.** MAUI's gestures expose primary and secondary buttons only; "middle-click a folder opens it in a new tab" needs a platform hook.

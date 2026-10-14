@@ -72,7 +72,9 @@ public static class AppMenu
             new MenuFlyoutSeparator(),
             Item("Menu.NewFolder", x => x.NewFolderCommand, command | KeyboardAcceleratorModifiers.Shift, "N"),
             Item("Menu.Open", x => x.ActivateCommand, mac ? command : KeyboardAcceleratorModifiers.None, mac ? "O" : "Enter"),
-            Item("Menu.Rename", x => x.RenameCommand, KeyboardAcceleratorModifiers.None, mac ? "Enter" : "F2"),
+            // On the Mac Return renames from the list itself (KeySink): a menu shortcut without ⌘ would take Return from text fields too.
+            Item("Menu.Rename", x => x.RenameCommand, KeyboardAcceleratorModifiers.None, mac ? null : "F2"),
+            Item("Menu.QuickLook", x => x.QuickLookSelectionCommand, command, mac ? "Y" : null),
             Item("Menu.Duplicate", x => x.DuplicateCommand, command, mac ? "D" : null),
             Item("Menu.CopyToOtherPane", x => x.CopyToOtherPaneCommand, mac ? command | KeyboardAcceleratorModifiers.Ctrl : command | KeyboardAcceleratorModifiers.Alt, "C"),
             Item("Menu.MoveToOtherPane", x => x.MoveToOtherPaneCommand, mac ? command | KeyboardAcceleratorModifiers.Ctrl : command | KeyboardAcceleratorModifiers.Alt, "M"),
@@ -95,6 +97,7 @@ public static class AppMenu
             Item("Menu.ShowHidden", x => x.ToggleHiddenCommand, mac ? command | KeyboardAcceleratorModifiers.Shift : command, mac ? "." : "H"),
             Item("Menu.Refresh", x => x.RefreshCommand, mac ? command : KeyboardAcceleratorModifiers.None, mac ? "R" : "F5"),
             Item("Menu.Find", x => x.FindCommand, command, "F"),
+            Item("Menu.Preview", x => x.TogglePreviewCommand, mac ? command | KeyboardAcceleratorModifiers.Shift : KeyboardAcceleratorModifiers.Alt, "P"),
             Item("Menu.DualPane", x => x.ToggleSplitCommand, command | KeyboardAcceleratorModifiers.Shift, "D"),
             Item("Menu.Operations", x => x.ShowOperationsCommand, mac ? command | KeyboardAcceleratorModifiers.Alt : command | KeyboardAcceleratorModifiers.Shift, mac ? "L" : "J"),
             new MenuFlyoutSeparator(),
@@ -111,10 +114,11 @@ public static class AppMenu
             Item("Menu.NextTab", x => x.StepTabCommand, mac ? command | KeyboardAcceleratorModifiers.Shift : KeyboardAcceleratorModifiers.Ctrl, mac ? "]" : "Tab", "1"),
             Item("Menu.PreviousTab", x => x.StepTabCommand, mac ? command | KeyboardAcceleratorModifiers.Shift : KeyboardAcceleratorModifiers.Ctrl | KeyboardAcceleratorModifiers.Shift, mac ? "[" : "Tab", "-1"),
             new MenuFlyoutSeparator(),
-            Item("Menu.NextItem", x => x.StepCommand, KeyboardAcceleratorModifiers.None, "Down", "1"),
-            Item("Menu.PreviousItem", x => x.StepCommand, KeyboardAcceleratorModifiers.None, "Up", "-1"),
-            Item("Menu.ExtendDown", x => x.StepCommand, KeyboardAcceleratorModifiers.Shift, "Down", "+1"),
-            Item("Menu.ExtendUp", x => x.StepCommand, KeyboardAcceleratorModifiers.Shift, "Up", "+-1")));
+            // The arrows come from the list itself on the Mac (KeySink), for the same reason as Return.
+            Item("Menu.NextItem", x => x.StepCommand, KeyboardAcceleratorModifiers.None, mac ? null : "Down", "1"),
+            Item("Menu.PreviousItem", x => x.StepCommand, KeyboardAcceleratorModifiers.None, mac ? null : "Up", "-1"),
+            Item("Menu.ExtendDown", x => x.StepCommand, KeyboardAcceleratorModifiers.Shift, mac ? null : "Down", "+1"),
+            Item("Menu.ExtendUp", x => x.StepCommand, KeyboardAcceleratorModifiers.Shift, mac ? null : "Up", "+-1")));
 #if MACCATALYST
         // Asked again a moment later: a rebuild asked while the window was still coming up was sometimes skipped,
         // leaving the bar without the app's menus.

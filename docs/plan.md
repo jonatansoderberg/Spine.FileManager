@@ -1,6 +1,6 @@
 # Spine File Manager — Requirements and Plan
 
-**Last updated:** 2026-10-14 — folder filter (#32), Dual Pane (#23 part 1), last session (#25 part 1), windows (#22), Open in Terminal (#24), tabs (#21), journal (#20); milestone A done on the Mac; Windows (#3) compiled only.
+**Last updated:** 2026-10-14 — preview (#34) and the list's keys on the Mac; folder filter (#32), Dual Pane (#23 part 1), last session (#25 part 1), windows (#22), terminal (#24), tabs (#21), journal (#20); milestone A done on the Mac; Windows (#3) compiled only.
 
 A living plan. Each step links its GitHub issue once it has one; update the status, the decisions and the line above in the same PR as the work.
 
@@ -364,6 +364,8 @@ Current-folder search as a quick filter; later an index (file name, extension, m
 A file-specific command system (`IFileCommand`) whose commands depend on selection, provider, capabilities, platform and context: Open, Open in New Tab / Window / Pane, Open in Terminal, Copy, Cut, Paste, Send to Device, Add to Favorites, Rename, Delete, Properties. Providers can add commands.
 
 ## 37. Phase 24 — Preview
+
+**Quick Look and the preview pane done 2026-10-14 ([#34](https://github.com/jonatansoderberg/Spine.FileManager/issues/34)).**
 
 V1: images, text, JSON, XML, Markdown, PDF, video and audio metadata. Later: Office, 3D, archives, source code. Space on desktop for Quick Preview.
 

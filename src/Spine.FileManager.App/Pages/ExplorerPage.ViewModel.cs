@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Plugin.Maui.Spine.Common;
+using Spine.FileManager.Controls;
 using Spine.FileManager.Explorer;
 using Spine.FileManager.Favorites;
 using Spine.FileManager.Operations;
@@ -552,6 +553,151 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     partial void OnFilterChanged(string value) => Rebuild(keepSelection: true);
 
+    // ---- Preview ----
+
+    [ObservableProperty]
+    public partial bool ShowsPreview { get; private set; }
+
+    [ObservableProperty] public partial ImageSource? PreviewImage { get; private set; }
+    [ObservableProperty] public partial string? PreviewTitle { get; private set; }
+    [ObservableProperty] public partial string? PreviewDetails { get; private set; }
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasPreviewText))] public partial string? PreviewText { get; private set; }
+
+    public bool HasPreviewText => PreviewText is not null;
+
+    private CancellationTokenSource? _preview;
+
+    private static readonly HashSet<string> TextExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "txt", "md", "markdown", "json", "xml", "csv", "log", "yml", "yaml", "toml", "ini", "cfg", "conf", "sh", "zsh", "ps1", "bat",
+        "cs", "csproj", "slnx", "sln", "props", "targets", "xaml", "js", "ts", "tsx", "jsx", "css", "html", "htm", "py", "rb", "go", "rs",
+        "java", "kt", "swift", "c", "h", "cpp", "hpp", "sql", "plist", "gitignore", "editorconfig",
+    };
+
+    [RelayCommand]
+    private void TogglePreview()
+    {
+        ShowsPreview = !ShowsPreview;
+        UpdatePreview();
+    }
+
+    [RelayCommand]
+    private void QuickLookSelection()
+    {
+        var paths = (SelectedItems.Any() ? SelectedItems : Rows.Select(r => r.Item)).Where(i => i.Location.NativePath is not null)
+            .Select(i => i.Location.NativePath!).ToList();
+        if (QuickLookPreview.IsSupported)
+            QuickLookPreview.Show(paths, 0, WindowPage);
+        else if (!ShowsPreview)
+            TogglePreview();
+    }
+
+    // The pane follows the selection: one item shows its picture, text and facts; several, or none, show nothing.
+    private void UpdatePreview()
+    {
+        _preview?.Cancel();
+        if (!ShowsPreview || SelectedItems.ToList() is not [var item])
+        {
+            PreviewImage = null;
+            PreviewTitle = null;
+            PreviewDetails = null;
+            PreviewText = null;
+            return;
+        }
+        var cancel = _preview = new CancellationTokenSource();
+        var culture = System.Globalization.CultureInfo.CurrentCulture;
+        PreviewTitle = item.DisplayName;
+        var facts = new List<string> { new ItemRow(item, new RowFormat(_strings)).Kind };
+        if (item.Size is { } size)
+            facts.Add(ByteSize.Format(size, culture));
+        if (item.Modified is { } modified)
+            facts.Add(_strings.Get("Preview.Modified", modified.ToLocalTime().ToString("g", culture)));
+        if (item.Created is { } created)
+            facts.Add(_strings.Get("Preview.Created", created.ToLocalTime().ToString("g", culture)));
+        PreviewDetails = string.Join("\n", facts);
+        PreviewImage = item.IsFolder ? "folder.png" : "file.png";
+        PreviewText = null;
+        // The picture and the text come separately: a slow thumbnail must not hold the text back.
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(120, cancel.Token);
+            if (item.Location.NativePath is { } path && await Thumbnails.GetAsync(path, 512) is { } picture && !cancel.IsCancellationRequested)
+                MainThread.BeginInvokeOnMainThread(() => { if (!cancel.IsCancellationRequested) PreviewImage = picture; });
+        }, cancel.Token);
+        if (!item.IsFolder && (TextExtensions.Contains(item.Extension) || item.Extension.Length == 0))
+            _ = Task.Run(async () =>
+            {
+                if (await ReadText(item, cancel.Token) is { } text)
+                    MainThread.BeginInvokeOnMainThread(() => { if (!cancel.IsCancellationRequested) PreviewText = text; });
+            }, cancel.Token);
+    }
+
+    // The first 32 KB as text, unless it holds a NUL byte (then it is not text).
+    private async Task<string?> ReadText(StorageItem item, CancellationToken cancel)
+    {
+        try
+        {
+            await using var stream = await _providers[item.Location].OpenReadAsync(item.Location, cancel);
+            var buffer = new byte[32 * 1024];
+            var read = await stream.ReadAtLeastAsync(buffer, buffer.Length, throwOnEndOfStream: false, cancel);
+            if (Array.IndexOf(buffer, (byte)0, 0, read) >= 0)
+                return null;
+            var text = System.Text.Encoding.UTF8.GetString(buffer, 0, read);
+            return read == buffer.Length ? text + "\n…" : text;
+        }
+        catch (Exception e) when (e is StorageException or OperationCanceledException)
+        {
+            return null;
+        }
+    }
+
+    // ---- Keys from the list (KeySink) ----
+
+    /// <summary>Asks the page to scroll the row at this index into view.</summary>
+    public event Action<int>? RevealRequested;
+
+    private string _typed = "";
+    private DateTime _typedAt;
+
+    public void OnListKey(ListKey key, bool shift, string? text)
+    {
+        switch (key)
+        {
+            case ListKey.Up or ListKey.Down:
+                _selection.Step(key == ListKey.Down ? 1 : -1, Rows.Count, extend: shift);
+                ApplySelection();
+                Reveal();
+                break;
+            case ListKey.Return:
+                // Finder renames on Return; opening is ⌘↓ or ⌘O.
+                _ = Rename();
+                break;
+            case ListKey.Space:
+                QuickLookSelection();
+                break;
+            case ListKey.Text when text is not null:
+                // Typing a name's beginning jumps to it; a pause of a second starts a new name.
+                _typed = DateTime.Now - _typedAt < TimeSpan.FromSeconds(1) ? _typed + text : text;
+                _typedAt = DateTime.Now;
+                var culture = System.Globalization.CultureInfo.CurrentCulture.CompareInfo;
+                for (var i = 0; i < Rows.Count; i++)
+                    if (culture.IsPrefix(Rows[i].Name, _typed, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreNonSpace))
+                    {
+                        _selection.Click(i);
+                        ApplySelection();
+                        Reveal();
+                        break;
+                    }
+                break;
+        }
+    }
+
+    private void Reveal()
+    {
+        if (_selection.Anchor is { } index)
+            RevealRequested?.Invoke(index);
+    }
+
     /// <summary>Raised by ⌘F / Ctrl+F; the page puts the cursor in the filter field.</summary>
     public event Action? FilterRequested;
 
@@ -1069,6 +1215,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
         for (var i = 0; i < Rows.Count; i++)
             Rows[i].IsSelected = _selection.Contains(i);
         UpdateStatus();
+        UpdatePreview();
     }
 
     private void UpdateStatus()

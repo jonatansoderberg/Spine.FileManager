@@ -102,12 +102,13 @@
             </CollectionView>
         </Grid>
 
-        <Grid Grid.Column="1" RowDefinitions="Auto,Auto,Auto,*,Auto">
+        <Grid Grid.Column="1" RowDefinitions="Auto,Auto,Auto,*,Auto" ColumnDefinitions="*,Auto">
             <Grid.GestureRecognizers>
                 <PointerGestureRecognizer PointerPressed="OnPanePressed" />
             </Grid.GestureRecognizers>
 
-            <VerticalStackLayout>
+            <KeySink x:Name="Keys" WidthRequest="1" HeightRequest="1" Opacity="0" HorizontalOptions="Start" VerticalOptions="Start" />
+            <VerticalStackLayout Grid.ColumnSpan="2">
             <!-- In Dual Pane, a line marks the pane the menus and the sidebar act on. -->
             <BoxView HeightRequest="2" IsVisible="{Binding MarksFocus}" Color="{AppThemeBinding Light=#2F6FEB, Dark=#5B8DEF}" />
             <!-- Tabs: from the second tab on; a click shows the tab, × closes it. -->
@@ -183,7 +184,7 @@
             </Grid>
             </VerticalStackLayout>
 
-            <Label Grid.Row="1" Text="{Binding Error}" IsVisible="{Binding HasError}" FontSize="13" Padding="16,8"
+            <Label Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Error}" IsVisible="{Binding HasError}" FontSize="13" Padding="16,8"
                    TextColor="{AppThemeBinding Light=#B3261E, Dark=#F2B8B5}" BackgroundColor="{AppThemeBinding Light=#FDECEA, Dark=#3B1F1E}" />
 
             <!-- Column headers: a click sorts, a second click reverses. -->
@@ -203,7 +204,10 @@
             </Grid>
 
             <!-- Every row is one height; measuring only the first keeps a 100 000-row list from measuring them all. -->
-            <FileListView Grid.Row="3" ItemsSource="{Binding Rows}" SelectionMode="None" ItemSizingStrategy="MeasureFirstItem" IsVisible="{Binding IsList}">
+            <FileListView x:Name="List" Grid.Row="3" ItemsSource="{Binding Rows}" SelectionMode="None" ItemSizingStrategy="MeasureFirstItem" IsVisible="{Binding IsList}">
+                <FileListView.GestureRecognizers>
+                    <PointerGestureRecognizer PointerPressed="OnListPressed" />
+                </FileListView.GestureRecognizers>
                 <FileListView.ItemTemplate>
                     <DataTemplate x:DataType="ItemRow">
                         <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" HeightRequest="28" Padding="16,0,8,0" Opacity="{Binding Dimmed}"
@@ -231,7 +235,10 @@
             </FileListView>
 
             <!-- Icons: a second list rather than a new ItemsLayout, which a shown CollectionView ignores on iOS. -->
-            <FileListView Grid.Row="2" Grid.RowSpan="2" ItemsSource="{Binding Rows}" SelectionMode="None" ItemSizingStrategy="MeasureFirstItem" IsVisible="{Binding IsIcons}" Margin="8,8,8,0">
+            <FileListView x:Name="Icons" Grid.Row="2" Grid.RowSpan="2" ItemsSource="{Binding Rows}" SelectionMode="None" ItemSizingStrategy="MeasureFirstItem" IsVisible="{Binding IsIcons}" Margin="8,8,8,0">
+                <FileListView.GestureRecognizers>
+                    <PointerGestureRecognizer PointerPressed="OnListPressed" />
+                </FileListView.GestureRecognizers>
                 <FileListView.ItemsLayout>
                     <GridItemsLayout Orientation="Vertical" Span="{Binding GridSpan}" VerticalItemSpacing="4" HorizontalItemSpacing="4" />
                 </FileListView.ItemsLayout>
@@ -255,20 +262,34 @@
                 </FileListView.ItemTemplate>
             </FileListView>
 
-            <Grid Grid.Row="4" ColumnDefinitions="*,Auto" Padding="16,4">
+            <Grid Grid.Row="4" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" Padding="16,4">
                 <Label Text="{Binding Status}" FontSize="12" Opacity="0.6" VerticalTextAlignment="Center" />
                 <ActivityIndicator Grid.Column="1" IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}" HeightRequest="14" WidthRequest="14" />
             </Grid>
 
+            <!-- Preview: the selected item's picture (the system's thumbnail), its text and its facts. -->
+            <ScrollView Grid.Row="2" Grid.RowSpan="2" Grid.Column="1" WidthRequest="300" IsVisible="{Binding ShowsPreview}"
+                        BackgroundColor="{AppThemeBinding Light=#F7F7F8, Dark=#1B1C1F}">
+                <VerticalStackLayout Padding="16" Spacing="10">
+                    <Image Source="{Binding PreviewImage}" HeightRequest="220" Aspect="AspectFit" />
+                    <Label Text="{Binding PreviewTitle}" FontSize="14" FontAttributes="Bold" HorizontalTextAlignment="Center" LineBreakMode="MiddleTruncation" />
+                    <Label Text="{Binding PreviewDetails}" FontSize="12" Opacity="0.7" HorizontalTextAlignment="Center" />
+                    <Border IsVisible="{Binding HasPreviewText}" Padding="10" StrokeThickness="0" BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#232427}">
+                        <Label Text="{Binding PreviewText}" FontFamily="{OnPlatform MacCatalyst=Menlo, iOS=Menlo, WinUI=Consolas, Android=monospace}" FontSize="11" LineBreakMode="CharacterWrap" />
+                    </Border>
+                    <Label Text="{String Preview.None}" IsVisible="{Binding PreviewTitle, Converter={StaticResource IsNull}}" FontSize="12" Opacity="0.5" HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+            </ScrollView>
+
             <!-- Operations the app found unfinished at start, waiting to be resumed. -->
-            <Grid Grid.Row="4" ColumnDefinitions="*,Auto" Padding="16,4" IsVisible="{Binding ShowsInterrupted}"
+            <Grid Grid.Row="4" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" Padding="16,4" IsVisible="{Binding ShowsInterrupted}"
                   BackgroundColor="{AppThemeBinding Light=#FFF4E5, Dark=#3A2C14}">
                 <Label Text="{Binding InterruptedText}" FontSize="12" VerticalTextAlignment="Center" />
                 <Button Grid.Column="1" Text="{String Operations.Open}" Command="{Binding ShowOperationsCommand}" FontSize="12" Padding="8,0" HeightRequest="24" />
             </Grid>
 
             <!-- The running copy or move; a click opens the Operation Center. -->
-            <Grid Grid.Row="4" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Padding="16,4" IsVisible="{Binding ShowsOperation}"
+            <Grid Grid.Row="4" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Padding="16,4" IsVisible="{Binding ShowsOperation}"
                   BackgroundColor="{AppThemeBinding Light=#F3F4F6, Dark=#1E1F22}">
                 <Grid.GestureRecognizers>
                     <TapGestureRecognizer Command="{Binding ShowOperationsCommand}" />

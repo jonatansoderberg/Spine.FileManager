@@ -138,4 +138,9 @@
   <s key="Explorer.Matches.other">{0} träffar</s>
   <s key="Explorer.OfItems.one">av {0} objekt</s>
   <s key="Explorer.OfItems.other">av {0} objekt</s>
+  <s key="Menu.QuickLook">Snabbtitt</s>
+  <s key="Menu.Preview">Visa förhandsvisning</s>
+  <s key="Preview.Modified">Ändrad {0}</s>
+  <s key="Preview.Created">Skapad {0}</s>
+  <s key="Preview.None">Markera ett objekt för att förhandsvisa det.</s>
 </strings>

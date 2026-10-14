@@ -23,6 +23,12 @@ public partial class ExplorerPage
                 return;
             vm.HostPage = () => Window?.Page;
             vm.FilterRequested += () => FilterField.Focus();
+            Keys.Pressed += vm.OnListKey;
+            vm.RevealRequested += index =>
+            {
+                var list = vm.IsIcons ? Icons : List;
+                list.ScrollTo(index, position: ScrollToPosition.MakeVisible, animate: false);
+            };
             if (!vm.IsSecondary)
                 AppMenu.Install(this, vm);
             // A deep folder's breadcrumb is wider than the bar; keep its end, the current folder, in view as the
@@ -69,6 +75,9 @@ public partial class ExplorerPage
         if (BindingContext is ExplorerPageViewModel vm)
             vm.Focus();
     }
+
+    // A click in the list gives it the keyboard (arrows, Return, Space, typing); a click in a text field takes it back.
+    private void OnListPressed(object? sender, PointerEventArgs e) => Keys.Activate();
 
     private void OnSplitterPanned(object? sender, PanUpdatedEventArgs e)
     {
