@@ -58,6 +58,8 @@ public static class AppMenu
             Item("Menu.OpenInNewTab", vm.OpenInNewTabCommand, mac ? command | KeyboardAcceleratorModifiers.Ctrl : command | KeyboardAcceleratorModifiers.Shift, mac ? "O" : "T"),
             Item("Menu.CloseTab", vm.CloseTabCommand, command, "W"),
             new MenuFlyoutSeparator(),
+            Item("Menu.OpenInTerminal", vm.OpenInTerminalCommand, mac ? command | KeyboardAcceleratorModifiers.Alt : KeyboardAcceleratorModifiers.Ctrl | KeyboardAcceleratorModifiers.Shift, mac ? "T" : "Enter"),
+            new MenuFlyoutSeparator(),
             Item("Menu.NewFolder", vm.NewFolderCommand, command | KeyboardAcceleratorModifiers.Shift, "N"),
             Item("Menu.Open", vm.ActivateCommand, mac ? command : KeyboardAcceleratorModifiers.None, mac ? "O" : "Enter"),
             Item("Menu.Rename", vm.RenameCommand, KeyboardAcceleratorModifiers.None, mac ? "Enter" : "F2"),

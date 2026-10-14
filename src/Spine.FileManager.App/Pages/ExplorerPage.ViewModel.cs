@@ -182,6 +182,24 @@ public partial class ExplorerPageViewModel : ViewModelBase
             await OpenTab(folder.Location, activate: true);
     }
 
+    public bool CanOpenTerminal => TerminalLauncher.IsSupported;
+
+    /// <summary>Opens the selected folder, or the folder shown when a file or nothing is selected, in a terminal.</summary>
+    [RelayCommand]
+    private void OpenInTerminal(Terminal? terminal)
+    {
+        var folder = SelectedItems.ToList() is [{ IsFolder: true } one] ? one.Location : Current;
+        if (folder?.NativePath is not { } path || !TerminalLauncher.Open(path, terminal))
+            Error = _strings["Explorer.Error.Terminal"];
+    }
+
+    [RelayCommand]
+    private void RowOpenInTerminal(ItemRow row)
+    {
+        Pick(row);
+        OpenInTerminal(null);
+    }
+
     [RelayCommand]
     private Task RowOpenInNewTab(ItemRow row) => row.Item.IsFolder ? OpenTab(row.Item.Location, activate: true) : Task.CompletedTask;
 
@@ -271,6 +289,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
             {
                 new MenuAction(strings["Menu.Open"], null, RowOpenCommand),
                 new MenuAction(strings["Menu.OpenInNewTab"], null, RowOpenInNewTabCommand),
+                new MenuAction(strings["Menu.OpenInTerminal"], null, RowOpenInTerminalCommand) { IsVisible = TerminalLauncher.IsSupported },
                 new MenuAction(strings["Menu.AddFavorite"], "Star.svg", RowFavoriteCommand),
             },
             new MenuSection

@@ -1,6 +1,6 @@
 # Spine File Manager — Requirements and Plan
 
-**Last updated:** 2026-10-14 — B2 tabs (#21) and B1 operations journal (#20); milestone A done on the Mac; Windows (#3) compiled only.
+**Last updated:** 2026-10-14 — B7 Open in Terminal (#24), B2 tabs (#21), B1 operations journal (#20); milestone A done on the Mac; Windows (#3) compiled only.
 
 A living plan. Each step links its GitHub issue once it has one; update the status, the decisions and the line above in the same PR as the work.
 
@@ -90,7 +90,7 @@ Result: Explorer/Finder plus Edge/Commander productivity.
 | B4 | Multiple windows | ⬜ | with #22 |
 | B5 | Split panes (§15) | ⬜ | [#23](https://github.com/jonatansoderberg/Spine.FileManager/issues/23) |
 | B6 | Drag tabs between windows | ⬜ | with #22 |
-| B7 | Terminal integration (§17) | ⬜ | [#24](https://github.com/jonatansoderberg/Spine.FileManager/issues/24) |
+| B7 | Terminal integration (§17) | ✅ Open in Terminal | [#24](https://github.com/jonatansoderberg/Spine.FileManager/issues/24) |
 | B8 | Workspaces (§18) | ⬜ | [#25](https://github.com/jonatansoderberg/Spine.FileManager/issues/25) |
 
 ### Milestone C — Device Fabric
