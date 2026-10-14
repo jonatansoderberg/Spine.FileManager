@@ -207,6 +207,14 @@ public partial class ExplorerPage
 #if IOS || MACCATALYST
         external = e.PlatformArgs?.DropSession?.HasConformingItems(["public.file-url"]) == true;
 #endif
+        // A linked device takes files and folders from here or from another app, and sends them.
+        if (sender is BindableObject { BindingContext: DeviceRow device })
+        {
+            var sends = TabDrag.Current is null && (external || FileDrag.Current?.Items.Any(i => i.NativePath is not null) == true);
+            device.IsDropTarget = sends;
+            e.AcceptedOperation = sends ? DataPackageOperation.Copy : DataPackageOperation.None;
+            return;
+        }
         var action = FileAction(sender, external);
         Highlight(sender, action != DropAction.None && sender is BindableObject { BindingContext: ItemRow });
         e.AcceptedOperation = action == DropAction.None ? DataPackageOperation.None : DataPackageOperation.Copy;
@@ -216,11 +224,28 @@ public partial class ExplorerPage
 #endif
     }
 
-    private void OnFileDragLeave(object? sender, DragEventArgs e) => Highlight(sender, false);
+    private void OnFileDragLeave(object? sender, DragEventArgs e)
+    {
+        Highlight(sender, false);
+        if (sender is BindableObject { BindingContext: DeviceRow device })
+            device.IsDropTarget = false;
+    }
 
     private async void OnFileDrop(object? sender, DropEventArgs e)
     {
         Highlight(sender, false);
+        if (sender is BindableObject { BindingContext: DeviceRow device } && BindingContext is ExplorerPageViewModel explorer)
+        {
+            device.IsDropTarget = false;
+            e.Handled = true;
+            var paths = FileDrag.Current is { } dragged ? [.. dragged.Items.Select(i => i.NativePath).OfType<string>()] : new List<string>();
+#if IOS || MACCATALYST
+            if (FileDrag.Current is null && e.PlatformArgs?.DropSession is { } dropped)
+                paths = await DroppedPaths(dropped);
+#endif
+            await explorer.SendToDevice(device, paths);
+            return;
+        }
         if (TabDrag.Current is not null || BindingContext is not ExplorerPageViewModel vm || DropFolder(sender) is not { } target)
             return;
         e.Handled = true;

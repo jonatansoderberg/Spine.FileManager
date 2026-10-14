@@ -1,3 +1,4 @@
+using Microsoft.Maui.LifecycleEvents;
 using Microsoft.Extensions.Logging;
 using Plugin.Maui.Spine.Extensions;
 using Spine.FileManager.Services;
@@ -21,6 +22,15 @@ public static class MauiProgram
                 options.Windows.MinWidth = 480;
                 options.Windows.MinHeight = 360;
                 options.Windows.PersistWindowPosition = true;
+            })
+            .ConfigureLifecycleEvents(events =>
+            {
+#if IOS || MACCATALYST
+                // A pairing link (spinefm://pair?…) opened on this device joins the device that showed it.
+                events.AddiOS(ios => ios
+                    .OpenUrl((_, url, _) => DeviceLinks.Open(url.AbsoluteString))
+                    .SceneOpenUrl((_, contexts) => contexts.ToArray().Count(context => DeviceLinks.Open(context.Url.AbsoluteString)) > 0));
+#endif
             });
 
 #if IOS || MACCATALYST
@@ -48,6 +58,7 @@ public static class MauiProgram
         builder.Services.AddSingleton(new Workspaces.SessionStore(Path.Combine(AppPaths.Data, "session.json")));
         builder.Services.AddSingleton<SessionTracker>();
         builder.Services.AddSingleton<UndoService>();
+        builder.Services.AddSingleton<DeviceService>();
 
 #if DEBUG
         builder.Logging.AddDebug();

@@ -76,7 +76,7 @@ public sealed class PairingTests : IDisposable
     {
         var invitation = Invite();
         var host = new Pairing.Host(_mac, invitation, "Mac", _time);
-        var guessed = invitation with { Secret = new byte[32] };
+        var guessed = invitation with { Secret = new byte[PairingInvitation.SecretLength] };
         var error = Assert.Throws<PairingException>(() => host.Answer(new Pairing.Joiner(_phone, guessed, "Phone", _time).Hello()));
         Assert.Contains("does not know", error.Message);
     }

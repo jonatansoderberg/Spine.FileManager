@@ -13,14 +13,17 @@ public sealed record PairingInvitation(string SessionId, byte[] Secret, string N
     public const string Scheme = "spinefm";
     public static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(2);
 
+    /// <summary>128 bits: plenty for a code that works once within two minutes, and a QR code that a phone reads easily.</summary>
+    public const int SecretLength = 16;
+
     public static PairingInvitation Create(NodeIdentity host, string name, IReadOnlyList<string> endpoints, DateTimeOffset now) =>
-        new(Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(8)), RandomNumberGenerator.GetBytes(32), host.NodeId, name, endpoints, now + Lifetime);
+        new(Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(4)), RandomNumberGenerator.GetBytes(SecretLength), host.NodeId, name, endpoints, now + Lifetime);
 
     public bool IsExpired(DateTimeOffset now) => now >= Expires;
 
     public string ToUri() =>
         $"{Scheme}://pair?v=1&s={SessionId}&k={Base64Url(Secret)}&n={NodeId}&name={Uri.EscapeDataString(Name)}" +
-        $"&e={Uri.EscapeDataString(string.Join(',', Endpoints))}&x={Expires.ToUnixTimeSeconds()}";
+        $"&e={string.Join(',', Endpoints)}&x={Expires.ToUnixTimeSeconds()}";
 
     public static PairingInvitation Parse(string text)
     {
@@ -31,7 +34,7 @@ public sealed record PairingInvitation(string SessionId, byte[] Secret, string N
             throw new FormatException("This pairing code is from a newer version.");
         string Required(string key) => query[key] is { Length: > 0 } value ? value : throw new FormatException($"The pairing code has no '{key}'.");
         var secret = FromBase64Url(Required("k"));
-        if (secret.Length != 32)
+        if (secret.Length != SecretLength)
             throw new FormatException("The pairing code's secret has the wrong length.");
         return new PairingInvitation(Required("s"), secret, Required("n"), Required("name"),
             [.. Required("e").Split(',', StringSplitOptions.RemoveEmptyEntries)],

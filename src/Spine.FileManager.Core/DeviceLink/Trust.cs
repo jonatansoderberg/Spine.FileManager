@@ -12,6 +12,9 @@ public enum TrustLifetime { QuickTransfer, Session, Remember }
 /// </summary>
 public sealed record TrustedNode(string NodeId, byte[] PublicKey, string SourceName, string? LocalAlias, TrustLifetime Lifetime, DateTimeOffset PairedAt)
 {
+    /// <summary>Where the node last listened (host:port), until discovery finds it again.</summary>
+    public IReadOnlyList<string> Endpoints { get; init; } = [];
+
     public string DisplayName => LocalAlias ?? SourceName;
 }
 
@@ -31,7 +34,7 @@ public sealed class TrustStore(string path)
 
     public TrustedNode Trust(PairedNode node, TrustLifetime lifetime, DateTimeOffset now)
     {
-        var trusted = new TrustedNode(node.NodeId, node.PublicKey, node.Name, Find(node.NodeId)?.LocalAlias, lifetime, now);
+        var trusted = new TrustedNode(node.NodeId, node.PublicKey, node.Name, Find(node.NodeId)?.LocalAlias, lifetime, now) { Endpoints = Find(node.NodeId)?.Endpoints ?? [] };
         Nodes[node.NodeId] = trusted;
         Save();
         return trusted;
@@ -42,6 +45,15 @@ public sealed class TrustStore(string path)
         if (Find(nodeId) is { } node)
         {
             Nodes[nodeId] = node with { LocalAlias = string.IsNullOrWhiteSpace(alias) ? null : alias.Trim() };
+            Save();
+        }
+    }
+
+    public void SetEndpoints(string nodeId, IReadOnlyList<string> endpoints)
+    {
+        if (Find(nodeId) is { } node && !node.Endpoints.SequenceEqual(endpoints))
+        {
+            Nodes[nodeId] = node with { Endpoints = endpoints };
             Save();
         }
     }

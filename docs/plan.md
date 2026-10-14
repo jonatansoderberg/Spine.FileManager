@@ -1,6 +1,6 @@
 # Spine File Manager — Requirements and Plan
 
-**Last updated:** 2026-10-14 — undo (#48); tabs in the title bar (#46); file drag and drop (#44); Spike 6 transport (#37); tab drag (#41); Spike 5 identity and pairing (#36); preview (#34), filter (#32), Dual Pane (#23 part 1), last session (#25 part 1), windows (#22), terminal (#24), tabs (#21), journal (#20); milestone A done on the Mac; Windows (#3) compiled only.
+**Last updated:** 2026-10-14 — Other Devices (#38); undo (#48); tabs in the title bar (#46); file drag and drop (#44); Spike 6 transport (#37); tab drag (#41); Spike 5 identity and pairing (#36); preview (#34), filter (#32), Dual Pane (#23 part 1), last session (#25 part 1), windows (#22), terminal (#24), tabs (#21), journal (#20); milestone A done on the Mac; Windows (#3) compiled only.
 
 A living plan. Each step links its GitHub issue once it has one; update the status, the decisions and the line above in the same PR as the work.
 
@@ -97,7 +97,7 @@ Result: Explorer/Finder plus Edge/Commander productivity.
 ### Milestone C — Device Fabric
 Result: AirDrop-like transfer with robust resume.
 
-Node identity (§19) ✅ · Spike 5 — QR pairing (§20) ✅ [#36](https://github.com/jonatansoderberg/Spine.FileManager/issues/36) · Spike 6 — transport ✅ [#37](https://github.com/jonatansoderberg/Spine.FileManager/issues/37) · Other Devices UI [#38](https://github.com/jonatansoderberg/Spine.FileManager/issues/38) · LAN discovery [#39](https://github.com/jonatansoderberg/Spine.FileManager/issues/39) · Other Devices (§21) · connection lifetime · names/aliases · LAN discovery (§22) · Spike 6 — transport (§23) · transfer engine · retry/resume (§27) · distributed Operation Center (§26).
+Node identity (§19) ✅ · Spike 5 — QR pairing (§20) ✅ [#36](https://github.com/jonatansoderberg/Spine.FileManager/issues/36) · Spike 6 — transport ✅ [#37](https://github.com/jonatansoderberg/Spine.FileManager/issues/37) · Other Devices UI ✅ [#38](https://github.com/jonatansoderberg/Spine.FileManager/issues/38) · LAN discovery [#39](https://github.com/jonatansoderberg/Spine.FileManager/issues/39) · Other Devices (§21) · connection lifetime · names/aliases · LAN discovery (§22) · Spike 6 — transport (§23) · transfer engine · retry/resume (§27) · distributed Operation Center (§26).
 
 ### Milestone D — Remote Explorer
 Result: other computers feel like more storage providers.
@@ -435,3 +435,4 @@ Or workspace "Spine": pane 1 Maui.Spine, pane 2 Spine.FileManager, pane 3 build 
 - **2026-10-14 — A drop moves on the same volume and copies onto another,** as Finder and Explorer do; Option / Ctrl copies, Command / Shift moves. Files dropped from another app are copied unless the move key is held.
 - **2026-10-14 — On the Mac the tabs sit in the title bar and the window shows no title** (#46), with Spine's full-bleed page mode.
 - **2026-10-14 — Undo is one history for the whole app** (#48), as in Finder: copies and new folders go to the Trash, moves go back, renames get their old name. It lasts for this run; it is not journaled.
+- **2026-10-14 — One port, a purpose byte per connection** (#38): pairing in the clear (its secret and signatures authenticate it), transfers over mutual TLS on the node keys. Received files go to Downloads on a computer, as with AirDrop.

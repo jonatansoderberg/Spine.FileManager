@@ -89,6 +89,7 @@ public static class AppMenu
             Item("Menu.CloseTab", x => x.CloseTabCommand, command, "W"),
             new MenuFlyoutSeparator(),
             Item("Menu.OpenInTerminal", x => x.OpenInTerminalCommand, mac ? command | KeyboardAcceleratorModifiers.Alt : KeyboardAcceleratorModifiers.Ctrl | KeyboardAcceleratorModifiers.Shift, mac ? "T" : "Enter"),
+            Item("Devices.Link", x => x.LinkDeviceCommand, KeyboardAcceleratorModifiers.None, null),
             new MenuFlyoutSeparator(),
             Item("Menu.NewFolder", x => x.NewFolderCommand, command | KeyboardAcceleratorModifiers.Shift, "N"),
             Item("Menu.Open", x => x.ActivateCommand, mac ? command : KeyboardAcceleratorModifiers.None, mac ? "O" : "Enter"),

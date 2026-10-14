@@ -50,12 +50,19 @@ public static class FileTransfer
     }
 
     /// <summary>Receives one file into <paramref name="folder"/>; null when the sender has no more files.</summary>
-    public static async Task<string?> ReceiveAsync(Stream channel, string folder, Action<long>? progress = null, CancellationToken cancel = default)
+    public static Task<string?> ReceiveAsync(Stream channel, string folder, Action<long>? progress = null, CancellationToken cancel = default) =>
+        ReceiveAsync(channel, offer => Path.Combine(folder, Path.GetFileName(offer.Name)), progress, cancel);
+
+    /// <summary>Receives one file to the path <paramref name="target"/> chooses for its offer; null when the sender has no more files.</summary>
+    public static async Task<string?> ReceiveAsync(Stream channel, Func<FileOffer, string> target, Action<long>? progress = null, CancellationToken cancel = default)
     {
         var offer = await ReadAsync<FileOffer?>(channel, cancel);
         if (offer is null)
             return null;
-        var name = Path.GetFileName(offer.Name);
+        var path = target(offer);
+        var name = Path.GetFileName(path);
+        var folder = Path.GetDirectoryName(path)!;
+        Directory.CreateDirectory(folder);
         var part = Path.Combine(folder, $".{name}.{offer.Id}.spine-part");
         // The checksum is computed as the bytes arrive; after a resume the kept part is read once first.
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
@@ -91,16 +98,16 @@ public static class FileTransfer
             await WriteAsync(channel, new FileDone(false, "The file arrived damaged; it will be sent again."), cancel);
             throw new IOException($"{name} did not match its checksum.");
         }
-        var target = Path.Combine(folder, name);
-        File.Move(part, target, overwrite: false);
+        File.Move(part, path, overwrite: false);
         await WriteAsync(channel, new FileDone(true, null), cancel);
-        return target;
+        return path;
     }
 
     /// <summary>Tells the receiver there are no more files.</summary>
     public static Task EndAsync(Stream channel, CancellationToken cancel = default) => WriteAsync<FileOffer?>(channel, null, cancel);
 
-    private static async Task WriteAsync<T>(Stream channel, T message, CancellationToken cancel)
+    /// <summary>One length-prefixed JSON message, the framing of every exchange between two devices.</summary>
+    public static async Task WriteAsync<T>(Stream channel, T message, CancellationToken cancel = default)
     {
         var json = JsonSerializer.SerializeToUtf8Bytes(message);
         var length = new byte[4];
@@ -110,7 +117,7 @@ public static class FileTransfer
         await channel.FlushAsync(cancel);
     }
 
-    private static async Task<T> ReadAsync<T>(Stream channel, CancellationToken cancel)
+    public static async Task<T> ReadAsync<T>(Stream channel, CancellationToken cancel = default)
     {
         var length = new byte[4];
         await channel.ReadExactlyAsync(length, cancel);

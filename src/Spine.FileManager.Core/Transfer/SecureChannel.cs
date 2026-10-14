@@ -16,9 +16,13 @@ public sealed class ChannelException(string message, Exception? inner = null) : 
 /// </summary>
 public static class SecureChannel
 {
-    public static async Task<(SslStream Stream, string PeerNodeId)> AcceptAsync(TcpClient client, NodeIdentity self, Func<string, bool> isTrusted, CancellationToken cancel = default)
+    public static Task<(SslStream Stream, string PeerNodeId)> AcceptAsync(TcpClient client, NodeIdentity self, Func<string, bool> isTrusted, CancellationToken cancel = default) =>
+        AcceptAsync(client.GetStream(), self, isTrusted, cancel);
+
+    /// <summary>TLS over a connection that has already said what it is for.</summary>
+    public static async Task<(SslStream Stream, string PeerNodeId)> AcceptAsync(Stream connection, NodeIdentity self, Func<string, bool> isTrusted, CancellationToken cancel = default)
     {
-        var stream = new SslStream(client.GetStream(), leaveInnerStreamOpen: false);
+        var stream = new SslStream(connection, leaveInnerStreamOpen: false);
         string? peer = null;
         try
         {
@@ -42,7 +46,13 @@ public static class SecureChannel
     {
         var client = new TcpClient { NoDelay = true };
         await client.ConnectAsync(endpoint, cancel);
-        var stream = new SslStream(client.GetStream(), leaveInnerStreamOpen: false);
+        return await ConnectAsync(client.GetStream(), self, expectedNodeId, cancel);
+    }
+
+    /// <summary>TLS over a connection that has already said what it is for.</summary>
+    public static async Task<SslStream> ConnectAsync(Stream connection, NodeIdentity self, string expectedNodeId, CancellationToken cancel = default)
+    {
+        var stream = new SslStream(connection, leaveInnerStreamOpen: false);
         string? peer = null;
         try
         {
