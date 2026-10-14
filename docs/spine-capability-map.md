@@ -49,6 +49,15 @@ Actions: **Use** as is · **Extend** in Spine (PR in Maui.Spine, release, bump `
 9. **File-type icons.** No folder, file, drive or device symbols.
 10. **Windows maturity.** StateView, Highlight, Shimmer, Images, the title-bar search and Rows taps compile but have not run on a Windows device (Maui.Spine #501). Verify early — Windows is a first-class target here.
 
+## Spine candidates found while building
+
+Solved in this repository for now (decision 2026-10-14); each could move into Spine later.
+
+- **Key commands and a menu bar.** The explorer's shortcuts ride on MAUI's `MenuBarItems` (`Services/AppMenu.cs`); on the Mac the system's File/Format/View menus are removed in `AppDelegate.BuildMenu` and Edit's Select All is caught as `selectAll:` at the end of the responder chain. A Spine menu-bar builder with per-platform shortcuts would serve every desktop app.
+- **Modifier keys for clicks.** MAUI's tap events carry no modifiers; `Services/ModifierKeys.cs` reads GCKeyboard (Mac) and InputKeyboardSource (Windows).
+- **Localised navigable titles.** `[NavigableRegion(Title = …)]` is literal text (see the table).
+- **A sheet from the root page's first appearance does not show** on Mac Catalyst, and `ShowAsync` awaited there never returns, so the page stays empty. The explorer shows its first-run sheet after its first folder has loaded instead.
+
 ## Observed while setting up
 
 - On Mac Catalyst the start page shows no header bar title under the traffic lights; the window title shows `AppTitle`. Check what Spine intends on the Mac before the explorer's header is designed.

@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<SpinePage
+    xmlns="http://schemas.microsoft.com/dotnet/maui/global"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="Spine.FileManager.Pages.ExplorerPage"
+    x:TypeArguments="ExplorerPageViewModel"
+    x:DataType="ExplorerPageViewModel">
+
+    <ContentPage.Resources>
+        <Color x:Key="SelectionLight">#D3E3FD</Color>
+        <Color x:Key="SelectionDark">#2B4C80</Color>
+        <Style x:Key="ToolButton" TargetType="ImageButton">
+            <Setter Property="WidthRequest" Value="32" />
+            <Setter Property="HeightRequest" Value="32" />
+            <Setter Property="Padding" Value="6" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="BackgroundColor" Value="Transparent" />
+            <Setter Property="SvgImageSource.EnableSvg" Value="True" />
+            <Setter Property="SvgImageSource.LightTintColor" Value="#1B1B1B" />
+            <Setter Property="SvgImageSource.DarkTintColor" Value="#E8E8E8" />
+            <Setter Property="VisualStateManager.VisualStateGroups">
+                <VisualStateGroupList>
+                    <VisualStateGroup x:Name="CommonStates">
+                        <VisualState x:Name="Normal" />
+                        <VisualState x:Name="Disabled">
+                            <VisualState.Setters>
+                                <Setter Property="Opacity" Value="0.3" />
+                            </VisualState.Setters>
+                        </VisualState>
+                    </VisualStateGroup>
+                </VisualStateGroupList>
+            </Setter>
+        </Style>
+        <Style x:Key="ColumnHeader" TargetType="Label">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Opacity" Value="0.65" />
+            <Setter Property="VerticalTextAlignment" Value="Center" />
+            <Setter Property="Padding" Value="8,6" />
+        </Style>
+        <Style x:Key="Cell" TargetType="Label">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="VerticalTextAlignment" Value="Center" />
+            <Setter Property="LineBreakMode" Value="TailTruncation" />
+            <Setter Property="Padding" Value="8,0" />
+        </Style>
+    </ContentPage.Resources>
+
+    <Grid ColumnDefinitions="Auto,*">
+
+        <!-- Sidebar: the places; Favorites join it in #9. -->
+        <Grid WidthRequest="210" IsVisible="{Binding IsWide}" RowDefinitions="Auto,*"
+              BackgroundColor="{AppThemeBinding Light=#F3F4F6, Dark=#1E1F22}">
+            <Label Text="{String Explorer.Places}" FontSize="12" Opacity="0.6" Padding="16,12,16,4" />
+            <CollectionView Grid.Row="1" ItemsSource="{Binding Places}" SelectionMode="None">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="PlaceRow">
+                        <Grid ColumnDefinitions="Auto,*" Padding="16,0" HeightRequest="30" ColumnSpacing="8">
+                            <Grid.Triggers>
+                                <DataTrigger TargetType="Grid" Binding="{Binding IsCurrent}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SelectionLight}, Dark={StaticResource SelectionDark}}" />
+                                </DataTrigger>
+                            </Grid.Triggers>
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenPlaceCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
+                            </Grid.GestureRecognizers>
+                            <Image Source="{Binding Icon}" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
+                            <Label Grid.Column="1" Text="{Binding Name}" FontSize="13" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </Grid>
+
+        <Grid Grid.Column="1" RowDefinitions="Auto,Auto,Auto,*,Auto">
+
+            <!-- Toolbar: history, up, refresh, the path (the breadcrumb in #6), hidden files. -->
+            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto" ColumnSpacing="2" Padding="8,6">
+                <ImageButton Style="{StaticResource ToolButton}" SvgImageSource.Svg="ChevronLeft.svg" Command="{Binding BackCommand}" IsEnabled="{Binding CanGoBack}"
+                             SemanticProperties.Description="{String Explorer.Back}" ToolTipProperties.Text="{String Explorer.Back}" />
+                <ImageButton Grid.Column="1" Style="{StaticResource ToolButton}" SvgImageSource.Svg="ChevronRight.svg" Command="{Binding ForwardCommand}" IsEnabled="{Binding CanGoForward}"
+                             SemanticProperties.Description="{String Explorer.Forward}" ToolTipProperties.Text="{String Explorer.Forward}" />
+                <ImageButton Grid.Column="2" Style="{StaticResource ToolButton}" SvgImageSource.Svg="ChevronUp.svg" Command="{Binding UpCommand}" IsEnabled="{Binding CanGoUp}"
+                             SemanticProperties.Description="{String Explorer.Up}" ToolTipProperties.Text="{String Explorer.Up}" />
+                <ImageButton Grid.Column="3" Style="{StaticResource ToolButton}" SvgImageSource.Svg="Refresh.svg" Command="{Binding RefreshCommand}"
+                             SemanticProperties.Description="{String Explorer.Refresh}" ToolTipProperties.Text="{String Explorer.Refresh}" />
+                <Label Grid.Column="4" Text="{Binding PathText}" FontSize="13" VerticalTextAlignment="Center" LineBreakMode="HeadTruncation" Padding="8,0" />
+                <ImageButton Grid.Column="5" Style="{StaticResource ToolButton}" Command="{Binding ToggleHiddenCommand}"
+                             SemanticProperties.Description="{String Explorer.ShowHidden}" ToolTipProperties.Text="{String Explorer.ShowHidden}">
+                    <ImageButton.Triggers>
+                        <DataTrigger TargetType="ImageButton" Binding="{Binding ShowHidden}" Value="True">
+                            <Setter Property="SvgImageSource.Svg" Value="Eye.svg" />
+                        </DataTrigger>
+                        <DataTrigger TargetType="ImageButton" Binding="{Binding ShowHidden}" Value="False">
+                            <Setter Property="SvgImageSource.Svg" Value="EyeOff.svg" />
+                        </DataTrigger>
+                    </ImageButton.Triggers>
+                </ImageButton>
+            </Grid>
+
+            <Label Grid.Row="1" Text="{Binding Error}" IsVisible="{Binding HasError}" FontSize="13" Padding="16,8"
+                   TextColor="{AppThemeBinding Light=#B3261E, Dark=#F2B8B5}" BackgroundColor="{AppThemeBinding Light=#FDECEA, Dark=#3B1F1E}" />
+
+            <!-- Column headers: a click sorts, a second click reverses. -->
+            <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto,Auto" Padding="8,0">
+                <Label Text="{Binding NameHeader}" Style="{StaticResource ColumnHeader}" Padding="38,6,8,6">
+                    <Label.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Name" /></Label.GestureRecognizers>
+                </Label>
+                <Label Grid.Column="1" Text="{Binding ModifiedHeader}" Style="{StaticResource ColumnHeader}" WidthRequest="160" IsVisible="{Binding IsWide}">
+                    <Label.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Modified" /></Label.GestureRecognizers>
+                </Label>
+                <Label Grid.Column="2" Text="{Binding SizeHeader}" Style="{StaticResource ColumnHeader}" WidthRequest="90" HorizontalTextAlignment="End">
+                    <Label.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Size" /></Label.GestureRecognizers>
+                </Label>
+                <Label Grid.Column="3" Text="{Binding KindHeader}" Style="{StaticResource ColumnHeader}" WidthRequest="130" IsVisible="{Binding IsWide}">
+                    <Label.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Kind" /></Label.GestureRecognizers>
+                </Label>
+            </Grid>
+
+            <CollectionView Grid.Row="3" ItemsSource="{Binding Rows}" SelectionMode="None">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="ItemRow">
+                        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" HeightRequest="28" Padding="16,0,8,0" Opacity="{Binding Dimmed}">
+                            <Grid.Triggers>
+                                <DataTrigger TargetType="Grid" Binding="{Binding IsSelected}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SelectionLight}, Dark={StaticResource SelectionDark}}" />
+                                </DataTrigger>
+                            </Grid.Triggers>
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer NumberOfTapsRequired="2" Command="{Binding ActivateCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
+                                <TapGestureRecognizer Command="{Binding TapCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
+                            </Grid.GestureRecognizers>
+                            <Image Source="{Binding Icon}" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
+                            <Label Grid.Column="1" Text="{Binding Name}" Style="{StaticResource Cell}" />
+                            <Label Grid.Column="2" Text="{Binding Modified}" Style="{StaticResource Cell}" Opacity="0.7" WidthRequest="160" IsVisible="{Binding IsWide, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" />
+                            <Label Grid.Column="3" Text="{Binding Size}" Style="{StaticResource Cell}" Opacity="0.7" WidthRequest="90" HorizontalTextAlignment="End" />
+                            <Label Grid.Column="4" Text="{Binding Kind}" Style="{StaticResource Cell}" Opacity="0.7" WidthRequest="130" IsVisible="{Binding IsWide, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" />
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+                <CollectionView.EmptyView>
+                    <Label Text="{String Explorer.Empty}" IsVisible="{Binding IsLoading, Converter={StaticResource Not}}" Opacity="0.5" HorizontalTextAlignment="Center" Padding="24" />
+                </CollectionView.EmptyView>
+            </CollectionView>
+
+            <Grid Grid.Row="4" ColumnDefinitions="*,Auto" Padding="16,4">
+                <Label Text="{Binding Status}" FontSize="12" Opacity="0.6" />
+                <ActivityIndicator Grid.Column="1" IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}" HeightRequest="14" WidthRequest="14" />
+            </Grid>
+        </Grid>
+    </Grid>
+
+</SpinePage>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<SpinePage
+    xmlns="http://schemas.microsoft.com/dotnet/maui/global"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="Spine.FileManager.Pages.FirstRunPage"
+    x:TypeArguments="FirstRunPageViewModel"
+    x:DataType="FirstRunPageViewModel">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="{x:Static HeaderBarConstants.PagePadding}" Spacing="12">
+            <Label Text="{String FirstRun.Intro}" FontSize="15" />
+            <Label Text="{String FirstRun.Folders}" FontSize="15" />
+            <Label Text="{String FirstRun.FullDiskAccess}" FontSize="13" Opacity="0.7" />
+            <Button Text="{String FirstRun.OpenSettings}" Command="{Binding OpenFullDiskAccessCommand}" HorizontalOptions="Start" />
+        </VerticalStackLayout>
+    </ScrollView>
+
+    <SpinePage.Footer>
+        <Grid Padding="{x:Static HeaderBarConstants.PagePadding}">
+            <Button Text="{String FirstRun.Continue}" Command="{Binding ContinueCommand}" IsEnabled="{Binding IsWorking, Converter={StaticResource Not}}" />
+            <ActivityIndicator IsRunning="{Binding IsWorking}" IsVisible="{Binding IsWorking}" HorizontalOptions="End" Margin="0,0,12,0" />
+        </Grid>
+    </SpinePage.Footer>
+
+</SpinePage>

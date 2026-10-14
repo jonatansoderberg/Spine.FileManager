@@ -13,6 +13,9 @@ public interface IFileSystemPlatform
     bool CanTrash(string path);
 
     Task MoveToTrashAsync(string path, CancellationToken cancellationToken);
+
+    /// <summary>The name to show for a folder when it differs from its file name (localised system folders), or null.</summary>
+    string? FolderDisplayName(string path, string name);
 }
 
 /// <summary>Known folders through <see cref="Environment.SpecialFolder"/> and fixed volumes through <see cref="DriveInfo"/>; no trash.</summary>
@@ -51,4 +54,6 @@ public class DefaultFileSystemPlatform : IFileSystemPlatform
 
     public virtual Task MoveToTrashAsync(string path, CancellationToken cancellationToken) =>
         throw new PlatformNotSupportedException("This platform has no trash.");
+
+    public virtual string? FolderDisplayName(string path, string name) => null;
 }

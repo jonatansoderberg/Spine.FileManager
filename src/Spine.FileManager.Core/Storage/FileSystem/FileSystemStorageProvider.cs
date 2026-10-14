@@ -54,7 +54,7 @@ public sealed class FileSystemStorageProvider(IFileSystemPlatform platform) : IS
         FileSystemInfo info = Directory.Exists(path) ? new DirectoryInfo(path) : new FileInfo(path);
         if (!info.Exists)
             throw new FileNotFoundException(null, path);
-        return Item(info);
+        return Named(Item(info));
     }, cancellationToken);
 
     public StorageLocation? GetParent(StorageLocation location) =>
@@ -72,7 +72,7 @@ public sealed class FileSystemStorageProvider(IFileSystemPlatform platform) : IS
                     throw File.Exists(folder.ItemId)
                         ? new StorageException(StorageErrorKind.NotSupported, folder, $"{folder.DisplayPath} is a file, not a folder.")
                         : new DirectoryNotFoundException(folder.ItemId);
-                var entries = new FileSystemEnumerable<StorageItem>(folder.ItemId, (ref FileSystemEntry entry) => Item(ref entry),
+                var entries = new FileSystemEnumerable<StorageItem>(folder.ItemId, (ref FileSystemEntry entry) => Named(Item(ref entry)),
                     new EnumerationOptions { IgnoreInaccessible = true, AttributesToSkip = 0, ReturnSpecialDirectories = false });
                 foreach (var item in entries)
                 {
@@ -220,6 +220,9 @@ public sealed class FileSystemStorageProvider(IFileSystemPlatform platform) : IS
         foreach (var folder in Directory.EnumerateDirectories(source))
             CopyFolder(folder, Path.Combine(target, Path.GetFileName(folder)), cancellationToken);
     }
+
+    private StorageItem Named(StorageItem item) =>
+        item.IsFolder && platform.FolderDisplayName(item.Location.ItemId, item.Name) is { } shown && shown != item.Name ? item with { DisplayName = shown } : item;
 
     private static StorageItem Item(ref FileSystemEntry entry)
     {

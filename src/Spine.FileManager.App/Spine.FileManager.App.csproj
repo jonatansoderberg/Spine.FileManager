@@ -23,6 +23,7 @@
 
 	<ItemGroup>
 		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#2F6FEB" />
+		<MauiImage Include="Resources\Images\*.svg" BaseSize="32,32" />
 		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#2F6FEB" BaseSize="128,128" />
 		<!-- English is the neutral document, Swedish strings.sv.xml (ISpineStrings). WithCulture="false" keeps the
 		     .sv. files out of a satellite assembly, where Spine does not look. -->
@@ -51,12 +52,19 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<MauiXaml Update="Pages\HomePage.View.xaml">
+		<MauiXaml Update="Pages\ExplorerPage.View.xaml">
 			<Generator>MSBuild:Compile</Generator>
-			<DependentUpon>HomePage.cs</DependentUpon>
+			<DependentUpon>ExplorerPage.cs</DependentUpon>
 		</MauiXaml>
-		<Compile Include="Pages\HomePage.ViewModel.cs">
-			<DependentUpon>HomePage.cs</DependentUpon>
+		<Compile Include="Pages\ExplorerPage.ViewModel.cs">
+			<DependentUpon>ExplorerPage.cs</DependentUpon>
+		</Compile>
+		<MauiXaml Update="Pages\FirstRunPage.View.xaml">
+			<Generator>MSBuild:Compile</Generator>
+			<DependentUpon>FirstRunPage.cs</DependentUpon>
+		</MauiXaml>
+		<Compile Include="Pages\FirstRunPage.ViewModel.cs">
+			<DependentUpon>FirstRunPage.cs</DependentUpon>
 		</Compile>
 	</ItemGroup>
 
