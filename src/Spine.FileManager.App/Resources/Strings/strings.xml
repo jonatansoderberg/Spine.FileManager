@@ -120,4 +120,9 @@
   <s key="Operations.State.Failed">Failed</s>
   <s key="Operations.State.Cancelled">Cancelled</s>
   <s key="Operations.State.Interrupted">Interrupted</s>
+  <s key="Menu.NewTab">New Tab</s>
+  <s key="Menu.OpenInNewTab">Open in New Tab</s>
+  <s key="Menu.CloseTab">Close Tab</s>
+  <s key="Menu.NextTab">Show Next Tab</s>
+  <s key="Menu.PreviousTab">Show Previous Tab</s>
 </strings>

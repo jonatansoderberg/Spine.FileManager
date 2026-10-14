@@ -19,6 +19,8 @@ public class AppDelegate : MauiUIApplicationDelegate
 		builder.RemoveMenu(UIMenuIdentifier.Format.GetConstant());
 		// Duplicate, Move, Rename… and Export As… are a document app's; the explorer has its own Rename.
 		builder.RemoveMenu(UIMenuIdentifier.Document.GetConstant());
+		// The system's Close (⌘W) closes the window; in the explorer ⌘W closes a tab (File › Close Tab).
+		builder.RemoveMenu(UIMenuIdentifier.Close.GetConstant());
 		foreach (var identifier in new[] { UIMenuIdentifier.File, UIMenuIdentifier.View })
 			if (builder.GetMenu(identifier.GetConstant()) is { } menu && !AppMenu.Owns(Titles(menu)))
 				builder.RemoveMenu(identifier.GetConstant());

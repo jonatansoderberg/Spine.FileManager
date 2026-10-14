@@ -120,4 +120,9 @@
   <s key="Operations.State.Failed">Misslyckades</s>
   <s key="Operations.State.Cancelled">Avbruten</s>
   <s key="Operations.State.Interrupted">Avbröts</s>
+  <s key="Menu.NewTab">Ny flik</s>
+  <s key="Menu.OpenInNewTab">Öppna i ny flik</s>
+  <s key="Menu.CloseTab">Stäng flik</s>
+  <s key="Menu.NextTab">Visa nästa flik</s>
+  <s key="Menu.PreviousTab">Visa föregående flik</s>
 </strings>
