@@ -16,12 +16,21 @@
 		<WindowsPackageType>None</WindowsPackageType>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">
+		<CodesignEntitlements Condition="'$(MacAppStore)' != 'true'">Platforms\MacCatalyst\Entitlements.plist</CodesignEntitlements>
+		<CodesignEntitlements Condition="'$(MacAppStore)' == 'true'">Platforms\MacCatalyst\Entitlements.AppStore.plist</CodesignEntitlements>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#2F6FEB" />
 		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#2F6FEB" BaseSize="128,128" />
 		<!-- English is the neutral document, Swedish strings.sv.xml (ISpineStrings). WithCulture="false" keeps the
 		     .sv. files out of a satellite assembly, where Spine does not look. -->
 		<EmbeddedResource Include="Resources\Strings\*.xml" WithCulture="false" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Remove="Platforms\MacCatalyst\Entitlements*.plist" />
 	</ItemGroup>
 
 	<ItemGroup>

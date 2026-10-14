@@ -1,0 +1,6 @@
+"NSDocumentsFolderUsageDescription" = "Spine File Manager visar och hanterar filerna i din Dokument-mapp.";
+"NSDesktopFolderUsageDescription" = "Spine File Manager visar och hanterar filerna på ditt skrivbord.";
+"NSDownloadsFolderUsageDescription" = "Spine File Manager visar och hanterar filerna i din Hämtade filer-mapp.";
+"NSRemovableVolumesUsageDescription" = "Spine File Manager visar och hanterar filerna på flyttbara enheter.";
+"NSNetworkVolumesUsageDescription" = "Spine File Manager visar och hanterar filerna på nätverksvolymer.";
+"NSFileProviderDomainUsageDescription" = "Spine File Manager visar och hanterar filerna i din molnlagring.";

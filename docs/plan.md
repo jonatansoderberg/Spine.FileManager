@@ -1,6 +1,6 @@
 # Spine File Manager — Requirements and Plan
 
-**Last updated:** 2026-10-14 — storage abstraction (#2) in Core; Spike 1 run on Mac, iOS simulator and Android emulator; Mac ships with Developer ID, no sandbox.
+**Last updated:** 2026-10-14 — Mac provider (#4) done, Windows provider (#3) compiled but not run; storage abstraction (#2) in Core.
 
 A living plan. Each step links its GitHub issue once it has one; update the status, the decisions and the line above in the same PR as the work.
 
@@ -71,8 +71,8 @@ Result: a usable desktop file manager.
 | A1 | Phase 0 — Spine inventory (§5) | ✅ | — |
 | A2 | Spike 1 — file-system capabilities (§6) | 🔄 | [#1](https://github.com/jonatansoderberg/Spine.FileManager/issues/1) |
 | A3 | Storage abstraction (§7) | ✅ | [#2](https://github.com/jonatansoderberg/Spine.FileManager/issues/2) |
-| A4 | Windows local provider | ⬜ | [#3](https://github.com/jonatansoderberg/Spine.FileManager/issues/3) |
-| A5 | macOS local provider | ⬜ | [#4](https://github.com/jonatansoderberg/Spine.FileManager/issues/4) |
+| A4 | Windows local provider | 🔄 compiled, not run | [#3](https://github.com/jonatansoderberg/Spine.FileManager/issues/3) |
+| A5 | macOS local provider | ✅ | [#4](https://github.com/jonatansoderberg/Spine.FileManager/issues/4) |
 | A6 | Basic FileExplorer (§8) | ⬜ | [#5](https://github.com/jonatansoderberg/Spine.FileManager/issues/5) |
 | A7 | Breadcrumb bar (§8) | ⬜ | [#6](https://github.com/jonatansoderberg/Spine.FileManager/issues/6) |
 | A8 | List/grid + Spike 2 — file-list performance (§9) | ⬜ | [#7](https://github.com/jonatansoderberg/Spine.FileManager/issues/7) |

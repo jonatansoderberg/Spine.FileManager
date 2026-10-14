@@ -1,4 +1,17 @@
 <strings>
   <s key="Home.Title">Files</s>
-  <s key="Home.Placeholder">Nothing to browse yet — the explorer arrives with Milestone A.</s>
+  <s key="Home.Places">Places</s>
+  <s key="Place.Kind.Home">Home</s>
+  <s key="Place.Kind.Desktop">Desktop</s>
+  <s key="Place.Kind.Documents">Documents</s>
+  <s key="Place.Kind.Downloads">Downloads</s>
+  <s key="Place.Kind.Pictures">Pictures</s>
+  <s key="Place.Kind.Music">Music</s>
+  <s key="Place.Kind.Videos">Videos</s>
+  <s key="Place.Kind.Volume">Drive</s>
+  <s key="Place.Kind.RemovableVolume">Removable drive</s>
+  <s key="Place.Kind.NetworkVolume">Network</s>
+  <s key="Place.Kind.Cloud">Cloud</s>
+  <s key="Place.Kind.AppData">App data</s>
+  <s key="Place.Kind.Other">Folder</s>
 </strings>

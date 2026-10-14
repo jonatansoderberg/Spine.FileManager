@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Plugin.Maui.Spine.Extensions;
+using Spine.FileManager.Storage.FileSystem;
 
 namespace Spine.FileManager;
 
@@ -20,6 +21,18 @@ public static class MauiProgram
                 options.Windows.MinHeight = 360;
                 options.Windows.PersistWindowPosition = true;
             });
+
+        builder.Services.AddSingleton<IFileSystemPlatform>(
+#if MACCATALYST
+            new MacFileSystemPlatform()
+#elif WINDOWS
+            new WindowsFileSystemPlatform()
+#else
+            new DefaultFileSystemPlatform()
+#endif
+        );
+        builder.Services.AddSingleton<IStorageProvider, FileSystemStorageProvider>();
+        builder.Services.AddSingleton<StorageProviders>();
 
 #if DEBUG
         builder.Logging.AddDebug();

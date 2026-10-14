@@ -1,4 +1,17 @@
 <strings culture="sv">
   <s key="Home.Title">Filer</s>
-  <s key="Home.Placeholder">Inget att bläddra i än — utforskaren kommer med milstolpe A.</s>
+  <s key="Home.Places">Platser</s>
+  <s key="Place.Kind.Home">Hem</s>
+  <s key="Place.Kind.Desktop">Skrivbord</s>
+  <s key="Place.Kind.Documents">Dokument</s>
+  <s key="Place.Kind.Downloads">Hämtade filer</s>
+  <s key="Place.Kind.Pictures">Bilder</s>
+  <s key="Place.Kind.Music">Musik</s>
+  <s key="Place.Kind.Videos">Filmer</s>
+  <s key="Place.Kind.Volume">Enhet</s>
+  <s key="Place.Kind.RemovableVolume">Flyttbar enhet</s>
+  <s key="Place.Kind.NetworkVolume">Nätverk</s>
+  <s key="Place.Kind.Cloud">Moln</s>
+  <s key="Place.Kind.AppData">Appdata</s>
+  <s key="Place.Kind.Other">Mapp</s>
 </strings>
