@@ -29,18 +29,40 @@ public sealed partial class BreadcrumbSegment(StorageLocation location, string n
     [ObservableProperty]
     public partial string Name { get; set; } = name;
 
-    /// <summary>The folder's subfolders, filled in after the bar is shown, for the drop-down behind the segment's chevron.</summary>
-    public Plugin.Maui.Spine.Core.MenuItems Children { get; } = [];
+    /// <summary>
+    /// The folder's subfolders for the drop-down behind the segment's chevron, set once when read: Spine rebuilds a native
+    /// menu on every change to its items, and filling one row by row froze the window for 27 s at 500 subfolders.
+    /// </summary>
+    [ObservableProperty]
+    public partial Plugin.Maui.Spine.Core.MenuItems? Children { get; set; }
 }
 
-public sealed partial class ItemRow(StorageItem item, string kind, string modified, string size) : ObservableObject
+/// <summary>How a list's rows are worded: the culture and the kind names, shared by every row of one listing.</summary>
+public sealed class RowFormat(ISpineStrings strings)
 {
+    public System.Globalization.CultureInfo Culture { get; } = System.Globalization.CultureInfo.CurrentCulture;
+    public string Folder { get; } = strings["Explorer.Kind.Folder"];
+    public string Document { get; } = strings["Explorer.Kind.Document"];
+    public string FileKind { get; } = strings["Explorer.Kind.File"];
+}
+
+/// <summary>
+/// One row of the list. The texts are made when a cell asks for them, so a folder of 100 000 items costs 100 000 small
+/// objects rather than 300 000 formatted strings before the first row shows.
+/// </summary>
+public sealed partial class ItemRow(StorageItem item, RowFormat format) : ObservableObject
+{
+    private static readonly ImageSource FolderIcon = "folder.png";
+    private static readonly ImageSource FileIcon = "file.png";
+
     public StorageItem Item { get; } = item;
     public string Name => Item.DisplayName;
-    public string Kind { get; } = kind;
-    public string Modified { get; } = modified;
-    public string Size { get; } = size;
-    public ImageSource Icon => Item.IsFolder ? "folder.png" : "file.png";
+    public string Kind => Item.IsFolder ? format.Folder
+        : Item.Extension.Length > 0 ? string.Format(format.Culture, format.FileKind, Item.Extension.ToUpperInvariant())
+        : format.Document;
+    public string Modified => Item.Modified?.ToLocalTime().ToString("g", format.Culture) ?? "";
+    public string Size => Item.Size is { } size ? ByteSize.Format(size, format.Culture) : "";
+    public ImageSource Icon => Item.IsFolder ? FolderIcon : FileIcon;
     public double Dimmed => Item.IsHidden ? 0.5 : 1;
 
     [ObservableProperty]
@@ -115,6 +137,16 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     [ObservableProperty]
     public partial bool ShowHidden { get; private set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsList))]
+    public partial bool IsIcons { get; private set; }
+
+    public bool IsList => !IsIcons;
+
+    /// <summary>Columns of the icon grid, from the list's width.</summary>
+    [ObservableProperty]
+    public partial int GridSpan { get; set; } = 6;
 
     public string NameHeader => Header("Explorer.Column.Name", SortColumn.Name);
     public string ModifiedHeader => Header("Explorer.Column.Modified", SortColumn.Modified);
@@ -220,6 +252,9 @@ public partial class ExplorerPageViewModel : ViewModelBase
         if (Current is { } location)
             _ = BuildBreadcrumb(_providers[location], location);
     }
+
+    [RelayCommand]
+    private void ShowAs(string view) => IsIcons = view == "Icons";
 
     [RelayCommand]
     private void SortBy(string column)
@@ -328,13 +363,16 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
         try
         {
-            var items = new List<StorageItem>();
-            await foreach (var item in provider.EnumerateAsync(location, cancel.Token))
-                items.Add(item);
+            // Read and sorted off the UI thread; only the finished rows cross over.
+            var (items, rows) = await Task.Run(async () =>
+            {
+                var items = new List<StorageItem>();
+                await foreach (var item in provider.EnumerateAsync(location, cancel.Token))
+                    items.Add(item);
+                return (items, BuildRows(items));
+            }, cancel.Token);
             _items = items;
-            Rebuild();
-            if (keep is { Count: > 0 })
-                SelectWhere(item => keep.Contains(item.Location));
+            Show(rows, keep);
         }
         catch (OperationCanceledException)
         {
@@ -366,8 +404,10 @@ public partial class ExplorerPageViewModel : ViewModelBase
             try
             {
                 segment.Name = (await provider.GetItemAsync(segment.Location)).DisplayName;
+                var menu = new Plugin.Maui.Spine.Core.MenuItems();
                 foreach (var folder in await Breadcrumb.SubfoldersAsync(provider, segment.Location, ShowHidden))
-                    segment.Children.Add(new Plugin.Maui.Spine.Core.MenuAction(folder.DisplayName, "folder.svg", OpenLocationCommand) { CommandParameter = folder.Location });
+                    menu.Add(new Plugin.Maui.Spine.Core.MenuAction(folder.DisplayName, "folder.svg", OpenLocationCommand) { CommandParameter = folder.Location });
+                segment.Children = menu;
             }
             catch (StorageException)
             {
@@ -407,18 +447,22 @@ public partial class ExplorerPageViewModel : ViewModelBase
         });
     }
 
-    private void Rebuild(bool keepSelection = false)
+    private ItemRow[] BuildRows(List<StorageItem> items)
     {
-        var keep = keepSelection ? SelectedItems.Select(i => i.Location).ToHashSet() : null;
-        var culture = System.Globalization.CultureInfo.CurrentCulture;
-        Rows = [.. _items.Where(i => ShowHidden || !i.IsHidden).Order(Sort.Comparer()).Select(item => new ItemRow(item,
-            item.IsFolder ? _strings["Explorer.Kind.Folder"]
-                : item.Extension.Length > 0 ? _strings.Get("Explorer.Kind.File", item.Extension.ToUpperInvariant())
-                : _strings["Explorer.Kind.Document"],
-            item.Modified?.ToLocalTime().ToString("g", culture) ?? "",
-            item.Size is { } size ? ByteSize.Format(size, culture) : ""))];
+        var format = new RowFormat(_strings);
+        var visible = ShowHidden ? [.. items] : items.Where(i => !i.IsHidden).ToArray();
+        Sort.Sort(visible);
+        return Array.ConvertAll(visible, item => new ItemRow(item, format));
+    }
+
+    private void Rebuild(bool keepSelection = false) =>
+        Show(BuildRows(_items), keepSelection ? SelectedItems.Select(i => i.Location).ToHashSet() : null);
+
+    private void Show(ItemRow[] rows, HashSet<StorageLocation>? keep)
+    {
+        Rows = rows;
         _selection.Clear();
-        if (keep is not null)
+        if (keep is { Count: > 0 })
             SelectWhere(item => keep.Contains(item.Location));
         else
             UpdateStatus();

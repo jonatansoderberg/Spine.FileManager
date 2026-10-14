@@ -5,6 +5,7 @@
     xmlns:services="clr-namespace:Spine.FileManager.Services">
 
     <services:NotConverter x:Key="Not" />
+    <services:StrengthConverter x:Key="Strength" />
 
     <Style TargetType="Label">
         <Setter Property="TextColor" Value="{AppThemeBinding Light=#1B1B1B, Dark=White}" />

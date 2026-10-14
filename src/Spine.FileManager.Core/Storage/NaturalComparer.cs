@@ -9,6 +9,12 @@ public sealed class NaturalComparer(CultureInfo? culture = null) : IComparer<str
 
     public static NaturalComparer Current => new();
 
+    /// <summary>
+    /// A precomputed key that orders exactly as <see cref="Compare"/> does. Sorting 100 000 names with keys took a
+    /// fraction of comparing them pairwise with the culture's rules (Spike 2).
+    /// </summary>
+    public NaturalKey GetKey(string text) => new(text, _compare);
+
     public int Compare(string? x, string? y)
     {
         if (ReferenceEquals(x, y))
@@ -50,5 +56,57 @@ public sealed class NaturalComparer(CultureInfo? culture = null) : IComparer<str
             }
         }
         return (x.Length - i).CompareTo(y.Length - j);
+    }
+}
+
+/// <summary>A name split into its text and number runs, the text as the culture's sort key.</summary>
+public sealed class NaturalKey : IComparable<NaturalKey>
+{
+    private readonly object[] _runs;
+
+    internal NaturalKey(string text, CompareInfo compare)
+    {
+        var runs = new List<object>();
+        for (var i = 0; i < text.Length;)
+        {
+            var start = i;
+            var digits = char.IsAsciiDigit(text[i]);
+            while (i < text.Length && char.IsAsciiDigit(text[i]) == digits)
+                i++;
+            var run = text[start..i];
+            runs.Add(digits ? new Number(run.TrimStart('0'), run.Length) : compare.GetSortKey(run, CompareOptions.IgnoreCase));
+        }
+        _runs = [.. runs];
+    }
+
+    public int CompareTo(NaturalKey? other)
+    {
+        if (other is null)
+            return 1;
+        for (var k = 0; k < _runs.Length && k < other._runs.Length; k++)
+        {
+            var order = (_runs[k], other._runs[k]) switch
+            {
+                (Number x, Number y) => x.CompareTo(y),
+                (SortKey x, SortKey y) => SortKey.Compare(x, y),
+                // A number against text: the number sorts first, as an empty text run would.
+                (Number, _) => -1,
+                _ => 1,
+            };
+            if (order != 0)
+                return order;
+        }
+        return _runs.Length.CompareTo(other._runs.Length);
+    }
+
+    private sealed record Number(string Digits, int Length) : IComparable<Number>
+    {
+        public int CompareTo(Number? other)
+        {
+            if (Digits.Length != other!.Digits.Length)
+                return Digits.Length.CompareTo(other.Digits.Length);
+            var digits = string.CompareOrdinal(Digits, other.Digits);
+            return digits != 0 ? Math.Sign(digits) : Length.CompareTo(other.Length);
+        }
     }
 }
