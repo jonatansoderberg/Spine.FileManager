@@ -42,6 +42,8 @@ public static class MauiProgram
         builder.Services.AddSingleton(services => new Operations.OperationQueue(
             services.GetRequiredService<StorageProviders>(), new Operations.OperationJournal(Path.Combine(AppPaths.Data, "operations"))));
         builder.Services.AddSingleton(new Favorites.FavoritesStore(Path.Combine(AppPaths.Data, "favorites.json")));
+        builder.Services.AddSingleton(new Workspaces.SessionStore(Path.Combine(AppPaths.Data, "session.json")));
+        builder.Services.AddSingleton<SessionTracker>();
 
 #if DEBUG
         builder.Logging.AddDebug();

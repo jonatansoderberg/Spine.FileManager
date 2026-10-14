@@ -10,20 +10,22 @@ public static class ExplorerWindows
 {
     public static bool IsSupported => DeviceInfo.Idiom == DeviceIdiom.Desktop;
 
-    /// <summary>Opens a window showing <paramref name="tab"/>'s folder, history and view, or a copy of where <paramref name="from"/> is.</summary>
-    public static void Open(ExplorerTab? tab = null, StorageLocation? from = null)
+    /// <summary>Opens a window with <paramref name="tabs"/> (moved or restored, <paramref name="active"/> shown), or at <paramref name="from"/>.</summary>
+    public static void Open(IReadOnlyList<ExplorerTab>? tabs = null, int active = 0, StorageLocation? from = null)
     {
         if (!IsSupported || Application.Current is not { } app)
             return;
         var explorer = new ExplorerPage();
         var vm = (ExplorerPageViewModel)explorer.BindingContext;
-        vm.Start(tab, from);
+        vm.Start(tabs, active, from);
         var window = new Window(new ContentPage { Content = explorer, Title = AppInfo.Name }) { Title = AppInfo.Name };
         window.Created += (_, _) => _ = vm.OnAppearingAsync(NavigationDirection.NavigateTo);
         window.Destroying += (_, _) =>
         {
             if (AppMenu.Explorer == vm)
                 AppMenu.Explorer = null;
+            // A window the user closes is not part of the next session.
+            IPlatformApplication.Current?.Services.GetService<SessionTracker>()?.Unregister(vm);
         };
         app.OpenWindow(window);
     }
