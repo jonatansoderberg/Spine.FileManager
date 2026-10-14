@@ -69,15 +69,15 @@ Result: a usable desktop file manager.
 | # | Step | Status | Issue |
 |---|---|---|---|
 | A1 | Phase 0 — Spine inventory (§5) | ✅ | — |
-| A2 | Spike 1 — file-system capabilities (§6) | ⬜ | |
-| A3 | Storage abstraction (§7) | ⬜ | |
-| A4 | Windows local provider | ⬜ | |
-| A5 | macOS local provider | ⬜ | |
-| A6 | Basic FileExplorer (§8) | ⬜ | |
-| A7 | Breadcrumb bar (§8) | ⬜ | |
-| A8 | List/grid + Spike 2 — file-list performance (§9) | ⬜ | |
-| A9 | Local operations | ⬜ | |
-| A10 | Favorites (§15) | ⬜ | |
+| A2 | Spike 1 — file-system capabilities (§6) | ⬜ | [#1](https://github.com/jonatansoderberg/Spine.FileManager/issues/1) |
+| A3 | Storage abstraction (§7) | ⬜ | [#2](https://github.com/jonatansoderberg/Spine.FileManager/issues/2) |
+| A4 | Windows local provider | ⬜ | [#3](https://github.com/jonatansoderberg/Spine.FileManager/issues/3) |
+| A5 | macOS local provider | ⬜ | [#4](https://github.com/jonatansoderberg/Spine.FileManager/issues/4) |
+| A6 | Basic FileExplorer (§8) | ⬜ | [#5](https://github.com/jonatansoderberg/Spine.FileManager/issues/5) |
+| A7 | Breadcrumb bar (§8) | ⬜ | [#6](https://github.com/jonatansoderberg/Spine.FileManager/issues/6) |
+| A8 | List/grid + Spike 2 — file-list performance (§9) | ⬜ | [#7](https://github.com/jonatansoderberg/Spine.FileManager/issues/7) |
+| A9 | Local operations | ⬜ | [#8](https://github.com/jonatansoderberg/Spine.FileManager/issues/8) |
+| A10 | Favorites (§15) | ⬜ | [#9](https://github.com/jonatansoderberg/Spine.FileManager/issues/9) |
 
 ### Milestone B — Power User Desktop
 Result: Explorer/Finder plus Edge/Commander productivity.
