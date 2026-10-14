@@ -251,8 +251,20 @@ public sealed class FileSystemStorageProviderTests : IDisposable
         Assert.Equal([new StorageRoot(FileSystemStorageProvider.Location(Path.GetTempPath()), "Temp", StorageRootKind.Home)], roots);
     }
 
+    [Fact]
+    public async Task Folders_get_the_platforms_display_name_and_files_keep_theirs()
+    {
+        _temp.Folder("Desktop");
+        _temp.File("Desktop.txt");
+        var items = (await List(Root)).ToDictionary(i => i.Name);
+        Assert.Equal("Skrivbord", items["Desktop"].DisplayName);
+        Assert.Equal("Desktop.txt", items["Desktop.txt"].DisplayName);
+    }
+
     private sealed class FakeTrash : DefaultFileSystemPlatform
     {
+        public override string? FolderDisplayName(string path, string name) => name == "Desktop" ? "Skrivbord" : null;
+
         public List<string> Trashed { get; } = [];
 
         public override bool CanTrash(string path) => true;

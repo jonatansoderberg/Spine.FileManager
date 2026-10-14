@@ -8,6 +8,9 @@ public enum StorageItemKind { File, Folder }
 /// </summary>
 public sealed record StorageItem(StorageLocation Location, string Name, StorageItemKind Kind)
 {
+    /// <summary>What the user sees: Finder's localised folder names ("Skrivbord" for Desktop) or the name itself.</summary>
+    public string DisplayName { get => field ?? Name; init; }
+
     public long? Size { get; init; }
     public DateTimeOffset? Modified { get; init; }
     public DateTimeOffset? Created { get; init; }
