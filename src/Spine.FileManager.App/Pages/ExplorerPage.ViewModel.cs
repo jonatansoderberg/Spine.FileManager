@@ -3,6 +3,7 @@ using Plugin.Maui.Spine.Common;
 using Spine.FileManager.Explorer;
 using Spine.FileManager.Favorites;
 using Spine.FileManager.Operations;
+using Spine.FileManager.Workspaces;
 using MenuAction = Plugin.Maui.Spine.Core.MenuAction;
 using MenuItems = Plugin.Maui.Spine.Core.MenuItems;
 using MenuSection = Plugin.Maui.Spine.Core.MenuSection;
@@ -163,6 +164,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     private void SyncTabs()
     {
+        IPlatformApplication.Current?.Services.GetService<SessionTracker>()?.Changed();
         Tabs.Clear();
         foreach (var tab in _tabs.Tabs)
         {
@@ -175,14 +177,28 @@ public partial class ExplorerPageViewModel : ViewModelBase
     [RelayCommand]
     private Task NewTab() => OpenTab(Current, activate: true);
 
-    private ExplorerTab? _startTab;
+    private IReadOnlyList<ExplorerTab>? _startTabs;
+    private int _startActive;
     private StorageLocation? _startLocation;
 
-    /// <summary>For an explorer in a new window: start in <paramref name="tab"/> (moved from another window) or at <paramref name="location"/>.</summary>
-    public void Start(ExplorerTab? tab, StorageLocation? location)
+    /// <summary>For an explorer in a new window: start with <paramref name="tabs"/> (moved or restored) or at <paramref name="location"/>.</summary>
+    public void Start(IReadOnlyList<ExplorerTab>? tabs, int active, StorageLocation? location)
     {
-        _startTab = tab;
+        _startTabs = tabs;
+        _startActive = active;
         _startLocation = location;
+    }
+
+    /// <summary>This window's tabs as the session saves them.</summary>
+    public WindowState Snapshot() => new(
+        [.. _tabs.Tabs.Where(t => t.Location is not null).Select(t => new TabState(t.Location!, t.Sort, t.ShowHidden, t.IsIcons))],
+        Math.Max(0, _tabs.Tabs.Where(t => t.Location is not null).ToList().IndexOf(_tabs.Active)));
+
+    private static ExplorerTab Tab(TabState state)
+    {
+        var tab = new ExplorerTab { Sort = state.Sort, ShowHidden = state.ShowHidden, IsIcons = state.IsIcons };
+        tab.History.Navigate(state.Location);
+        return tab;
     }
 
     [RelayCommand]
@@ -199,7 +215,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
             Remember();
         await CloseTab(moving);
         moving.IsActive = true;
-        ExplorerWindows.Open(moving);
+        ExplorerWindows.Open([moving]);
     }
 
     [RelayCommand]
@@ -289,11 +305,13 @@ public partial class ExplorerPageViewModel : ViewModelBase
             await Load(location, cached: tab.Items, keep: tab.Selected);
     }
 
-    partial void OnSortChanged(ItemSort value) => _tabs.Active.Sort = value;
+    partial void OnSortChanged(ItemSort value) { _tabs.Active.Sort = value; SessionChanged(); }
 
-    partial void OnShowHiddenChanged(bool value) => _tabs.Active.ShowHidden = value;
+    partial void OnShowHiddenChanged(bool value) { _tabs.Active.ShowHidden = value; SessionChanged(); }
 
-    partial void OnIsIconsChanged(bool value) => _tabs.Active.IsIcons = value;
+    partial void OnIsIconsChanged(bool value) { _tabs.Active.IsIcons = value; SessionChanged(); }
+
+    private static void SessionChanged() => IPlatformApplication.Current?.Services.GetService<SessionTracker>()?.Changed();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasNoFavorites))]
@@ -493,14 +511,27 @@ public partial class ExplorerPageViewModel : ViewModelBase
     {
         if (Places.Count > 0)
             return;
-        if (_startTab is { } moved)
+        var session = IPlatformApplication.Current!.Services.GetRequiredService<SessionTracker>();
+        if (_startTabs is null && await session.RestoreAsync() is { Count: > 0 } windows)
         {
-            // A tab moved here from another window becomes this window's only tab, as it was.
-            _tabs.Add(moved);
-            _tabs.Close(_tabs.Tabs[0]);
-            _startTab = null;
+            // The first explorer brings back the last session: its own tabs, and the other windows.
+            _startTabs = [.. windows[0].Tabs.Select(Tab)];
+            _startActive = windows[0].Active;
+            foreach (var window in windows.Skip(1))
+                ExplorerWindows.Open([.. window.Tabs.Select(Tab)], window.Active);
+        }
+        if (_startTabs is { Count: > 0 } startTabs)
+        {
+            // Moved or restored tabs replace the window's first, empty tab.
+            var initial = _tabs.Tabs[0];
+            foreach (var tab in startTabs)
+                _tabs.Add(tab, activate: false);
+            _tabs.Close(initial);
+            _tabs.Activate(startTabs[Math.Clamp(_startActive, 0, startTabs.Count - 1)]);
+            _startTabs = null;
         }
         SyncTabs();
+        session.Register(this);
         UpdateInterrupted();
         await LoadFavorites();
         foreach (var provider in _providers.All)
@@ -807,6 +838,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
         var changedFolder = !location.Equals(Current) || cached is not null || keep is { Count: > 0 } && !keepSelection;
         var tab = _tabs.Active;
         tab.Location = location;
+        SessionChanged();
         if (string.IsNullOrEmpty(tab.Title) || !location.Equals(Current))
             tab.Title = Path.GetFileName(location.DisplayPath.TrimEnd(Path.DirectorySeparatorChar)) is { Length: > 0 } name ? name : location.DisplayPath;
 
