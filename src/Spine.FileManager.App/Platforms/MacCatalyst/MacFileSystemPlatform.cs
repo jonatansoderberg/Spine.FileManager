@@ -61,7 +61,8 @@ public sealed class MacFileSystemPlatform : DefaultFileSystemPlatform
 
     // Only folders: for files DisplayName hides the extension when Finder is set to, which a file manager must not.
     public override string? FolderDisplayName(string path, string name) =>
-        name.EndsWith(".localized", StringComparison.Ordinal) || name is "Desktop" or "Documents" or "Downloads" or "Movies" or "Music" or "Pictures" or "Public" or "Applications" or "Library"
+        path.Count(c => c == '/') == 1 || name.EndsWith(".localized", StringComparison.Ordinal)
+            || name is "Desktop" or "Documents" or "Downloads" or "Movies" or "Music" or "Pictures" or "Public" or "Applications" or "Library"
             ? NSFileManager.DefaultManager.DisplayName(path)
             : null;
 

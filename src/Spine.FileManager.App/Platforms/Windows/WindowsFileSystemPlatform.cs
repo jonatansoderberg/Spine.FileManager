@@ -72,6 +72,22 @@ public sealed class WindowsFileSystemPlatform : DefaultFileSystemPlatform
         return Task.CompletedTask;
     }
 
+    // A drive root shows its label, as Explorer does: "Data (D:)".
+    public override string? FolderDisplayName(string path, string name)
+    {
+        if (Path.GetPathRoot(path) != path)
+            return null;
+        try
+        {
+            var drive = new DriveInfo(path);
+            return drive.IsReady && drive.VolumeLabel.Length > 0 ? $"{drive.VolumeLabel} ({path.TrimEnd('\\')})" : path.TrimEnd('\\');
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
+    }
+
     static string? KnownFolder(Guid id)
     {
         if (SHGetKnownFolderPath(id, 0, 0, out var path) != 0)

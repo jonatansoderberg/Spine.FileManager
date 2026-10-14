@@ -1,6 +1,6 @@
 # Spine File Manager — Requirements and Plan
 
-**Last updated:** 2026-10-14 — explorer (#5) on the Mac with menu bar and first-launch step; Mac provider (#4) done, Windows (#3) compiled only; storage abstraction (#2).
+**Last updated:** 2026-10-14 — breadcrumb (#6) and explorer (#5) on the Mac; Mac provider (#4) done, Windows (#3) compiled only; storage abstraction (#2).
 
 A living plan. Each step links its GitHub issue once it has one; update the status, the decisions and the line above in the same PR as the work.
 
@@ -74,7 +74,7 @@ Result: a usable desktop file manager.
 | A4 | Windows local provider | 🔄 compiled, not run | [#3](https://github.com/jonatansoderberg/Spine.FileManager/issues/3) |
 | A5 | macOS local provider | ✅ | [#4](https://github.com/jonatansoderberg/Spine.FileManager/issues/4) |
 | A6 | Basic FileExplorer (§8) | ✅ | [#5](https://github.com/jonatansoderberg/Spine.FileManager/issues/5) |
-| A7 | Breadcrumb bar (§8) | ⬜ | [#6](https://github.com/jonatansoderberg/Spine.FileManager/issues/6) |
+| A7 | Breadcrumb bar (§8) | ✅ | [#6](https://github.com/jonatansoderberg/Spine.FileManager/issues/6) |
 | A8 | List/grid + Spike 2 — file-list performance (§9) | ⬜ | [#7](https://github.com/jonatansoderberg/Spine.FileManager/issues/7) |
 | A9 | Local operations | ⬜ | [#8](https://github.com/jonatansoderberg/Spine.FileManager/issues/8) |
 | A10 | Favorites (§15) | ⬜ | [#9](https://github.com/jonatansoderberg/Spine.FileManager/issues/9) |

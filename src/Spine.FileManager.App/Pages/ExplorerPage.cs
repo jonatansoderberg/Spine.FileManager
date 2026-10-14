@@ -13,8 +13,15 @@ public partial class ExplorerPage
         };
         Loaded += (_, _) =>
         {
-            if (BindingContext is ExplorerPageViewModel vm)
-                AppMenu.Install(this, vm);
+            if (BindingContext is not ExplorerPageViewModel vm)
+                return;
+            AppMenu.Install(this, vm);
+            // A deep folder's breadcrumb is wider than the bar; keep its end, the current folder, in view.
+            vm.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(ExplorerPageViewModel.Segments))
+                    Dispatcher.Dispatch(async () => await BreadcrumbScroll.ScrollToAsync(double.MaxValue, 0, false));
+            };
         };
     }
 }

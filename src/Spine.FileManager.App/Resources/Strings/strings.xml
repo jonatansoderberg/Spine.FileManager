@@ -64,4 +64,5 @@
   <s key="FirstRun.FullDiskAccess">Or give Spine File Manager Full Disk Access once, and macOS will not ask again.</s>
   <s key="FirstRun.OpenSettings">Open Full Disk Access settings</s>
   <s key="FirstRun.Continue">Continue</s>
+  <s key="Explorer.Subfolders">Subfolders</s>
 </strings>
