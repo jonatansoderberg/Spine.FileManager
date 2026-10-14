@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>$(MauiTargetFrameworks)</TargetFrameworks>
+		<OutputType>Exe</OutputType>
+		<RootNamespace>FileSystemSpike</RootNamespace>
+		<UseMaui>true</UseMaui>
+		<SingleProject>true</SingleProject>
+		<MauiXamlInflator>SourceGen</MauiXamlInflator>
+
+		<ApplicationTitle>FS Spike</ApplicationTitle>
+		<ApplicationId>se.cosmomedia.filemanager.spike</ApplicationId>
+		<ApplicationDisplayVersion>0.1</ApplicationDisplayVersion>
+		<ApplicationVersion>1</ApplicationVersion>
+
+		<WindowsPackageType>None</WindowsPackageType>
+
+		<!-- -p:SpikeSandbox=false builds the Mac app without the App Sandbox, as a Developer ID app would ship. -->
+		<SpikeSandbox Condition="'$(SpikeSandbox)' == ''">true</SpikeSandbox>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">
+		<CodesignEntitlements Condition="'$(SpikeSandbox)' == 'true'">Platforms\MacCatalyst\Entitlements.plist</CodesignEntitlements>
+		<CodesignEntitlements Condition="'$(SpikeSandbox)' != 'true'">Platforms\MacCatalyst\Entitlements.NoSandbox.plist</CodesignEntitlements>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Remove="Platforms\MacCatalyst\Entitlements*.plist" />
+		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#E8A33D" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="CommunityToolkit.Mvvm" />
+		<PackageReference Include="Microsoft.Maui.Controls" />
+		<PackageReference Include="Plugin.Maui.Spine" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Remove="**\*.ViewModel.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<MauiXaml Update="ProbePage.View.xaml">
+			<Generator>MSBuild:Compile</Generator>
+			<DependentUpon>ProbePage.cs</DependentUpon>
+		</MauiXaml>
+		<Compile Include="ProbePage.ViewModel.cs">
+			<DependentUpon>ProbePage.cs</DependentUpon>
+		</Compile>
+	</ItemGroup>
+
+</Project>
