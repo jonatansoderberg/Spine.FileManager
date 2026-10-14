@@ -175,4 +175,8 @@
   <s key="Link.Scan">Scan Code</s>
   <s key="Link.Joining">Linking…</s>
   <s key="Link.Failed">Could not link: {0}</s>
+  <s key="Menu.Icons">Icons</s>
+  <s key="Menu.Icons.Spine">Spine</s>
+  <s key="Menu.Icons.System">System</s>
+  <s key="Menu.Icons.OpenThemes">Open Icon Themes Folder</s>
 </strings>

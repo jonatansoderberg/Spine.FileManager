@@ -185,6 +185,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
         _operations.Changed += operation => MainThread.BeginInvokeOnMainThread(() => OnOperationChanged(operation));
         _operations.ResolveConflict = (_, conflict) => MainThread.InvokeOnMainThreadAsync(() => AskConflict(conflict));
         _strings.Changed += (_, _) => Rebuild(keepSelection: true);
+        FileIcons.Changed += () => MainThread.BeginInvokeOnMainThread(() => Rebuild(keepSelection: true));
+        FileIcons.Refreshed += () => MainThread.BeginInvokeOnMainThread(() => Rebuild(keepSelection: true));
     }
 
     public ObservableCollection<PlaceRow> Places { get; } = [];

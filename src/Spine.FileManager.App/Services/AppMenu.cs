@@ -51,6 +51,7 @@ public static class AppMenu
         var strings = SpineStrings.Current;
         Build(host, vm, strings);
         strings.Changed += (_, _) => Build(host, vm, strings);
+        FileIcons.Changed += () => MainThread.BeginInvokeOnMainThread(() => Build(host, vm, strings));
     }
 
     static void Build(Page host, ExplorerPageViewModel vm, ISpineStrings strings)
@@ -70,6 +71,26 @@ public static class AppMenu
             if (shortcut is not null)
                 item.KeyboardAccelerators.Add(new KeyboardAccelerator { Modifiers = modifiers, Key = shortcut });
             return item;
+        }
+
+        // View › Icons: Spine's, the system's, and the icon themes the user has added; the one in use has a check mark.
+        MenuFlyoutSubItem Icons()
+        {
+            var icons = new MenuFlyoutSubItem { Text = strings["Menu.Icons"] };
+            MenuFlyoutItem Style(string title, string style) =>
+                new() { Text = (FileIcons.Style == style ? "✓ " : "") + title, Command = new Command(() => FileIcons.Use(style)) };
+            icons.Add(Style(strings["Menu.Icons.Spine"], FileIcons.SpineStyle));
+            if (FileIcons.HasSystemIcons)
+                icons.Add(Style(strings["Menu.Icons.System"], FileIcons.SystemStyle));
+            foreach (var theme in FileIcons.Themes)
+                icons.Add(Style(theme.Name, Path.GetFileName(theme.Folder)));
+            icons.Add(new MenuFlyoutSeparator());
+            icons.Add(new MenuFlyoutItem
+            {
+                Text = strings["Menu.Icons.OpenThemes"],
+                Command = new Command(() => Explorer?.OpenLocationCommand.Execute(Storage.FileSystem.FileSystemStorageProvider.Location(FileIcons.PrepareThemesFolder()))),
+            });
+            return icons;
         }
 
         MenuBarItem Menu(string key, params Microsoft.Maui.IMenuElement[] items)
@@ -127,7 +148,9 @@ public static class AppMenu
             Item("Menu.SortName", x => x.SortByCommand, KeyboardAcceleratorModifiers.None, null, "Name"),
             Item("Menu.SortModified", x => x.SortByCommand, KeyboardAcceleratorModifiers.None, null, "Modified"),
             Item("Menu.SortSize", x => x.SortByCommand, KeyboardAcceleratorModifiers.None, null, "Size"),
-            Item("Menu.SortKind", x => x.SortByCommand, KeyboardAcceleratorModifiers.None, null, "Kind")));
+            Item("Menu.SortKind", x => x.SortByCommand, KeyboardAcceleratorModifiers.None, null, "Kind"),
+            new MenuFlyoutSeparator(),
+            Icons()));
         host.MenuBarItems.Add(Menu("Menu.Go",
             Item("Menu.Back", x => x.BackCommand, mac ? command : KeyboardAcceleratorModifiers.Alt, mac ? "[" : "Left"),
             Item("Menu.Forward", x => x.ForwardCommand, mac ? command : KeyboardAcceleratorModifiers.Alt, mac ? "]" : "Right"),
