@@ -38,6 +38,7 @@ public static class MauiProgram
         );
         builder.Services.AddSingleton<IStorageProvider, FileSystemStorageProvider>();
         builder.Services.AddSingleton<StorageProviders>();
+        builder.Services.AddSingleton<Operations.OperationQueue>();
 
 #if DEBUG
         builder.Logging.AddDebug();

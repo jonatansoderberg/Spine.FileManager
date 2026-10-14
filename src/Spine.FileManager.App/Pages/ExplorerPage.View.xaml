@@ -195,8 +195,16 @@
             </FileListView>
 
             <Grid Grid.Row="4" ColumnDefinitions="*,Auto" Padding="16,4">
-                <Label Text="{Binding Status}" FontSize="12" Opacity="0.6" />
+                <Label Text="{Binding Status}" FontSize="12" Opacity="0.6" VerticalTextAlignment="Center" />
                 <ActivityIndicator Grid.Column="1" IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}" HeightRequest="14" WidthRequest="14" />
+            </Grid>
+
+            <!-- The running copy or move; the full Operation Center is milestone B. -->
+            <Grid Grid.Row="4" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Padding="16,4" IsVisible="{Binding HasOperation}"
+                  BackgroundColor="{AppThemeBinding Light=#F3F4F6, Dark=#1E1F22}">
+                <ProgressBar Progress="{Binding OperationProgress}" WidthRequest="160" VerticalOptions="Center" />
+                <Label Grid.Column="1" Text="{Binding OperationText}" FontSize="12" LineBreakMode="MiddleTruncation" VerticalTextAlignment="Center" />
+                <Button Grid.Column="2" Text="{String Operation.Cancel}" Command="{Binding CancelOperationCommand}" FontSize="12" Padding="8,0" HeightRequest="24" />
             </Grid>
         </Grid>
     </Grid>

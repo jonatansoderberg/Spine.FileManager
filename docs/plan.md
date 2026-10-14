@@ -1,6 +1,6 @@
 # Spine File Manager — Requirements and Plan
 
-**Last updated:** 2026-10-14 — list/grid and Spike 2 (#7): 10 000 items in 0.16 s; breadcrumb (#6), explorer (#5), Mac provider (#4); Windows (#3) compiled only.
+**Last updated:** 2026-10-14 — local operations (#8): queue, copy/move/paste with conflicts and progress; list/grid (#7), breadcrumb (#6), explorer (#5), Mac provider (#4); Windows (#3) compiled only.
 
 A living plan. Each step links its GitHub issue once it has one; update the status, the decisions and the line above in the same PR as the work.
 
@@ -76,7 +76,7 @@ Result: a usable desktop file manager.
 | A6 | Basic FileExplorer (§8) | ✅ | [#5](https://github.com/jonatansoderberg/Spine.FileManager/issues/5) |
 | A7 | Breadcrumb bar (§8) | ✅ | [#6](https://github.com/jonatansoderberg/Spine.FileManager/issues/6) |
 | A8 | List/grid + Spike 2 — file-list performance (§9) | ✅ | [#7](https://github.com/jonatansoderberg/Spine.FileManager/issues/7) |
-| A9 | Local operations | ⬜ | [#8](https://github.com/jonatansoderberg/Spine.FileManager/issues/8) |
+| A9 | Local operations | ✅ | [#8](https://github.com/jonatansoderberg/Spine.FileManager/issues/8) |
 | A10 | Favorites (§15) | ⬜ | [#9](https://github.com/jonatansoderberg/Spine.FileManager/issues/9) |
 
 ### Milestone B — Power User Desktop

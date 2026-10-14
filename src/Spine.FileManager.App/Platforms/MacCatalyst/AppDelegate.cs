@@ -27,9 +27,23 @@ public class AppDelegate : MauiUIApplicationDelegate
 	static IEnumerable<string> Titles(UIMenu menu) =>
 		menu.Children.SelectMany(child => child is UIMenu inner ? Titles(inner).Prepend(inner.Title) : [child.Title]);
 
-	public override bool CanPerform(Selector action, NSObject? withSender) =>
-		action.Name == "selectAll:" ? AppMenu.Explorer is not null : base.CanPerform(action, withSender);
+	public override bool CanPerform(Selector action, NSObject? withSender) => action.Name switch
+	{
+		"selectAll:" => AppMenu.Explorer is not null,
+		"copy:" or "cut:" => AppMenu.Explorer?.HasSelection == true,
+		"paste:" => AppMenu.Explorer is not null && FileClipboard.HasItems,
+		_ => base.CanPerform(action, withSender),
+	};
 
 	[Export("selectAll:")]
 	public void SelectAll(NSObject? sender) => AppMenu.Explorer?.SelectAllCommand.Execute(null);
+
+	[Export("copy:")]
+	public void Copy(NSObject? sender) => AppMenu.Explorer?.CopyCommand.Execute(null);
+
+	[Export("cut:")]
+	public void Cut(NSObject? sender) => AppMenu.Explorer?.CutCommand.Execute(null);
+
+	[Export("paste:")]
+	public void Paste(NSObject? sender) => AppMenu.Explorer?.PasteCommand.Execute(null);
 }
