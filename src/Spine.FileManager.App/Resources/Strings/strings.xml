@@ -88,4 +88,9 @@
   <s key="Conflict.KeepBothAll">Keep Both for All</s>
   <s key="Conflict.SkipAll">Skip All</s>
   <s key="Conflict.Stop">Stop</s>
+  <s key="Explorer.Favorites">Favorites</s>
+  <s key="Explorer.FavoritesHint">Right-click a folder and choose Add to Favorites.</s>
+  <s key="Menu.AddFavorite">Add to Favorites</s>
+  <s key="Menu.RemoveFavorite">Remove from Favorites</s>
+  <s key="Explorer.Error.FavoriteFolder">Only folders can be favorites.</s>
 </strings>

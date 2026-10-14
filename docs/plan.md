@@ -1,6 +1,6 @@
 # Spine File Manager — Requirements and Plan
 
-**Last updated:** 2026-10-14 — local operations (#8): queue, copy/move/paste with conflicts and progress; list/grid (#7), breadcrumb (#6), explorer (#5), Mac provider (#4); Windows (#3) compiled only.
+**Last updated:** 2026-10-14 — **Milestone A done on the Mac** (#2, #4–#9); Windows provider (#3) compiled only, Spike 1's Windows and hardware pass open (#1).
 
 A living plan. Each step links its GitHub issue once it has one; update the status, the decisions and the line above in the same PR as the work.
 
@@ -64,7 +64,7 @@ They need not become separate NuGet packages; the split is for architectural bou
 Status: ✅ done · 🔄 in progress · ⬜ not started.
 
 ### Milestone A — Local Explorer
-Result: a usable desktop file manager.
+Result: a usable desktop file manager. **Done on the Mac 2026-10-14;** Windows has compiled at every step but not run (#3), and Spike 1's Windows and hardware pass is open (#1).
 
 | # | Step | Status | Issue |
 |---|---|---|---|
@@ -77,7 +77,7 @@ Result: a usable desktop file manager.
 | A7 | Breadcrumb bar (§8) | ✅ | [#6](https://github.com/jonatansoderberg/Spine.FileManager/issues/6) |
 | A8 | List/grid + Spike 2 — file-list performance (§9) | ✅ | [#7](https://github.com/jonatansoderberg/Spine.FileManager/issues/7) |
 | A9 | Local operations | ✅ | [#8](https://github.com/jonatansoderberg/Spine.FileManager/issues/8) |
-| A10 | Favorites (§15) | ⬜ | [#9](https://github.com/jonatansoderberg/Spine.FileManager/issues/9) |
+| A10 | Favorites (§15) | ✅ | [#9](https://github.com/jonatansoderberg/Spine.FileManager/issues/9) |
 
 ### Milestone B — Power User Desktop
 Result: Explorer/Finder plus Edge/Commander productivity.

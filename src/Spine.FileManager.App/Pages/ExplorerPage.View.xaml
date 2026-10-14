@@ -56,11 +56,33 @@
 
     <Grid ColumnDefinitions="Auto,*">
 
-        <!-- Sidebar: the places; Favorites join it in #9. -->
-        <Grid WidthRequest="210" IsVisible="{Binding IsWide}" RowDefinitions="Auto,*"
+        <!-- Sidebar: favorites (reorderable, right-click to remove), then the places. -->
+        <Grid WidthRequest="210" IsVisible="{Binding IsWide}" RowDefinitions="Auto,Auto,Auto,Auto,*"
               BackgroundColor="{AppThemeBinding Light=#F3F4F6, Dark=#1E1F22}">
-            <Label Text="{String Explorer.Places}" FontSize="12" Opacity="0.6" Padding="16,12,16,4" />
-            <CollectionView Grid.Row="1" ItemsSource="{Binding Places}" SelectionMode="None">
+            <Label Text="{String Explorer.Favorites}" FontSize="12" Opacity="0.6" Padding="16,12,16,4" />
+            <CollectionView Grid.Row="1" ItemsSource="{Binding Favorites}" SelectionMode="None" HeightRequest="{Binding FavoritesHeight}"
+                            Reorder.Mode="LongPress" Reorder.Command="{Binding SaveFavoriteOrderCommand}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="FavoriteRow">
+                        <Grid ColumnDefinitions="Auto,*" Padding="16,0" HeightRequest="30" ColumnSpacing="8" Opacity="{Binding Dimmed}"
+                              ContextMenu.Items="{Binding FavoriteMenu, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" ContextMenu.CommandParameter="{Binding .}">
+                            <Grid.Triggers>
+                                <DataTrigger TargetType="Grid" Binding="{Binding IsCurrent}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SelectionLight}, Dark={StaticResource SelectionDark}}" />
+                                </DataTrigger>
+                            </Grid.Triggers>
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenFavoriteCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
+                            </Grid.GestureRecognizers>
+                            <Image Source="{Binding Icon}" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
+                            <Label Grid.Column="1" Text="{Binding Name}" FontSize="13" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+            <Label Grid.Row="2" Text="{String Explorer.FavoritesHint}" IsVisible="{Binding HasNoFavorites}" FontSize="12" Opacity="0.5" Padding="16,0,16,8" />
+            <Label Grid.Row="3" Text="{String Explorer.Places}" FontSize="12" Opacity="0.6" Padding="16,12,16,4" />
+            <CollectionView Grid.Row="4" ItemsSource="{Binding Places}" SelectionMode="None">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="PlaceRow">
                         <Grid ColumnDefinitions="Auto,*" Padding="16,0" HeightRequest="30" ColumnSpacing="8">
@@ -147,7 +169,8 @@
             <FileListView Grid.Row="3" ItemsSource="{Binding Rows}" SelectionMode="None" ItemSizingStrategy="MeasureFirstItem" IsVisible="{Binding IsList}">
                 <FileListView.ItemTemplate>
                     <DataTemplate x:DataType="ItemRow">
-                        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" HeightRequest="28" Padding="16,0,8,0" Opacity="{Binding Dimmed}">
+                        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" HeightRequest="28" Padding="16,0,8,0" Opacity="{Binding Dimmed}"
+                              ContextMenu.Items="{Binding RowMenu, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" ContextMenu.CommandParameter="{Binding .}">
                             <Grid.Triggers>
                                 <DataTrigger TargetType="Grid" Binding="{Binding IsSelected}" Value="True">
                                     <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SelectionLight}, Dark={StaticResource SelectionDark}}" />
@@ -177,7 +200,8 @@
                 </FileListView.ItemsLayout>
                 <FileListView.ItemTemplate>
                     <DataTemplate x:DataType="ItemRow">
-                        <Grid RowDefinitions="56,34" WidthRequest="96" Padding="4" Opacity="{Binding Dimmed}">
+                        <Grid RowDefinitions="56,34" WidthRequest="96" Padding="4" Opacity="{Binding Dimmed}"
+                              ContextMenu.Items="{Binding RowMenu, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" ContextMenu.CommandParameter="{Binding .}">
                             <Grid.Triggers>
                                 <DataTrigger TargetType="Grid" Binding="{Binding IsSelected}" Value="True">
                                     <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SelectionLight}, Dark={StaticResource SelectionDark}}" />
