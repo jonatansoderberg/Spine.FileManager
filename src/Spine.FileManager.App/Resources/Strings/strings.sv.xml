@@ -175,4 +175,8 @@
   <s key="Link.Scan">Skanna kod</s>
   <s key="Link.Joining">Länkar…</s>
   <s key="Link.Failed">Kunde inte länka: {0}</s>
+  <s key="Menu.Icons">Ikoner</s>
+  <s key="Menu.Icons.Spine">Spine</s>
+  <s key="Menu.Icons.System">Systemets</s>
+  <s key="Menu.Icons.OpenThemes">Öppna mappen för ikonteman</s>
 </strings>

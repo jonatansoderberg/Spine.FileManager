@@ -9,6 +9,8 @@
     <ContentPage.Resources>
         <Color x:Key="SelectionLight">#D3E3FD</Color>
         <Color x:Key="SelectionDark">#2B4C80</Color>
+        <Color x:Key="Accent">#2F6FEB</Color>
+        <Color x:Key="AccentDark">#7FA6F5</Color>
         <Style x:Key="ToolButton" TargetType="ImageButton">
             <Setter Property="WidthRequest" Value="32" />
             <Setter Property="HeightRequest" Value="32" />
@@ -30,6 +32,20 @@
                     </VisualStateGroup>
                 </VisualStateGroupList>
             </Setter>
+        </Style>
+        <!-- A sidebar entry's glyph, tinted with the accent; Spine's SVG tint works on an ImageButton. The row takes the taps. -->
+        <Style x:Key="SidebarGlyph" TargetType="ImageButton">
+            <!-- Spine's glyphs leave room inside their view box; the button is larger than the glyph looks. -->
+            <Setter Property="WidthRequest" Value="28" />
+            <Setter Property="HeightRequest" Value="28" />
+            <Setter Property="Margin" Value="-5,0,-3,0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="BackgroundColor" Value="Transparent" />
+            <Setter Property="InputTransparent" Value="True" />
+            <Setter Property="VerticalOptions" Value="Center" />
+            <Setter Property="SvgImageSource.EnableSvg" Value="True" />
+            <Setter Property="SvgImageSource.LightTintColor" Value="{StaticResource Accent}" />
+            <Setter Property="SvgImageSource.DarkTintColor" Value="{StaticResource AccentDark}" />
         </Style>
         <Style x:Key="Crumb" TargetType="Button">
             <Setter Property="FontSize" Value="13" />
@@ -68,20 +84,22 @@
                             Reorder.Mode="LongPress" Reorder.Command="{Binding SaveFavoriteOrderCommand}">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="FavoriteRow">
-                        <Grid ColumnDefinitions="Auto,*" Padding="16,0" HeightRequest="30" ColumnSpacing="8" Opacity="{Binding Dimmed}"
+                        <Border Padding="8,0" Margin="8,1" HeightRequest="30" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent" Opacity="{Binding Dimmed}"
                               ContextMenu.Items="{Binding FavoriteMenu, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" ContextMenu.CommandParameter="{Binding .}">
-                            <Grid.Triggers>
-                                <DataTrigger TargetType="Grid" Binding="{Binding IsCurrent}" Value="True">
+                            <Border.Triggers>
+                                <DataTrigger TargetType="Border" Binding="{Binding IsCurrent}" Value="True">
                                     <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SelectionLight}, Dark={StaticResource SelectionDark}}" />
                                 </DataTrigger>
-                            </Grid.Triggers>
-                            <Grid.GestureRecognizers>
+                            </Border.Triggers>
+                            <Border.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding OpenFavoriteCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
                                 <DropGestureRecognizer DragOver="OnFileDragOver" DragLeave="OnFileDragLeave" Drop="OnFileDrop" />
-                            </Grid.GestureRecognizers>
-                            <Image Source="{Binding Icon}" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
-                            <Label Grid.Column="1" Text="{Binding Name}" FontSize="13" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
-                        </Grid>
+                            </Border.GestureRecognizers>
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="{Binding Glyph}" />
+                                <Label Grid.Column="1" Text="{Binding Name}" FontSize="13" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
+                            </Grid>
+                        </Border>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>
@@ -90,19 +108,21 @@
             <CollectionView Grid.Row="4" ItemsSource="{Binding Places}" SelectionMode="None" HeightRequest="{Binding PlacesHeight}">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="PlaceRow">
-                        <Grid ColumnDefinitions="Auto,*" Padding="16,0" HeightRequest="30" ColumnSpacing="8">
-                            <Grid.Triggers>
-                                <DataTrigger TargetType="Grid" Binding="{Binding IsCurrent}" Value="True">
+                        <Border Padding="8,0" Margin="8,1" HeightRequest="30" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent">
+                            <Border.Triggers>
+                                <DataTrigger TargetType="Border" Binding="{Binding IsCurrent}" Value="True">
                                     <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SelectionLight}, Dark={StaticResource SelectionDark}}" />
                                 </DataTrigger>
-                            </Grid.Triggers>
-                            <Grid.GestureRecognizers>
+                            </Border.Triggers>
+                            <Border.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding OpenPlaceCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
                                 <DropGestureRecognizer DragOver="OnFileDragOver" DragLeave="OnFileDragLeave" Drop="OnFileDrop" />
-                            </Grid.GestureRecognizers>
-                            <Image Source="{Binding Icon}" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
-                            <Label Grid.Column="1" Text="{Binding Name}" FontSize="13" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
-                        </Grid>
+                            </Border.GestureRecognizers>
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="{Binding Glyph}" />
+                                <Label Grid.Column="1" Text="{Binding Name}" FontSize="13" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
+                            </Grid>
+                        </Border>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>
@@ -112,20 +132,22 @@
             <CollectionView Grid.Row="6" ItemsSource="{Binding Devices}" SelectionMode="None" HeightRequest="{Binding DevicesHeight}">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="DeviceRow">
-                        <Grid ColumnDefinitions="Auto,*" Padding="16,0" HeightRequest="30" ColumnSpacing="8"
+                        <Border Padding="8,0" Margin="8,1" HeightRequest="30" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent"
                               ContextMenu.Items="{Binding DeviceMenu, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" ContextMenu.CommandParameter="{Binding .}"
                               ToolTipProperties.Text="{Binding Lifetime}">
-                            <Grid.Triggers>
-                                <DataTrigger TargetType="Grid" Binding="{Binding IsDropTarget}" Value="True">
+                            <Border.Triggers>
+                                <DataTrigger TargetType="Border" Binding="{Binding IsDropTarget}" Value="True">
                                     <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#B7CCF7, Dark=#35589A}" />
                                 </DataTrigger>
-                            </Grid.Triggers>
-                            <Grid.GestureRecognizers>
+                            </Border.Triggers>
+                            <Border.GestureRecognizers>
                                 <DropGestureRecognizer DragOver="OnFileDragOver" DragLeave="OnFileDragLeave" Drop="OnFileDrop" />
-                            </Grid.GestureRecognizers>
-                            <Image Source="device.png" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
-                            <Label Grid.Column="1" Text="{Binding Name}" FontSize="13" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
-                        </Grid>
+                            </Border.GestureRecognizers>
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="{Binding Glyph}" />
+                                <Label Grid.Column="1" Text="{Binding Name}" FontSize="13" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
+                            </Grid>
+                        </Border>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>

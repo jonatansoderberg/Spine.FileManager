@@ -18,11 +18,21 @@ public sealed partial class PlaceRow(StorageRoot root) : ObservableObject
 
     public string Name => Root.Name;
 
-    public ImageSource Icon => Root.Kind switch
+    /// <summary>A glyph from Spine's set, tinted like the sidebar's other entries.</summary>
+    public string Glyph => Root.Kind switch
     {
-        StorageRootKind.Cloud => "cloud.png",
-        StorageRootKind.Volume or StorageRootKind.RemovableVolume or StorageRootKind.NetworkVolume => "drive.png",
-        _ => "folder.png",
+        StorageRootKind.Home => "House.svg",
+        StorageRootKind.Desktop => "Tv.svg",
+        StorageRootKind.Documents => "Text.svg",
+        StorageRootKind.Downloads => "Download.svg",
+        StorageRootKind.Pictures => "Image.svg",
+        StorageRootKind.Music => "Speaker.svg",
+        StorageRootKind.Videos => "Play.svg",
+        StorageRootKind.Cloud => "Cloud.svg",
+        StorageRootKind.NetworkVolume => "Globe.svg",
+        StorageRootKind.Volume or StorageRootKind.RemovableVolume => "Stack.svg",
+        _ when Root.Name == "Applications" => "Grid.svg",
+        _ => "Layers.svg",
     };
 
     [ObservableProperty]
@@ -59,19 +69,20 @@ public sealed partial class DeviceRow(DeviceLink.TrustedNode node, string lifeti
 
     public string Lifetime { get; } = lifetime;
 
+    public string Glyph => Node.SourceName.Contains("Phone", StringComparison.OrdinalIgnoreCase) || Node.SourceName.Contains("Android", StringComparison.OrdinalIgnoreCase)
+        ? "Phone.svg" : "Tv.svg";
+
     [ObservableProperty]
     public partial bool IsDropTarget { get; set; }
 }
 
 public sealed partial class FavoriteRow(Favorite favorite) : ObservableObject
 {
-    private static readonly ImageSource FolderIcon = "folder.png";
-
     public Favorite Favorite { get; } = favorite;
 
     public string Name => Favorite.Name;
 
-    public ImageSource Icon => FolderIcon;
+    public string Glyph => "Star.svg";
 
     /// <summary>False while the folder is gone, offline or unreachable; the row stays, dimmed.</summary>
     [ObservableProperty]
@@ -117,9 +128,6 @@ public sealed class RowFormat(ISpineStrings strings)
 /// </summary>
 public sealed partial class ItemRow(StorageItem item, RowFormat format) : ObservableObject
 {
-    private static readonly ImageSource FolderIcon = "folder.png";
-    private static readonly ImageSource FileIcon = "file.png";
-
     public StorageItem Item { get; } = item;
     public string Name => Item.DisplayName;
     public string Kind => Item.IsFolder ? format.Folder
@@ -127,7 +135,7 @@ public sealed partial class ItemRow(StorageItem item, RowFormat format) : Observ
         : format.Document;
     public string Modified => Item.Modified?.ToLocalTime().ToString("g", format.Culture) ?? "";
     public string Size => Item.Size is { } size ? ByteSize.Format(size, format.Culture) : "";
-    public ImageSource Icon => Item.IsFolder ? FolderIcon : FileIcon;
+    public ImageSource Icon => FileIcons.For(Item);
     public double Dimmed => Item.IsHidden ? 0.5 : 1;
 
     /// <summary>A folder row a dragged item is over.</summary>
@@ -177,6 +185,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
         _operations.Changed += operation => MainThread.BeginInvokeOnMainThread(() => OnOperationChanged(operation));
         _operations.ResolveConflict = (_, conflict) => MainThread.InvokeOnMainThreadAsync(() => AskConflict(conflict));
         _strings.Changed += (_, _) => Rebuild(keepSelection: true);
+        FileIcons.Changed += () => MainThread.BeginInvokeOnMainThread(() => Rebuild(keepSelection: true));
+        FileIcons.Refreshed += () => MainThread.BeginInvokeOnMainThread(() => Rebuild(keepSelection: true));
     }
 
     public ObservableCollection<PlaceRow> Places { get; } = [];
