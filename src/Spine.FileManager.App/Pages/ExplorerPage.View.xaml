@@ -77,6 +77,7 @@
                             </Grid.Triggers>
                             <Grid.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding OpenFavoriteCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
+                                <DropGestureRecognizer DragOver="OnFileDragOver" DragLeave="OnFileDragLeave" Drop="OnFileDrop" />
                             </Grid.GestureRecognizers>
                             <Image Source="{Binding Icon}" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
                             <Label Grid.Column="1" Text="{Binding Name}" FontSize="13" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
@@ -97,6 +98,7 @@
                             </Grid.Triggers>
                             <Grid.GestureRecognizers>
                                 <TapGestureRecognizer Command="{Binding OpenPlaceCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
+                                <DropGestureRecognizer DragOver="OnFileDragOver" DragLeave="OnFileDragLeave" Drop="OnFileDrop" />
                             </Grid.GestureRecognizers>
                             <Image Source="{Binding Icon}" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
                             <Label Grid.Column="1" Text="{Binding Name}" FontSize="13" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
@@ -109,19 +111,29 @@
         <Grid Grid.Column="1" RowDefinitions="Auto,Auto,Auto,*,Auto" ColumnDefinitions="*,Auto">
             <Grid.GestureRecognizers>
                 <PointerGestureRecognizer PointerPressed="OnPanePressed" />
+                <!-- Files dropped anywhere else in the pane go to the folder shown; a CollectionView takes no drop itself. -->
+                <DropGestureRecognizer DragOver="OnFileDragOver" DragLeave="OnFileDragLeave" Drop="OnFileDrop" />
             </Grid.GestureRecognizers>
 
             <KeySink x:Name="Keys" WidthRequest="1" HeightRequest="1" Opacity="0" HorizontalOptions="Start" VerticalOptions="Start" />
             <VerticalStackLayout Grid.ColumnSpan="2">
             <!-- In Dual Pane, a line marks the pane the menus and the sidebar act on. -->
-            <BoxView HeightRequest="2" IsVisible="{Binding MarksFocus}" Color="{AppThemeBinding Light=#2F6FEB, Dark=#5B8DEF}" />
+            <!-- Always there in Dual Pane, only its opacity follows focus: a line appearing on a press shifted the pane
+                 and ended the drag that press started. -->
+            <BoxView HeightRequest="2" IsVisible="{Binding IsPaneOfTwo}" Opacity="0" Color="{AppThemeBinding Light=#2F6FEB, Dark=#5B8DEF}">
+                <BoxView.Triggers>
+                    <DataTrigger TargetType="BoxView" Binding="{Binding MarksFocus}" Value="True">
+                        <Setter Property="Opacity" Value="1" />
+                    </DataTrigger>
+                </BoxView.Triggers>
+            </BoxView>
             <!-- Tabs, always at least one: a click shows the tab, × closes it, a drag moves it within the bar, to
                  another window or, let go outside the app's windows, to a window of its own. A fixed height: measured
                  while still empty, a horizontal ScrollView keeps that height when the tabs arrive. -->
             <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never" HeightRequest="32"
                         BackgroundColor="{AppThemeBinding Light=#E9EAEE, Dark=#16171A}">
                 <ScrollView.GestureRecognizers>
-                    <DropGestureRecognizer DragOver="OnTabDragOver" DragLeave="OnWindowDragLeave" Drop="OnTabDrop" />
+                    <DropGestureRecognizer DragOver="OnTabDragOver" DragLeave="OnTabDragLeave" Drop="OnTabDrop" />
                 </ScrollView.GestureRecognizers>
                 <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Tabs}" Padding="8,4,8,0" Spacing="2">
                     <BindableLayout.ItemTemplate>
@@ -136,7 +148,7 @@
                                 </Grid.Triggers>
                                 <Grid.GestureRecognizers>
                                     <DragGestureRecognizer DragStarting="OnTabDragStarting" DropCompleted="OnTabDropCompleted" />
-                                    <DropGestureRecognizer DragOver="OnTabDragOver" DragLeave="OnWindowDragLeave" Drop="OnTabDrop" />
+                                    <DropGestureRecognizer DragOver="OnTabDragOver" DragLeave="OnTabDragLeave" Drop="OnTabDrop" />
                                     <TapGestureRecognizer Command="{Binding SelectTabCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
                                 </Grid.GestureRecognizers>
                                 <Label Text="{Binding Title}" FontSize="12" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
@@ -165,6 +177,9 @@
                         <BindableLayout.ItemTemplate>
                             <DataTemplate x:DataType="BreadcrumbSegment">
                                 <HorizontalStackLayout>
+                                    <HorizontalStackLayout.GestureRecognizers>
+                                        <DropGestureRecognizer DragOver="OnFileDragOver" DragLeave="OnFileDragLeave" Drop="OnFileDrop" />
+                                    </HorizontalStackLayout.GestureRecognizers>
                                     <Button Text="{Binding Name}" Style="{StaticResource Crumb}"
                                             Command="{Binding OpenLocationCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding Location}" />
                                     <Button Text="›" Style="{StaticResource Crumb}" Padding="4,0" MenuButton.Items="{Binding Children}"
@@ -205,13 +220,13 @@
                 <Label Text="{Binding NameHeader}" Style="{StaticResource ColumnHeader}" Padding="38,6,8,6">
                     <Label.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Name" /></Label.GestureRecognizers>
                 </Label>
-                <Label Grid.Column="1" Text="{Binding ModifiedHeader}" Style="{StaticResource ColumnHeader}" WidthRequest="160" IsVisible="{Binding IsWide}">
+                <Label Grid.Column="1" Text="{Binding ModifiedHeader}" Style="{StaticResource ColumnHeader}" WidthRequest="160" IsVisible="{Binding HasColumns}">
                     <Label.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Modified" /></Label.GestureRecognizers>
                 </Label>
                 <Label Grid.Column="2" Text="{Binding SizeHeader}" Style="{StaticResource ColumnHeader}" WidthRequest="90" HorizontalTextAlignment="End">
                     <Label.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Size" /></Label.GestureRecognizers>
                 </Label>
-                <Label Grid.Column="3" Text="{Binding KindHeader}" Style="{StaticResource ColumnHeader}" WidthRequest="130" IsVisible="{Binding IsWide}">
+                <Label Grid.Column="3" Text="{Binding KindHeader}" Style="{StaticResource ColumnHeader}" WidthRequest="130" IsVisible="{Binding HasColumns}">
                     <Label.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Kind" /></Label.GestureRecognizers>
                 </Label>
             </Grid>
@@ -230,16 +245,21 @@
                                 <DataTrigger TargetType="Grid" Binding="{Binding IsSelected}" Value="True">
                                     <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SelectionLight}, Dark={StaticResource SelectionDark}}" />
                                 </DataTrigger>
+                                <DataTrigger TargetType="Grid" Binding="{Binding IsDropTarget}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#B7CCF7, Dark=#35589A}" />
+                                </DataTrigger>
                             </Grid.Triggers>
                             <Grid.GestureRecognizers>
+                                <DragGestureRecognizer DragStarting="OnRowDragStarting" DropCompleted="OnRowDropCompleted" />
+                                <DropGestureRecognizer DragOver="OnFileDragOver" DragLeave="OnFileDragLeave" Drop="OnFileDrop" />
                                 <TapGestureRecognizer NumberOfTapsRequired="2" Command="{Binding ActivateCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
                                 <TapGestureRecognizer Command="{Binding TapCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
                             </Grid.GestureRecognizers>
                             <Image Source="{Binding Icon}" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
                             <Label Grid.Column="1" Text="{Binding Name}" Style="{StaticResource Cell}" />
-                            <Label Grid.Column="2" Text="{Binding Modified}" Style="{StaticResource Cell}" Opacity="0.7" WidthRequest="160" IsVisible="{Binding IsWide, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" />
+                            <Label Grid.Column="2" Text="{Binding Modified}" Style="{StaticResource Cell}" Opacity="0.7" WidthRequest="160" IsVisible="{Binding HasColumns, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" />
                             <Label Grid.Column="3" Text="{Binding Size}" Style="{StaticResource Cell}" Opacity="0.7" WidthRequest="90" HorizontalTextAlignment="End" />
-                            <Label Grid.Column="4" Text="{Binding Kind}" Style="{StaticResource Cell}" Opacity="0.7" WidthRequest="130" IsVisible="{Binding IsWide, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" />
+                            <Label Grid.Column="4" Text="{Binding Kind}" Style="{StaticResource Cell}" Opacity="0.7" WidthRequest="130" IsVisible="{Binding HasColumns, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" />
                         </Grid>
                     </DataTemplate>
                 </FileListView.ItemTemplate>
@@ -265,8 +285,13 @@
                                 <DataTrigger TargetType="Grid" Binding="{Binding IsSelected}" Value="True">
                                     <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SelectionLight}, Dark={StaticResource SelectionDark}}" />
                                 </DataTrigger>
+                                <DataTrigger TargetType="Grid" Binding="{Binding IsDropTarget}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#B7CCF7, Dark=#35589A}" />
+                                </DataTrigger>
                             </Grid.Triggers>
                             <Grid.GestureRecognizers>
+                                <DragGestureRecognizer DragStarting="OnRowDragStarting" DropCompleted="OnRowDropCompleted" />
+                                <DropGestureRecognizer DragOver="OnFileDragOver" DragLeave="OnFileDragLeave" Drop="OnFileDrop" />
                                 <TapGestureRecognizer NumberOfTapsRequired="2" Command="{Binding ActivateCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
                                 <TapGestureRecognizer Command="{Binding TapCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
                             </Grid.GestureRecognizers>

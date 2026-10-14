@@ -1,3 +1,6 @@
+using Spine.FileManager.Operations;
+using Spine.FileManager.Storage.FileSystem;
+
 namespace Spine.FileManager.Pages;
 
 [NavigableRegion(IsHeaderBarVisible = false)]
@@ -22,6 +25,8 @@ public partial class ExplorerPage
             if (BindingContext is not ExplorerPageViewModel vm)
                 return;
             vm.HostPage = () => Window?.Page;
+            // Name, Date modified, Size and Kind need about 560 points; a narrower pane shows Name and Size.
+            List.SizeChanged += (_, _) => vm.HasColumns = List.Width >= 560;
             vm.FilterRequested += () => FilterField.Focus();
             Keys.Pressed += vm.OnListKey;
             vm.RevealRequested += index =>
@@ -67,13 +72,31 @@ public partial class ExplorerPage
 
     private void OnTabDragOver(object? sender, DragEventArgs e)
     {
+        if (TabDrag.Current is null)
+        {
+            OnFileDragOver(sender, e);
+            return;
+        }
         e.AcceptedOperation = TabDrag.Current is null ? DataPackageOperation.None : DataPackageOperation.Copy;
         if (TabDrag.Current is { } drag)
             drag.OverWindow = true;
     }
 
+    private void OnTabDragLeave(object? sender, DragEventArgs e)
+    {
+        if (TabDrag.Current is null)
+            OnFileDragLeave(sender, e);
+        else
+            OnWindowDragLeave(sender, e);
+    }
+
     private async void OnTabDrop(object? sender, DropEventArgs e)
     {
+        if (TabDrag.Current is null)
+        {
+            OnFileDrop(sender, e);
+            return;
+        }
         if (TabDrag.Current is not { } drag || BindingContext is not ExplorerPageViewModel vm)
             return;
         e.Handled = true;
@@ -100,6 +123,114 @@ public partial class ExplorerPage
         if (TabDrag.Current is { } drag)
             drag.OverWindow = false;
     }
+
+    // Files: dragged from a row; dropped on a folder row, the list (the folder shown), a tab, a place, a favorite or a
+    // breadcrumb segment. From another app they come as file URLs, to another app they go as the files themselves.
+    private void OnRowDragStarting(object? sender, DragStartingEventArgs e)
+    {
+        if (sender is not View { BindingContext: ItemRow row } || BindingContext is not ExplorerPageViewModel vm)
+        {
+            e.Cancel = true;
+            return;
+        }
+        var items = vm.DragItems(row);
+#if IOS || MACCATALYST
+        if (items.Where(i => i.NativePath is not null).Select(i => new UIKit.UIDragItem(new Foundation.NSItemProvider(Foundation.NSUrl.CreateFileUrl(i.NativePath!, null)))).ToArray() is { Length: > 0 } files)
+            e.PlatformArgs?.SetDragItems(files);
+#endif
+        FileDrag.Start(vm, items);
+    }
+
+    private void OnRowDropCompleted(object? sender, DropCompletedEventArgs e) => FileDrag.End();
+
+    private StorageLocation? DropFolder(object? sender) => (sender as BindableObject)?.BindingContext switch
+    {
+        ItemRow { Item.IsFolder: true } row => row.Item.Location,
+        ItemRow or ExplorerPageViewModel => (BindingContext as ExplorerPageViewModel)?.Current,
+        ExplorerTab tab => tab.Location ?? tab.History.Current,
+        PlaceRow place => place.Root.Location,
+        FavoriteRow favorite => favorite.Favorite.Location,
+        BreadcrumbSegment segment => segment.Location,
+        _ => null,
+    };
+
+    // From this app the rule decides; from another app files are copied unless the move key is held, so a drop never
+    // takes a file away from where another app keeps it by accident.
+    private DropAction FileAction(object? sender, bool external)
+    {
+        if (TabDrag.Current is not null || BindingContext is not ExplorerPageViewModel vm || DropFolder(sender) is not { } target)
+            return DropAction.None;
+        if (FileDrag.Current is { } drag)
+            return vm.DropActionFor(drag.Items, target);
+        return !external ? DropAction.None : ModifierKeys.MoveKey ? DropAction.Move : DropAction.Copy;
+    }
+
+    private static void Highlight(object? sender, bool on)
+    {
+        if (sender is BindableObject { BindingContext: ItemRow { Item.IsFolder: true } row })
+            row.IsDropTarget = on;
+    }
+
+    private void OnFileDragOver(object? sender, DragEventArgs e)
+    {
+        var external = false;
+#if IOS || MACCATALYST
+        external = e.PlatformArgs?.DropSession?.HasConformingItems(["public.file-url"]) == true;
+#endif
+        var action = FileAction(sender, external);
+        Highlight(sender, action != DropAction.None && sender is BindableObject { BindingContext: ItemRow });
+        e.AcceptedOperation = action == DropAction.None ? DataPackageOperation.None : DataPackageOperation.Copy;
+#if IOS || MACCATALYST
+        if (action != DropAction.None)
+            e.PlatformArgs?.SetDropProposal(new UIKit.UIDropProposal(action == DropAction.Move ? UIKit.UIDropOperation.Move : UIKit.UIDropOperation.Copy));
+#endif
+    }
+
+    private void OnFileDragLeave(object? sender, DragEventArgs e) => Highlight(sender, false);
+
+    private async void OnFileDrop(object? sender, DropEventArgs e)
+    {
+        Highlight(sender, false);
+        if (TabDrag.Current is not null || BindingContext is not ExplorerPageViewModel vm || DropFolder(sender) is not { } target)
+            return;
+        e.Handled = true;
+        if (FileDrag.Current is { } drag)
+        {
+            vm.DropFiles(drag.Items, target, vm.DropActionFor(drag.Items, target));
+            return;
+        }
+#if IOS || MACCATALYST
+        if (e.PlatformArgs?.DropSession is { } session)
+        {
+            var action = ModifierKeys.MoveKey ? DropAction.Move : DropAction.Copy;
+            vm.DropFiles([.. (await DroppedPaths(session)).Select(FileSystemStorageProvider.Location)], target, action);
+        }
+#else
+        await Task.CompletedTask;
+#endif
+    }
+
+#if IOS || MACCATALYST
+    private static async Task<List<string>> DroppedPaths(UIKit.IUIDropSession session)
+    {
+        var paths = new List<string>();
+        foreach (var item in session.Items)
+        {
+            if (!item.ItemProvider.HasItemConformingTo("public.file-url"))
+                continue;
+            var loaded = new TaskCompletionSource<string?>();
+            item.ItemProvider.LoadItem("public.file-url", null, (data, _) => loaded.TrySetResult(data switch
+            {
+                Foundation.NSUrl url => url.Path,
+                Foundation.NSData bytes => Foundation.NSUrl.FromString(Foundation.NSString.FromData(bytes, Foundation.NSStringEncoding.UTF8)?.ToString() ?? "")?.Path,
+                _ => null,
+            }));
+            if (await loaded.Task is { } path)
+                paths.Add(path);
+        }
+        return paths;
+    }
+#endif
 
     // The second pane is an explorer of its own; this one keeps the sidebar and both answer to the menus by focus.
     private void ShowSecondPane(ExplorerPageViewModel vm)
