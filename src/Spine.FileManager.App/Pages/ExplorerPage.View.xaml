@@ -264,7 +264,7 @@
                         </BindableLayout.ItemTemplate>
                     </HorizontalStackLayout>
                 </ScrollView>
-                <Entry x:Name="FilterField" Grid.Column="8" Text="{Binding Filter}" Placeholder="{String Explorer.Filter}" FontSize="13" WidthRequest="170"
+                <Entry x:Name="FilterField" Grid.Column="8" Text="{Binding Filter}" Placeholder="{String Explorer.Search}" FontSize="13" WidthRequest="170"
                        ClearButtonVisibility="WhileEditing" IsVisible="{Binding IsWide}" VerticalOptions="Center" Margin="6,0,0,0"
                        SemanticProperties.Description="{String Explorer.Filter}" />
                 <!-- Icons only, as in Finder: a segment with a title shows it as text too. -->
@@ -284,6 +284,16 @@
                         </DataTrigger>
                     </ImageButton.Triggers>
                 </ImageButton>
+            </Grid>
+
+            <!-- Search: the field filters the folder shown; here the search reaches into its subfolders. -->
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="10" Padding="16,0,16,6" IsVisible="{Binding ShowsSearchScope}">
+                <SegmentedControl SelectedIndex="{Binding SearchScope}" WidthRequest="320" HorizontalOptions="Start">
+                    <Segment Title="{String Search.ThisFolder}" />
+                    <Segment Title="{String Search.Subfolders}" />
+                </SegmentedControl>
+                <ActivityIndicator Grid.Column="1" IsRunning="{Binding IsSearching}" IsVisible="{Binding IsSearching}" HeightRequest="16" WidthRequest="16" />
+                <Button Grid.Column="3" Text="{String Search.Stop}" Command="{Binding StopSearchingCommand}" IsVisible="{Binding IsSearching}" FontSize="13" />
             </Grid>
             </VerticalStackLayout>
 
@@ -361,7 +371,15 @@
                                 <TapGestureRecognizer Command="{Binding TapCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
                             </Grid.GestureRecognizers>
                             <Image Source="{Binding Icon}" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
-                            <Label Grid.Column="1" Text="{Binding Name}" Style="{StaticResource Cell}" />
+                            <!-- A search result also says which folder it is in. -->
+                            <Label Grid.Column="1" Style="{StaticResource Cell}">
+                                <Label.FormattedText>
+                                    <FormattedString>
+                                        <Span Text="{Binding Name}" />
+                                        <Span Text="{Binding WhereSuffix}" TextColor="{AppThemeBinding Light=#8A8F98, Dark=#8E939B}" />
+                                    </FormattedString>
+                                </Label.FormattedText>
+                            </Label>
                             <Label Grid.Column="2" Text="{Binding Modified}" Style="{StaticResource Cell}" Opacity="0.7" WidthRequest="{Binding ModifiedWidth, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" IsVisible="{Binding HasColumns, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" />
                             <Label Grid.Column="3" Text="{Binding Size}" Style="{StaticResource Cell}" Opacity="0.7" WidthRequest="{Binding SizeWidth, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" HorizontalTextAlignment="End" />
                             <Label Grid.Column="4" Text="{Binding Kind}" Style="{StaticResource Cell}" Opacity="0.7" WidthRequest="{Binding KindWidth, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" IsVisible="{Binding HasColumns, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" />

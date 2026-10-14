@@ -183,4 +183,10 @@
   <s key="Menu.Appearance.System">Som systemet</s>
   <s key="Menu.Appearance.Light">Ljust</s>
   <s key="Menu.Appearance.Dark">Mörkt</s>
+  <s key="Search.ThisFolder">Den här mappen</s>
+  <s key="Search.Subfolders">Med undermappar</s>
+  <s key="Search.Searching">Söker… {0} hittade</s>
+  <s key="Search.Found">{0} hittade</s>
+  <s key="Search.Stop">Stoppa</s>
+  <s key="Explorer.Search">Sök</s>
 </strings>

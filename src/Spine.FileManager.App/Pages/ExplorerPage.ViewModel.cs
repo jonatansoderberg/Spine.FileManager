@@ -138,6 +138,11 @@ public sealed partial class ItemRow(StorageItem item, RowFormat format) : Observ
     public ImageSource Icon => FileIcons.For(Item);
     public double Dimmed => Item.IsHidden ? 0.5 : 1;
 
+    /// <summary>In a search of the subfolders, the folder the item is in, from the folder searched.</summary>
+    public string? Where { get; init; }
+
+    public string WhereSuffix => Where is null ? "" : "   " + Where;
+
     /// <summary>A folder row a dragged item is over.</summary>
     [ObservableProperty]
     public partial bool IsDropTarget { get; set; }
@@ -796,7 +801,101 @@ public partial class ExplorerPageViewModel : ViewModelBase
     [ObservableProperty]
     public partial string Filter { get; set; } = "";
 
-    partial void OnFilterChanged(string value) => Rebuild(keepSelection: true);
+    partial void OnFilterChanged(string value)
+    {
+        OnPropertyChanged(nameof(ShowsSearchScope));
+        if (SearchSubfolders && !string.IsNullOrWhiteSpace(value))
+            Search();
+        else
+        {
+            StopSearch();
+            Rebuild(keepSelection: true);
+        }
+    }
+
+    public bool ShowsSearchScope => !string.IsNullOrWhiteSpace(Filter);
+
+    /// <summary>Whether the filter searches the subfolders too: 0 the folder shown, 1 it and everything below it.</summary>
+    [ObservableProperty]
+    public partial int SearchScope { get; set; }
+
+    public bool SearchSubfolders => SearchScope == 1;
+
+    partial void OnSearchScopeChanged(int value) => OnFilterChanged(Filter);
+
+    [ObservableProperty]
+    public partial bool IsSearching { get; private set; }
+
+    partial void OnIsSearchingChanged(bool value) => UpdateStatus();
+
+    private CancellationTokenSource? _search;
+    private List<StorageItem>? _found;
+
+    // The subfolders are searched in the background a moment after the typing stops; what is found shows in batches,
+    // and a new text, another scope or another folder stops the search.
+    private void Search()
+    {
+        _search?.Cancel();
+        if (Current is not { } root)
+            return;
+        var cancel = _search = new CancellationTokenSource();
+        var query = Filter;
+        var includeHidden = ShowHidden;
+        var provider = _providers[root];
+        var found = _found = [];
+        IsSearching = true;
+        Show([], null);
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(250, cancel.Token);
+                var shown = DateTime.UtcNow;
+                await foreach (var item in FileSearch.SearchAsync(provider, root, query, includeHidden, cancellationToken: cancel.Token))
+                {
+                    lock (found)
+                        found.Add(item);
+                    if (DateTime.UtcNow - shown > TimeSpan.FromMilliseconds(300))
+                    {
+                        shown = DateTime.UtcNow;
+                        MainThread.BeginInvokeOnMainThread(() => ShowFound(cancel));
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                if (cancel != _search)
+                    return;
+                IsSearching = false;
+                ShowFound(cancel);
+            });
+        });
+    }
+
+    private void ShowFound(CancellationTokenSource search)
+    {
+        if (search == _search && !search.IsCancellationRequested)
+            Rebuild(keepSelection: true);
+    }
+
+    private void StopSearch()
+    {
+        _search?.Cancel();
+        _search = null;
+        _found = null;
+        IsSearching = false;
+    }
+
+    [RelayCommand]
+    private void StopSearching()
+    {
+        _search?.Cancel();
+        IsSearching = false;
+    }
 
     // ---- Preview ----
 
@@ -1396,7 +1495,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
             _selection.Clear();
             _items = cached ?? [];
             Rows = [];
-            // A filter belongs to the folder it was typed in, as in Finder.
+            // A filter belongs to the folder it was typed in, as in Finder; so does a search.
+            StopSearch();
             Filter = "";
             Watch(provider, location);
             if (cached is not null)
@@ -1417,7 +1517,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
                 return;
             _items = items;
             tab.Items = items;
-            Show(rows, keep);
+            if (_found is null)
+                Show(rows, keep);
         }
         catch (OperationCanceledException)
         {
@@ -1526,7 +1627,22 @@ public partial class ExplorerPageViewModel : ViewModelBase
     }
 
     private void Rebuild(bool keepSelection = false) =>
-        Show(BuildRows(_items), keepSelection ? SelectedItems.Select(i => i.Location).ToHashSet() : null);
+        Show(_found is { } found ? BuildFoundRows(found) : BuildRows(_items), keepSelection ? SelectedItems.Select(i => i.Location).ToHashSet() : null);
+
+    // Search results, sorted as the list is, each with the folder it is in.
+    private ItemRow[] BuildFoundRows(List<StorageItem> found)
+    {
+        StorageItem[] items;
+        lock (found)
+            items = [.. found];
+        Sort.Sort(items);
+        var format = new RowFormat(_strings);
+        var root = Current?.DisplayPath ?? "";
+        return Array.ConvertAll(items, item => new ItemRow(item, format)
+        {
+            Where = Path.GetRelativePath(root, Path.GetDirectoryName(item.Location.DisplayPath) ?? root) is var where && where != "." ? where : null,
+        });
+    }
 
     private void Show(ItemRow[] rows, HashSet<StorageLocation>? keep)
     {
@@ -1561,7 +1677,9 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     private void UpdateStatus()
     {
-        var count = string.IsNullOrWhiteSpace(Filter)
+        var count = _found is not null
+            ? _strings.Get(IsSearching ? "Search.Searching" : "Search.Found", Rows.Count)
+            : string.IsNullOrWhiteSpace(Filter)
             ? _strings.Get("Explorer.Items", Rows.Count)
             : _strings.Get("Explorer.Matches", Rows.Count) + " " + _strings.Get("Explorer.OfItems", _items.Count(i => ShowHidden || !i.IsHidden));
         Status = _selection.Count == 0 ? count : $"{count} · {_strings.Get("Explorer.Selected", _selection.Count)}";

@@ -183,4 +183,10 @@
   <s key="Menu.Appearance.System">Match System</s>
   <s key="Menu.Appearance.Light">Light</s>
   <s key="Menu.Appearance.Dark">Dark</s>
+  <s key="Search.ThisFolder">This Folder</s>
+  <s key="Search.Subfolders">Including Subfolders</s>
+  <s key="Search.Searching">Searching… {0} found</s>
+  <s key="Search.Found">{0} found</s>
+  <s key="Search.Stop">Stop</s>
+  <s key="Explorer.Search">Search</s>
 </strings>
