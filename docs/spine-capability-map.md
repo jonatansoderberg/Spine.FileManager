@@ -55,6 +55,7 @@ Solved in this repository for now (decision 2026-10-14); each could move into Sp
 
 - **Key commands and a menu bar.** The explorer's shortcuts ride on MAUI's `MenuBarItems` (`Services/AppMenu.cs`); on the Mac the system's File/Format/View menus are removed in `AppDelegate.BuildMenu` and Edit's Select All is caught as `selectAll:` at the end of the responder chain. A Spine menu-bar builder with per-platform shortcuts would serve every desktop app.
 - **Modifier keys for clicks.** MAUI's tap events carry no modifiers; `Services/ModifierKeys.cs` reads GCKeyboard (Mac) and InputKeyboardSource (Windows).
+- **A host per window.** Further explorer windows are plain MAUI pages outside Spine's host (Spike 4, `docs/spikes/multi-window.md`); Spine sheets then still open in the main window.
 - **Middle-click.** MAUI's gestures expose primary and secondary buttons only; "middle-click a folder opens it in a new tab" needs a platform hook.
 - **Localised navigable titles.** `[NavigableRegion(Title = …)]` is literal text (see the table).
 - **Rebuilding a native menu per `MenuItems` change.** Filling a menu button's items one by one rebuilt the menu each time: 500 rows froze the window for 27 s (Spike 2). Build the `MenuItems` first and assign it once; a batch-update API in Spine would prevent the trap.

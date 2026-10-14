@@ -127,4 +127,6 @@
   <s key="Menu.PreviousTab">Visa föregående flik</s>
   <s key="Menu.OpenInTerminal">Öppna i Terminal</s>
   <s key="Explorer.Error.Terminal">Det gick inte att öppna en terminal här.</s>
+  <s key="Menu.NewWindow">Nytt fönster</s>
+  <s key="Menu.MoveTabToNewWindow">Flytta flik till nytt fönster</s>
 </strings>

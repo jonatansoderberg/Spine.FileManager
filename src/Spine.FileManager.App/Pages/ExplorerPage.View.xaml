@@ -112,7 +112,8 @@
                     <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="ExplorerTab">
                             <Grid ColumnDefinitions="*,Auto" WidthRequest="180" HeightRequest="28" Padding="10,0,2,0"
-                                  BackgroundColor="Transparent">
+                                  BackgroundColor="Transparent"
+                                  ContextMenu.Items="{Binding TabMenu, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" ContextMenu.CommandParameter="{Binding .}">
                                 <Grid.Triggers>
                                     <DataTrigger TargetType="Grid" Binding="{Binding IsActive}" Value="True">
                                         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#FFFFFF, Dark=#232427}" />

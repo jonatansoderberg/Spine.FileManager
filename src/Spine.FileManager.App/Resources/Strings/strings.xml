@@ -127,4 +127,6 @@
   <s key="Menu.PreviousTab">Show Previous Tab</s>
   <s key="Menu.OpenInTerminal">Open in Terminal</s>
   <s key="Explorer.Error.Terminal">No terminal could be opened here.</s>
+  <s key="Menu.NewWindow">New Window</s>
+  <s key="Menu.MoveTabToNewWindow">Move Tab to New Window</s>
 </strings>
