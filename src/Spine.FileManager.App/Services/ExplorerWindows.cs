@@ -27,12 +27,23 @@ public static class ExplorerWindows
         SettleLayout(window);
         window.Destroying += (_, _) =>
         {
-            if (AppMenu.Explorer == vm)
-                AppMenu.Explorer = null;
             // A window the user closes is not part of the next session.
             IPlatformApplication.Current?.Services.GetService<SessionTracker>()?.Unregister(vm);
         };
         return window;
+    }
+
+    /// <summary>Closes a window for good: MAUI's CloseWindow only hides a scene on the Mac.</summary>
+    public static void Close(Window window)
+    {
+#if MACCATALYST || IOS
+        if (window.Handler?.PlatformView is UIKit.UIWindow { WindowScene: { } scene })
+        {
+            UIKit.UIApplication.SharedApplication.RequestSceneSessionDestruction(scene.Session, null, null);
+            return;
+        }
+#endif
+        Application.Current?.CloseWindow(window);
     }
 
     /// <summary>

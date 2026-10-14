@@ -169,7 +169,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
             SyncTabs();
             return;
         }
-        if (!await from.Release(tab))
+        if (!await from.Release(tab, emptyCloses: true))
             return;
         Remember();
         _tabs.Drop(tab, index);
@@ -177,11 +177,29 @@ public partial class ExplorerPageViewModel : ViewModelBase
         await Show(tab);
     }
 
-    // The tab leaves this pane, for another window or a window of its own; the pane's last tab stays.
-    private async Task<bool> Release(ExplorerTab tab)
+    // The tab leaves this pane for another window or a window of its own. A pane's last tab can only leave for
+    // another pane (emptyCloses): the second pane then closes, and a window with no second pane closes with it. The
+    // main window stays, as Spine's sheets show only there.
+    private async Task<bool> Release(ExplorerTab tab, bool emptyCloses = false)
     {
         if (_tabs.Tabs.Count < 2)
-            return false;
+        {
+            if (!emptyCloses || (Partner is not null && !IsSecondary)
+                || (!IsSecondary && HostPage()?.Window == Application.Current?.Windows.FirstOrDefault()))
+                return false;
+            // After the drop has finished with the views of this pane.
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                if (IsSecondary)
+                    Partner!.IsSplit = false;
+                else if (HostPage()?.Window is { } window)
+                {
+                    IPlatformApplication.Current?.Services.GetService<SessionTracker>()?.Unregister(this);
+                    ExplorerWindows.Close(window);
+                }
+            });
+            return true;
+        }
         if (tab == _tabs.Active)
             Remember();
         await CloseTab(tab);

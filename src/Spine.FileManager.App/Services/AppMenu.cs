@@ -13,6 +13,8 @@ public static class AppMenu
     /// <summary>The explorer the menu acts on; on the Mac also the end of the responder chain for the Edit menu.</summary>
     public static ExplorerPageViewModel? Explorer { get; set; }
 
+    private static readonly List<ExplorerPageViewModel> Installed = [];
+
     /// <summary>Whether a menu with these item titles is one of the app's own (Mac: telling them from the system's).</summary>
     public static bool Owns(IEnumerable<string> titles)
     {
@@ -24,9 +26,17 @@ public static class AppMenu
     public static void Install(ExplorerPage page, ExplorerPageViewModel vm)
     {
         Explorer ??= vm;
-        if (page.Window is { } window)
+        if (page.Window is { } window && !Installed.Contains(vm))
         {
+            Installed.Add(vm);
             window.Activated += (_, _) => Explorer = vm.FocusedPane;
+            // Until another window is activated, the menu goes to the explorer opened last.
+            window.Destroying += (_, _) =>
+            {
+                Installed.Remove(vm);
+                if (Explorer == vm || Explorer == vm.Partner)
+                    Explorer = Installed.LastOrDefault()?.FocusedPane;
+            };
 #if MACCATALYST
             // MAUI's Activated does not come reliably for windows opened as scenes; the key window does.
             UIKit.UIWindow.Notifications.ObserveDidBecomeKey((_, e) =>

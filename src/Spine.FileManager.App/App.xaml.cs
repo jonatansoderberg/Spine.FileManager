@@ -12,15 +12,7 @@ public partial class App
         if (Windows.Count == 0)
             return base.CreateWindow(activationState);
         var window = new Window(new ContentPage());
-        window.Created += (_, _) => Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(300), () =>
-        {
-#if MACCATALYST || IOS
-            if (window.Handler?.PlatformView is UIKit.UIWindow { WindowScene: { } scene })
-                UIKit.UIApplication.SharedApplication.RequestSceneSessionDestruction(scene.Session, null, null);
-            else
-#endif
-                CloseWindow(window);
-        });
+        window.Created += (_, _) => Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(300), () => ExplorerWindows.Close(window));
         return window;
     }
 }

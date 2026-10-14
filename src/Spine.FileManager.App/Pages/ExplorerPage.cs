@@ -47,7 +47,7 @@ public partial class ExplorerPage
 
     private void OnTabDragStarting(object? sender, DragStartingEventArgs e)
     {
-        if (sender is not View { BindingContext: ExplorerTab tab } || BindingContext is not ExplorerPageViewModel vm || vm.Tabs.Count < 2)
+        if (sender is not View { BindingContext: ExplorerTab tab } || BindingContext is not ExplorerPageViewModel vm)
         {
             e.Cancel = true;
             return;
