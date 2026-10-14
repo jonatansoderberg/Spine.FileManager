@@ -94,6 +94,7 @@ public static class AppMenu
             new MenuFlyoutSeparator(),
             Item("Menu.ShowHidden", x => x.ToggleHiddenCommand, mac ? command | KeyboardAcceleratorModifiers.Shift : command, mac ? "." : "H"),
             Item("Menu.Refresh", x => x.RefreshCommand, mac ? command : KeyboardAcceleratorModifiers.None, mac ? "R" : "F5"),
+            Item("Menu.Find", x => x.FindCommand, command, "F"),
             Item("Menu.DualPane", x => x.ToggleSplitCommand, command | KeyboardAcceleratorModifiers.Shift, "D"),
             Item("Menu.Operations", x => x.ShowOperationsCommand, mac ? command | KeyboardAcceleratorModifiers.Alt : command | KeyboardAcceleratorModifiers.Shift, mac ? "L" : "J"),
             new MenuFlyoutSeparator(),

@@ -22,6 +22,7 @@ public partial class ExplorerPage
             if (BindingContext is not ExplorerPageViewModel vm)
                 return;
             vm.HostPage = () => Window?.Page;
+            vm.FilterRequested += () => FilterField.Focus();
             if (!vm.IsSecondary)
                 AppMenu.Install(this, vm);
             // A deep folder's breadcrumb is wider than the bar; keep its end, the current folder, in view as the

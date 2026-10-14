@@ -1,6 +1,6 @@
 # Spine File Manager — Requirements and Plan
 
-**Last updated:** 2026-10-14 — Dual Pane (#23 part 1), last session (#25 part 1), windows (#22), Open in Terminal (#24), tabs (#21), journal (#20); milestone A done on the Mac; Windows (#3) compiled only.
+**Last updated:** 2026-10-14 — folder filter (#32), Dual Pane (#23 part 1), last session (#25 part 1), windows (#22), Open in Terminal (#24), tabs (#21), journal (#20); milestone A done on the Mac; Windows (#3) compiled only.
 
 A living plan. Each step links its GitHub issue once it has one; update the status, the decisions and the line above in the same PR as the work.
 
@@ -354,6 +354,8 @@ Source *iPhone / All Photos*, destination *Gaming PC / D:\Photo Backup*; options
 Generalise to folder → folder, device → device, photos → folder; modes incremental, mirror, one-way sync. V1 is incremental backup only.
 
 ## 35. Phase 22 — Search
+
+**Current-folder filter done 2026-10-14 ([#32](https://github.com/jonatansoderberg/Spine.FileManager/issues/32)).**
 
 Current-folder search as a quick filter; later an index (file name, extension, metadata, tags, content). Remote search runs on the remote node rather than listing its disk over the network.
 
