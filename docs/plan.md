@@ -1,6 +1,6 @@
 # Spine File Manager — Requirements and Plan
 
-**Last updated:** 2026-10-14 — repository created, Phase 0 (Spine inventory) done in `docs/spine-capability-map.md`.
+**Last updated:** 2026-10-14 — Spike 1 run on Mac, iOS simulator and Android emulator (`docs/spikes/file-system.md`); Mac ships with Developer ID, no sandbox; Windows and hardware pass outstanding.
 
 A living plan. Each step links its GitHub issue once it has one; update the status, the decisions and the line above in the same PR as the work.
 
@@ -69,7 +69,7 @@ Result: a usable desktop file manager.
 | # | Step | Status | Issue |
 |---|---|---|---|
 | A1 | Phase 0 — Spine inventory (§5) | ✅ | — |
-| A2 | Spike 1 — file-system capabilities (§6) | ⬜ | [#1](https://github.com/jonatansoderberg/Spine.FileManager/issues/1) |
+| A2 | Spike 1 — file-system capabilities (§6) | 🔄 | [#1](https://github.com/jonatansoderberg/Spine.FileManager/issues/1) |
 | A3 | Storage abstraction (§7) | ⬜ | [#2](https://github.com/jonatansoderberg/Spine.FileManager/issues/2) |
 | A4 | Windows local provider | ⬜ | [#3](https://github.com/jonatansoderberg/Spine.FileManager/issues/3) |
 | A5 | macOS local provider | ⬜ | [#4](https://github.com/jonatansoderberg/Spine.FileManager/issues/4) |
@@ -419,4 +419,10 @@ Or workspace "Spine": pane 1 Maui.Spine, pane 2 Spine.FileManager, pane 3 build 
 - **2026-10-14 — App id `se.cosmomedia.filemanager`, title "Spine File Manager"** — placeholders until a product name is chosen; an App ID cannot be renamed once registered with Apple, so decide before the first device build.
 - **2026-10-14 — English and Swedish from the start** through Spine's `ISpineStrings` (XML documents per culture, Spine 0.1.12+); English is the neutral fallback. `[NavigableRegion(Title = …)]` takes literal text and navigation writes it to the view model's `Title`, so a page sets its localised title in `OnAppearingAsync` until Spine accepts a string key there (see the capability map).
 - **2026-10-14 — MTP devices as a provider** (Garmin watch and the like) in milestone D, after a spike (#11); MacDroid's File Provider covers the Mac until then.
-- **2026-10-14 — Mac means Mac Catalyst**, sandboxed: folder access outside the container goes through security-scoped bookmarks (Spike 1 confirms).
+- **2026-10-14 — Mac means Mac Catalyst.** Spike 1: in the sandbox, picked folders work fully through System.IO and security-scoped bookmarks survive restarts; without it, the user's folders work after one TCC prompt each.
+- **2026-10-14 — The Mac app ships with Developer ID, without the App Sandbox** (notarised download). It then works like Finder: home, iCloud Drive, volumes and shares through plain paths, after one TCC prompt per protected folder (Documents, Desktop, Downloads, iCloud Drive, removable and network volumes). The prompts are gathered in a first-launch step that touches those folders on purpose, with Full Disk Access offered as the one-step alternative. It also keeps the embedded terminal possible (a shell started from a sandboxed app inherits the sandbox) and MTP over libusb simple (#11). Updates (e.g. Sparkle) when someone besides Jonatan uses it.
+  **The Mac App Store stays open:** iOS is App Store–only and always sandboxed, so the storage model carries persisted grants (security-scoped bookmarks) from the start. A sandboxed Mac build is then a build variant with a "give access to your home folder" onboarding step, not a rewrite. Rules that keep it open: no code assumes a path is reachable without its provider's grant; no private APIs; process launching and USB access go through their own services, so a sandboxed variant can switch them off.
+- **2026-10-14 — Android: All files access or SAF-only is open.** Spike 1: without `MANAGE_EXTERNAL_STORAGE` the app cannot see other apps' files at all; with it the whole shared storage works through System.IO. Play grants it to file managers after a declaration. SAF stays the path for SD/USB volumes either way. Decide before the Android provider (milestone E).
+- **2026-10-14 — Working mode while Jonatan is away:** Claude merges its own PRs once a step builds and is verified on the platforms it can run; Jonatan reviews afterwards and fixes go in new PRs. Spine gaps are solved in this repository first and noted in the capability map as Spine candidates; Maui.Spine is not touched.
+- **2026-10-14 — The explorer's default view is a details list with a sidebar**, like Windows Explorer: sidebar with Favorites and locations, breadcrumb on top, columns Name, Date modified, Size and Kind; an icon grid as the alternative view.
+- **2026-10-14 — Delete moves to the system's Trash / Recycle Bin;** Shift+Delete deletes permanently after a confirmation. Where a provider has no trash (SAF, MTP, network shares without one) the app asks first and says it is permanent.

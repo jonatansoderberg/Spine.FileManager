@@ -4,4 +4,7 @@
   </Project>
   <Project Path="src/Spine.FileManager.Core/Spine.FileManager.Core.csproj" />
   <Project Path="src/Spine.FileManager.Tests/Spine.FileManager.Tests.csproj" />
+  <Folder Name="/spikes/">
+    <Project Path="spikes/FileSystem/FileSystemSpike.csproj" />
+  </Folder>
 </Solution>
