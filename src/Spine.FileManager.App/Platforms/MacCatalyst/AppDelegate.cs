@@ -42,6 +42,8 @@ public class AppDelegate : MauiUIApplicationDelegate
 		"selectAll:" => AppMenu.Explorer is not null,
 		"copy:" or "cut:" => AppMenu.Explorer?.HasSelection == true,
 		"paste:" => AppMenu.Explorer is not null && FileClipboard.HasItems,
+		// A text field being edited takes undo: itself; the explorer's undo comes after it in the responder chain.
+		"undo:" => AppMenu.Explorer is not null && ExplorerPageViewModel.CanUndo,
 		_ => base.CanPerform(action, withSender),
 	};
 
@@ -53,6 +55,9 @@ public class AppDelegate : MauiUIApplicationDelegate
 
 	[Export("cut:")]
 	public void Cut(NSObject? sender) => AppMenu.Explorer?.CutCommand.Execute(null);
+
+	[Export("undo:")]
+	public void Undo(NSObject? sender) => AppMenu.Explorer?.UndoLastCommand.Execute(null);
 
 	[Export("paste:")]
 	public void Paste(NSObject? sender) => AppMenu.Explorer?.PasteCommand.Execute(null);

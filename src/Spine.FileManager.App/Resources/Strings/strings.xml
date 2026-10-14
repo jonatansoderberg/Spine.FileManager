@@ -71,6 +71,7 @@
   <s key="Menu.AsList">as List</s>
   <s key="Menu.AsIcons">as Icons</s>
   <s key="Menu.Duplicate">Duplicate</s>
+  <s key="Menu.Undo">Undo</s>
   <s key="Menu.Cut">Cut</s>
   <s key="Menu.Copy">Copy</s>
   <s key="Menu.Paste">Paste</s>

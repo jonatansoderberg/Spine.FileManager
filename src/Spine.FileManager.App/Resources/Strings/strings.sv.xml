@@ -71,6 +71,7 @@
   <s key="Menu.AsList">som lista</s>
   <s key="Menu.AsIcons">som symboler</s>
   <s key="Menu.Duplicate">Duplicera</s>
+  <s key="Menu.Undo">Ångra</s>
   <s key="Menu.Cut">Klipp ut</s>
   <s key="Menu.Copy">Kopiera</s>
   <s key="Menu.Paste">Klistra in</s>

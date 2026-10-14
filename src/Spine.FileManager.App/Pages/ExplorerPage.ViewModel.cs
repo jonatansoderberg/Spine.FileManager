@@ -149,6 +149,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
     public ExplorerPageViewModel(ISpineStrings strings, StorageProviders providers, INavigationService navigation, OperationQueue operations, FavoritesStore favorites)
     {
         _favorites = favorites;
+        // Created with the first explorer, so the first finished operation is already recorded.
+        _ = Undo;
         _favorites.Changed += () => MainThread.BeginInvokeOnMainThread(() => _ = LoadFavorites());
         BuildMenus(strings);
         strings.Changed += (_, _) => BuildMenus(strings);
@@ -1028,6 +1030,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
         await Try(async () =>
         {
             var created = await _providers[folder].CreateFolderAsync(folder, name.Trim());
+            Undo.Record(new TrashItems([created.Location]));
             await Load(folder);
             SelectWhere(item => item.Location.Equals(created.Location));
         });
@@ -1044,10 +1047,19 @@ public partial class ExplorerPageViewModel : ViewModelBase
         await Try(async () =>
         {
             var renamed = await _providers[item.Location].RenameAsync(item.Location, name.Trim());
+            Undo.Record(new RenameBack(renamed.Location, item.Name));
             await Load(folder);
             SelectWhere(i => i.Location.Equals(renamed.Location));
         });
     }
+
+    private static UndoService Undo => IPlatformApplication.Current!.Services.GetRequiredService<UndoService>();
+
+    public static bool CanUndo => Undo.CanUndo;
+
+    /// <summary>Takes back the last copy, move, rename or new folder, in whichever window it happened.</summary>
+    [RelayCommand(AllowConcurrentExecutions = false)]
+    private Task UndoLast() => Try(Undo.UndoAsync);
 
     [RelayCommand]
     private void Copy() => PutOnClipboard(cut: false);

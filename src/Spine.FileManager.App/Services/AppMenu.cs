@@ -105,6 +105,8 @@ public static class AppMenu
         // On the Mac the system's Edit menu stays (text fields need it) and its Select All reaches the explorer through AppDelegate.
         if (!mac)
             host.MenuBarItems.Add(Menu("Menu.Edit",
+                Item("Menu.Undo", x => x.UndoLastCommand, command, "Z"),
+                new MenuFlyoutSeparator(),
                 Item("Menu.Cut", x => x.CutCommand, command, "X"),
                 Item("Menu.Copy", x => x.CopyCommand, command, "C"),
                 Item("Menu.Paste", x => x.PasteCommand, command, "V"),
