@@ -57,12 +57,17 @@ public static class AppMenu
             Item("Menu.NewFolder", vm.NewFolderCommand, command | KeyboardAcceleratorModifiers.Shift, "N"),
             Item("Menu.Open", vm.ActivateCommand, mac ? command : KeyboardAcceleratorModifiers.None, mac ? "O" : "Enter"),
             Item("Menu.Rename", vm.RenameCommand, KeyboardAcceleratorModifiers.None, mac ? "Enter" : "F2"),
+            Item("Menu.Duplicate", vm.DuplicateCommand, command, mac ? "D" : null),
             new MenuFlyoutSeparator(),
             Item("Menu.Delete", vm.DeleteCommand, mac ? command : KeyboardAcceleratorModifiers.None, mac ? "Back" : "Delete"),
             Item("Menu.DeletePermanently", vm.DeletePermanentlyCommand, mac ? command | KeyboardAcceleratorModifiers.Alt : KeyboardAcceleratorModifiers.Shift, mac ? "Back" : "Delete")));
         // On the Mac the system's Edit menu stays (text fields need it) and its Select All reaches the explorer through AppDelegate.
         if (!mac)
             host.MenuBarItems.Add(Menu("Menu.Edit",
+                Item("Menu.Cut", vm.CutCommand, command, "X"),
+                Item("Menu.Copy", vm.CopyCommand, command, "C"),
+                Item("Menu.Paste", vm.PasteCommand, command, "V"),
+                new MenuFlyoutSeparator(),
                 Item("Menu.SelectAll", vm.SelectAllCommand, command, "A")));
         host.MenuBarItems.Add(Menu("Menu.View",
             Item("Menu.AsList", vm.ShowAsCommand, mac ? command : command | KeyboardAcceleratorModifiers.Shift, mac ? "1" : "6", "List"),

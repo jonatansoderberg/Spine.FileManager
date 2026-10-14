@@ -69,4 +69,23 @@
   <s key="Explorer.AsIcons">Visa som symboler</s>
   <s key="Menu.AsList">som lista</s>
   <s key="Menu.AsIcons">som symboler</s>
+  <s key="Menu.Duplicate">Duplicera</s>
+  <s key="Menu.Cut">Klipp ut</s>
+  <s key="Menu.Copy">Kopiera</s>
+  <s key="Menu.Paste">Klistra in</s>
+  <s key="Operation.Copying">Kopierar</s>
+  <s key="Operation.Moving">Flyttar</s>
+  <s key="Operation.Preparing">Förbereder…</s>
+  <s key="Operation.Cancel">Avbryt</s>
+  <s key="Operation.Errors.one">Ett objekt kunde inte kopieras:</s>
+  <s key="Operation.Errors.other">{0} objekt kunde inte kopieras. Det första:</s>
+  <s key="Conflict.Title">”{0}” finns redan här.</s>
+  <s key="Conflict.FolderTitle">En mapp ”{0}” finns redan här. Ersätt slår ihop dem.</s>
+  <s key="Conflict.Replace">Ersätt</s>
+  <s key="Conflict.KeepBoth">Behåll båda</s>
+  <s key="Conflict.Skip">Hoppa över</s>
+  <s key="Conflict.ReplaceAll">Ersätt alla</s>
+  <s key="Conflict.KeepBothAll">Behåll båda för alla</s>
+  <s key="Conflict.SkipAll">Hoppa över alla</s>
+  <s key="Conflict.Stop">Stoppa</s>
 </strings>

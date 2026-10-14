@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Plugin.Maui.Spine.Common;
 using Spine.FileManager.Explorer;
+using Spine.FileManager.Operations;
 using Spine.FileManager.Services;
 
 namespace Spine.FileManager.Pages;
@@ -85,12 +86,16 @@ public partial class ExplorerPageViewModel : ViewModelBase
     private CancellationTokenSource? _reload;
 
     private readonly INavigationService _navigation;
+    private readonly OperationQueue _operations;
 
-    public ExplorerPageViewModel(ISpineStrings strings, StorageProviders providers, INavigationService navigation)
+    public ExplorerPageViewModel(ISpineStrings strings, StorageProviders providers, INavigationService navigation, OperationQueue operations)
     {
         _strings = strings;
         _providers = providers;
         _navigation = navigation;
+        _operations = operations;
+        _operations.Changed += operation => MainThread.BeginInvokeOnMainThread(() => OnOperationChanged(operation));
+        _operations.ResolveConflict = (_, conflict) => MainThread.InvokeOnMainThreadAsync(() => AskConflict(conflict));
         _strings.Changed += (_, _) => Rebuild(keepSelection: true);
     }
 
@@ -294,6 +299,106 @@ public partial class ExplorerPageViewModel : ViewModelBase
             await Load(folder);
             SelectWhere(i => i.Location.Equals(renamed.Location));
         });
+    }
+
+    [RelayCommand]
+    private void Copy() => PutOnClipboard(cut: false);
+
+    [RelayCommand]
+    private void Cut() => PutOnClipboard(cut: true);
+
+    private void PutOnClipboard(bool cut)
+    {
+        var items = SelectedItems.Select(i => i.Location).ToList();
+        if (items.Count > 0)
+            FileClipboard.Set(items, cut);
+    }
+
+    [RelayCommand]
+    private void Paste()
+    {
+        if (Current is not { } folder || FileClipboard.Items is not { Count: > 0 } items)
+            return;
+        _pasteSelects = _operations.Enqueue(FileClipboard.IsCut ? OperationKind.Move : OperationKind.Copy, items, folder);
+        if (FileClipboard.IsCut)
+            FileClipboard.Clear();
+    }
+
+    [RelayCommand]
+    private void Duplicate()
+    {
+        if (Current is { } folder && SelectedItems.Select(i => i.Location).ToList() is { Count: > 0 } items)
+            _pasteSelects = _operations.Enqueue(OperationKind.Copy, items, folder);
+    }
+
+    [RelayCommand]
+    private void CancelOperation() => _activeOperation?.Cancel();
+
+    public bool CanPaste => FileClipboard.HasItems;
+
+    public bool HasSelection => _selection.Count > 0;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasOperation))]
+    public partial string? OperationText { get; private set; }
+
+    [ObservableProperty]
+    public partial double OperationProgress { get; private set; }
+
+    public bool HasOperation => OperationText is not null;
+
+    private FileOperation? _activeOperation;
+    private FileOperation? _pasteSelects;
+
+    private void OnOperationChanged(FileOperation operation)
+    {
+        if (!operation.IsFinished)
+        {
+            _activeOperation = operation;
+            var progress = operation.Progress;
+            var verb = _strings[operation.Kind == OperationKind.Move ? "Operation.Moving" : "Operation.Copying"];
+            var amount = progress.BytesTotal > 0
+                ? $"{ByteSize.Format(progress.BytesDone)} / {ByteSize.Format(progress.BytesTotal)}"
+                : _strings.Get("Explorer.Items", progress.ItemsTotal);
+            var speed = progress.BytesPerSecond > 1_000_000 ? $" · {ByteSize.Format((long)progress.BytesPerSecond)}/s" : "";
+            OperationText = operation.State == OperationState.Preparing ? _strings["Operation.Preparing"] : $"{verb} {progress.Current} — {amount}{speed}";
+            OperationProgress = progress.Fraction;
+            return;
+        }
+
+        if (operation == _activeOperation)
+        {
+            _activeOperation = null;
+            OperationText = null;
+        }
+        if (operation.Errors.Count > 0)
+            Error = $"{_strings.Get("Operation.Errors", operation.Errors.Count)} {operation.Errors[0].Error}";
+        if (operation == _pasteSelects && Current is { } folder && operation.Target.Equals(folder))
+        {
+            var results = operation.Results.ToHashSet();
+            _ = Load(folder).ContinueWith(_ => MainThread.BeginInvokeOnMainThread(() => SelectWhere(i => results.Contains(i.Location))));
+        }
+    }
+
+    private async Task<ConflictAnswer> AskConflict(Conflict conflict)
+    {
+        if (WindowPage is not { } page)
+            return new(ConflictChoice.Skip);
+        string replace = _strings["Conflict.Replace"], keepBoth = _strings["Conflict.KeepBoth"], skip = _strings["Conflict.Skip"];
+        string replaceAll = _strings["Conflict.ReplaceAll"], skipAll = _strings["Conflict.SkipAll"], keepAll = _strings["Conflict.KeepBothAll"];
+        string[] buttons = conflict.Remaining > 0 ? [replace, keepBoth, skip, replaceAll, keepAll, skipAll] : [replace, keepBoth, skip];
+        var title = _strings.Get(conflict.Existing.IsFolder && conflict.Source.IsFolder ? "Conflict.FolderTitle" : "Conflict.Title", conflict.Source.Name);
+        var pick = await page.DisplayActionSheetAsync(title, _strings["Conflict.Stop"], null, buttons);
+        return pick switch
+        {
+            _ when pick == replace => new(ConflictChoice.Replace),
+            _ when pick == keepBoth => new(ConflictChoice.KeepBoth),
+            _ when pick == skip => new(ConflictChoice.Skip),
+            _ when pick == replaceAll => new(ConflictChoice.Replace, ForAll: true),
+            _ when pick == keepAll => new(ConflictChoice.KeepBoth, ForAll: true),
+            _ when pick == skipAll => new(ConflictChoice.Skip, ForAll: true),
+            _ => new(ConflictChoice.Stop),
+        };
     }
 
     [RelayCommand]

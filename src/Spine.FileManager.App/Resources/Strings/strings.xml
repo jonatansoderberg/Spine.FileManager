@@ -69,4 +69,23 @@
   <s key="Explorer.AsIcons">Show as icons</s>
   <s key="Menu.AsList">as List</s>
   <s key="Menu.AsIcons">as Icons</s>
+  <s key="Menu.Duplicate">Duplicate</s>
+  <s key="Menu.Cut">Cut</s>
+  <s key="Menu.Copy">Copy</s>
+  <s key="Menu.Paste">Paste</s>
+  <s key="Operation.Copying">Copying</s>
+  <s key="Operation.Moving">Moving</s>
+  <s key="Operation.Preparing">Preparing…</s>
+  <s key="Operation.Cancel">Cancel</s>
+  <s key="Operation.Errors.one">One item could not be copied:</s>
+  <s key="Operation.Errors.other">{0} items could not be copied. The first:</s>
+  <s key="Conflict.Title">“{0}” already exists here.</s>
+  <s key="Conflict.FolderTitle">A folder “{0}” already exists here. Replace merges the two.</s>
+  <s key="Conflict.Replace">Replace</s>
+  <s key="Conflict.KeepBoth">Keep Both</s>
+  <s key="Conflict.Skip">Skip</s>
+  <s key="Conflict.ReplaceAll">Replace All</s>
+  <s key="Conflict.KeepBothAll">Keep Both for All</s>
+  <s key="Conflict.SkipAll">Skip All</s>
+  <s key="Conflict.Stop">Stop</s>
 </strings>
