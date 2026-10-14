@@ -1,6 +1,6 @@
 # Spine File Manager — Requirements and Plan
 
-**Last updated:** 2026-10-14 — Spike 1 run on Mac, iOS simulator and Android emulator (`docs/spikes/file-system.md`); Mac ships with Developer ID, no sandbox; Windows and hardware pass outstanding.
+**Last updated:** 2026-10-14 — storage abstraction (#2) in Core; Spike 1 run on Mac, iOS simulator and Android emulator; Mac ships with Developer ID, no sandbox.
 
 A living plan. Each step links its GitHub issue once it has one; update the status, the decisions and the line above in the same PR as the work.
 
@@ -70,7 +70,7 @@ Result: a usable desktop file manager.
 |---|---|---|---|
 | A1 | Phase 0 — Spine inventory (§5) | ✅ | — |
 | A2 | Spike 1 — file-system capabilities (§6) | 🔄 | [#1](https://github.com/jonatansoderberg/Spine.FileManager/issues/1) |
-| A3 | Storage abstraction (§7) | ⬜ | [#2](https://github.com/jonatansoderberg/Spine.FileManager/issues/2) |
+| A3 | Storage abstraction (§7) | ✅ | [#2](https://github.com/jonatansoderberg/Spine.FileManager/issues/2) |
 | A4 | Windows local provider | ⬜ | [#3](https://github.com/jonatansoderberg/Spine.FileManager/issues/3) |
 | A5 | macOS local provider | ⬜ | [#4](https://github.com/jonatansoderberg/Spine.FileManager/issues/4) |
 | A6 | Basic FileExplorer (§8) | ⬜ | [#5](https://github.com/jonatansoderberg/Spine.FileManager/issues/5) |
