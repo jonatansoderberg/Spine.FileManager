@@ -24,6 +24,8 @@
 	<ItemGroup>
 		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#2F6FEB" />
 		<MauiImage Include="Resources\Images\*.svg" BaseSize="32,32" />
+		<!-- Menus (MenuAction.Svg) draw their icons from embedded SVGs. -->
+		<EmbeddedResource Include="Resources\Images\folder.svg" />
 		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#2F6FEB" BaseSize="128,128" />
 		<!-- English is the neutral document, Swedish strings.sv.xml (ISpineStrings). WithCulture="false" keeps the
 		     .sv. files out of a satellite assembly, where Spine does not look. -->

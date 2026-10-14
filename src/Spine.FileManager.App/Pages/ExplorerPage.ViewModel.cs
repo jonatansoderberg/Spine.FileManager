@@ -22,6 +22,17 @@ public sealed partial class PlaceRow(StorageRoot root) : ObservableObject
     public partial bool IsCurrent { get; set; }
 }
 
+public sealed partial class BreadcrumbSegment(StorageLocation location, string name) : ObservableObject
+{
+    public StorageLocation Location { get; } = location;
+
+    [ObservableProperty]
+    public partial string Name { get; set; } = name;
+
+    /// <summary>The folder's subfolders, filled in after the bar is shown, for the drop-down behind the segment's chevron.</summary>
+    public Plugin.Maui.Spine.Core.MenuItems Children { get; } = [];
+}
+
 public sealed partial class ItemRow(StorageItem item, string kind, string modified, string size) : ObservableObject
 {
     public StorageItem Item { get; } = item;
@@ -62,6 +73,9 @@ public partial class ExplorerPageViewModel : ViewModelBase
     }
 
     public ObservableCollection<PlaceRow> Places { get; } = [];
+
+    [ObservableProperty]
+    public partial IReadOnlyList<BreadcrumbSegment> Segments { get; private set; } = [];
 
     [ObservableProperty]
     public partial IReadOnlyList<ItemRow> Rows { get; private set; } = [];
@@ -128,6 +142,9 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     [RelayCommand]
     private Task OpenPlace(PlaceRow place) => Navigate(place.Root.Location);
+
+    [RelayCommand]
+    private Task OpenLocation(StorageLocation location) => location.Equals(Current) ? Task.CompletedTask : Navigate(location);
 
     [RelayCommand]
     private async Task Back()
@@ -200,6 +217,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
     {
         ShowHidden = !ShowHidden;
         Rebuild(keepSelection: true);
+        if (Current is { } location)
+            _ = BuildBreadcrumb(_providers[location], location);
     }
 
     [RelayCommand]
@@ -291,6 +310,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
         var changedFolder = !location.Equals(Current);
 
         Current = location;
+        if (changedFolder)
+            _ = BuildBreadcrumb(provider, location);
         CanGoBack = _history.CanGoBack;
         CanGoForward = _history.CanGoForward;
         foreach (var place in Places)
@@ -328,6 +349,29 @@ public partial class ExplorerPageViewModel : ViewModelBase
         {
             if (cancel == _loading)
                 IsLoading = false;
+        }
+    }
+
+    // The segments show at once with their file names; display names and each segment's subfolders follow.
+    private async Task BuildBreadcrumb(IStorageProvider provider, StorageLocation location)
+    {
+        var segments = Breadcrumb.Segments(provider, location)
+            .Select(l => new BreadcrumbSegment(l, Path.GetFileName(l.DisplayPath.TrimEnd(Path.DirectorySeparatorChar)) is { Length: > 0 } name ? name : l.DisplayPath))
+            .ToList();
+        Segments = segments;
+        foreach (var segment in segments)
+        {
+            if (!location.Equals(Current))
+                return;
+            try
+            {
+                segment.Name = (await provider.GetItemAsync(segment.Location)).DisplayName;
+                foreach (var folder in await Breadcrumb.SubfoldersAsync(provider, segment.Location, ShowHidden))
+                    segment.Children.Add(new Plugin.Maui.Spine.Core.MenuAction(folder.DisplayName, "folder.svg", OpenLocationCommand) { CommandParameter = folder.Location });
+            }
+            catch (StorageException)
+            {
+            }
         }
     }
 

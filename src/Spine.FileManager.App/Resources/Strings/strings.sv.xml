@@ -64,4 +64,5 @@
   <s key="FirstRun.FullDiskAccess">Eller ge Spine File Manager full skivåtkomst en gång, så frågar macOS inte igen.</s>
   <s key="FirstRun.OpenSettings">Öppna inställningar för full skivåtkomst</s>
   <s key="FirstRun.Continue">Fortsätt</s>
+  <s key="Explorer.Subfolders">Undermappar</s>
 </strings>

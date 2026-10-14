@@ -31,6 +31,15 @@
                 </VisualStateGroupList>
             </Setter>
         </Style>
+        <Style x:Key="Crumb" TargetType="Button">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Padding" Value="6,0" />
+            <Setter Property="HeightRequest" Value="28" />
+            <Setter Property="MinimumWidthRequest" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="BackgroundColor" Value="Transparent" />
+            <Setter Property="TextColor" Value="{AppThemeBinding Light=#1B1B1B, Dark=#E8E8E8}" />
+        </Style>
         <Style x:Key="ColumnHeader" TargetType="Label">
             <Setter Property="FontSize" Value="12" />
             <Setter Property="Opacity" Value="0.65" />
@@ -83,7 +92,21 @@
                              SemanticProperties.Description="{String Explorer.Up}" ToolTipProperties.Text="{String Explorer.Up}" />
                 <ImageButton Grid.Column="3" Style="{StaticResource ToolButton}" SvgImageSource.Svg="Refresh.svg" Command="{Binding RefreshCommand}"
                              SemanticProperties.Description="{String Explorer.Refresh}" ToolTipProperties.Text="{String Explorer.Refresh}" />
-                <Label Grid.Column="4" Text="{Binding PathText}" FontSize="13" VerticalTextAlignment="Center" LineBreakMode="HeadTruncation" Padding="8,0" />
+                <!-- Breadcrumb: a segment opens its folder, the chevron after it lists that folder's subfolders. -->
+                <ScrollView x:Name="BreadcrumbScroll" Grid.Column="4" Orientation="Horizontal" HorizontalScrollBarVisibility="Never" Margin="6,0">
+                    <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Segments}" VerticalOptions="Center">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="BreadcrumbSegment">
+                                <HorizontalStackLayout>
+                                    <Button Text="{Binding Name}" Style="{StaticResource Crumb}"
+                                            Command="{Binding OpenLocationCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding Location}" />
+                                    <Button Text="›" Style="{StaticResource Crumb}" Padding="4,0" MenuButton.Items="{Binding Children}"
+                                            SemanticProperties.Description="{String Explorer.Subfolders}" />
+                                </HorizontalStackLayout>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </HorizontalStackLayout>
+                </ScrollView>
                 <ImageButton Grid.Column="5" Style="{StaticResource ToolButton}" Command="{Binding ToggleHiddenCommand}"
                              SemanticProperties.Description="{String Explorer.ShowHidden}" ToolTipProperties.Text="{String Explorer.ShowHidden}">
                     <ImageButton.Triggers>
