@@ -23,6 +23,17 @@ public static class ExplorerWindows
         var vm = (ExplorerPageViewModel)explorer.BindingContext;
         vm.Start(tabs, active, from);
         var window = new Window(new ContentPage { Content = explorer, Title = AppInfo.Name }) { Title = AppInfo.Name };
+#if MACCATALYST
+        // As the main window (ExplorerPage): the explorer reaches into the title bar, which shows no title.
+        window.Created += (_, _) =>
+        {
+            if (window.Handler?.PlatformView is UIKit.UIWindow { WindowScene.Titlebar: { } titlebar })
+            {
+                titlebar.TitleVisibility = UIKit.UITitlebarTitleVisibility.Hidden;
+                titlebar.Toolbar = null;
+            }
+        };
+#endif
         window.Created += (_, _) => _ = vm.OnAppearingAsync(NavigationDirection.NavigateTo);
         SettleLayout(window);
         window.Destroying += (_, _) =>

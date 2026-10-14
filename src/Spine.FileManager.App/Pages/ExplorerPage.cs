@@ -3,7 +3,12 @@ using Spine.FileManager.Storage.FileSystem;
 
 namespace Spine.FileManager.Pages;
 
+// On the Mac the explorer reaches into the title bar: its tabs sit in the title bar's row and the window shows no title.
+#if MACCATALYST
+[NavigableRegion(IsHeaderBarVisible = false, SafeAreaEdges = SafeAreaEdges.None)]
+#else
 [NavigableRegion(IsHeaderBarVisible = false)]
+#endif
 public partial class ExplorerPage
 {
     private double _splitStart;
@@ -25,6 +30,31 @@ public partial class ExplorerPage
             if (BindingContext is not ExplorerPageViewModel vm)
                 return;
             vm.HostPage = () => Window?.Page;
+#if MACCATALYST
+            // Spine measures the title bar for its page; a window of its own has it as the window's safe area. Neither
+            // is known when the page loads, so it is read again once they are.
+            void ReadTitleBar()
+            {
+                var top = vm.SafeAreaInsets.Top;
+                if (top <= 0 && Window?.Handler?.PlatformView is UIKit.UIWindow window)
+                    top = window.SafeAreaInsets.Top;
+                if (top <= 0 || vm.IsSecondary)
+                    return;
+                vm.TitleBarHeight = top;
+                // A window of its own lays the page out below the title bar; Spine's host moves its page up the same way.
+                if (Parent is ContentPage)
+                    Margin = new Thickness(0, -top, 0, 0);
+            }
+            ReadTitleBar();
+            vm.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(vm.SafeAreaInsets))
+                    ReadTitleBar();
+                else if (e.PropertyName == nameof(vm.TitleBarHeight) && vm.Partner is { } partner)
+                    partner.TitleBarHeight = vm.TitleBarHeight;
+            };
+            Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(400), ReadTitleBar);
+#endif
             // Name, Date modified, Size and Kind need about 560 points; a narrower pane shows Name and Size.
             List.SizeChanged += (_, _) => vm.HasColumns = List.Width >= 560;
             vm.FilterRequested += () => FilterField.Focus();
@@ -243,6 +273,7 @@ public partial class ExplorerPage
             partner.Partner = vm;
             vm.Partner = partner;
             partner.Start(null, 0, vm.Current);
+            partner.TitleBarHeight = vm.TitleBarHeight;
             Root.ColumnDefinitions[3].Width = new GridLength(Math.Max(320, (Width - (vm.ShowsSidebar ? 210 : 0)) / 2));
             SecondPane.Content = second;
             _ = partner.OnAppearingAsync(NavigationDirection.NavigateTo);

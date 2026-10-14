@@ -1,6 +1,6 @@
 # Spine File Manager — Requirements and Plan
 
-**Last updated:** 2026-10-14 — file drag and drop (#44); Spike 6 transport (#37); tab drag (#41); Spike 5 identity and pairing (#36); preview (#34), filter (#32), Dual Pane (#23 part 1), last session (#25 part 1), windows (#22), terminal (#24), tabs (#21), journal (#20); milestone A done on the Mac; Windows (#3) compiled only.
+**Last updated:** 2026-10-14 — tabs in the title bar (#46); file drag and drop (#44); Spike 6 transport (#37); tab drag (#41); Spike 5 identity and pairing (#36); preview (#34), filter (#32), Dual Pane (#23 part 1), last session (#25 part 1), windows (#22), terminal (#24), tabs (#21), journal (#20); milestone A done on the Mac; Windows (#3) compiled only.
 
 A living plan. Each step links its GitHub issue once it has one; update the status, the decisions and the line above in the same PR as the work.
 
@@ -433,3 +433,4 @@ Or workspace "Spine": pane 1 Maui.Spine, pane 2 Spine.FileManager, pane 3 build 
 - **2026-10-14 — Delete moves to the system's Trash / Recycle Bin;** Shift+Delete deletes permanently after a confirmation. Where a provider has no trash (SAF, MTP, network shares without one) the app asks first and says it is permanent.
 - **2026-10-14 — Device transfer runs over TCP + TLS 1.3 with mutual node-key certificates, not QUIC** (Spike 6, `docs/spikes/transport.md`): `System.Net.Quic` is not supported on the Mac, iOS or Android. Files go as offer / accept-from-offset / bytes / verified, with part files and SHA-256, so a cut transfer resumes.
 - **2026-10-14 — A drop moves on the same volume and copies onto another,** as Finder and Explorer do; Option / Ctrl copies, Command / Shift moves. Files dropped from another app are copied unless the move key is held.
+- **2026-10-14 — On the Mac the tabs sit in the title bar and the window shows no title** (#46), with Spine's full-bleed page mode.

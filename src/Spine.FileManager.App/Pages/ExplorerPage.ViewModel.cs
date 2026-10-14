@@ -570,7 +570,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
     public bool CanGoUp => Current is not null && _providers[Current].GetParent(Current) is not null;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowsSidebar))]
+    [NotifyPropertyChangedFor(nameof(ShowsSidebar), nameof(TabBarPadding))]
     public partial bool IsWide { get; set; } = true;
 
     /// <summary>Whether the list is wide enough for the Date modified and Kind columns; in Dual Pane each pane decides.</summary>
@@ -592,6 +592,21 @@ public partial class ExplorerPageViewModel : ViewModelBase
     public ExplorerPageViewModel? Partner { get; set; }
 
     public bool ShowsSidebar => IsWide && !IsSecondary;
+
+    /// <summary>
+    /// The window's title bar on the Mac, which the explorer reaches into: the tab bar is as tall as it, and the sidebar
+    /// starts below the traffic lights. Elsewhere 0, and the tab bar keeps its own height.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TabBarHeight), nameof(TabBarPadding), nameof(SidebarPadding))]
+    public partial double TitleBarHeight { get; set; }
+
+    public double TabBarHeight => Math.Max(32, TitleBarHeight);
+
+    // Clear of the traffic lights when no sidebar is under them.
+    public Thickness TabBarPadding => new(TitleBarHeight > 0 && !ShowsSidebar && !IsSecondary ? 80 : 8, (TabBarHeight - 28) / 2, 8, 0);
+
+    public Thickness SidebarPadding => new(0, TitleBarHeight, 0, 0);
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(MarksFocus), nameof(IsPaneOfTwo))]

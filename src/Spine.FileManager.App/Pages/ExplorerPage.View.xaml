@@ -61,7 +61,7 @@
         </Grid.GestureRecognizers>
 
         <!-- Sidebar: favorites (reorderable, right-click to remove), then the places. -->
-        <Grid WidthRequest="210" IsVisible="{Binding ShowsSidebar}" RowDefinitions="Auto,Auto,Auto,Auto,*"
+        <Grid WidthRequest="210" IsVisible="{Binding ShowsSidebar}" Padding="{Binding SidebarPadding}" RowDefinitions="Auto,Auto,Auto,Auto,*"
               BackgroundColor="{AppThemeBinding Light=#F3F4F6, Dark=#1E1F22}">
             <Label Text="{String Explorer.Favorites}" FontSize="12" Opacity="0.6" Padding="16,12,16,4" />
             <CollectionView Grid.Row="1" ItemsSource="{Binding Favorites}" SelectionMode="None" HeightRequest="{Binding FavoritesHeight}"
@@ -130,12 +130,12 @@
             <!-- Tabs, always at least one: a click shows the tab, × closes it, a drag moves it within the bar, to
                  another window or, let go outside the app's windows, to a window of its own. A fixed height: measured
                  while still empty, a horizontal ScrollView keeps that height when the tabs arrive. -->
-            <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never" HeightRequest="32"
+            <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never" HeightRequest="{Binding TabBarHeight}"
                         BackgroundColor="{AppThemeBinding Light=#E9EAEE, Dark=#16171A}">
                 <ScrollView.GestureRecognizers>
                     <DropGestureRecognizer DragOver="OnTabDragOver" DragLeave="OnTabDragLeave" Drop="OnTabDrop" />
                 </ScrollView.GestureRecognizers>
-                <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Tabs}" Padding="8,4,8,0" Spacing="2">
+                <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Tabs}" Padding="{Binding TabBarPadding}" Spacing="2">
                     <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="ExplorerTab">
                             <Grid ColumnDefinitions="*,Auto" WidthRequest="180" HeightRequest="28" Padding="10,0,2,0"
