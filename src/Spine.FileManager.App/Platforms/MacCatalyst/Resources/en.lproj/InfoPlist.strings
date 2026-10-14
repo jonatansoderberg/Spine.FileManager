@@ -1,0 +1,6 @@
+"NSDocumentsFolderUsageDescription" = "Spine File Manager shows and manages the files in your Documents folder.";
+"NSDesktopFolderUsageDescription" = "Spine File Manager shows and manages the files on your Desktop.";
+"NSDownloadsFolderUsageDescription" = "Spine File Manager shows and manages the files in your Downloads folder.";
+"NSRemovableVolumesUsageDescription" = "Spine File Manager shows and manages the files on removable drives.";
+"NSNetworkVolumesUsageDescription" = "Spine File Manager shows and manages the files on network volumes.";
+"NSFileProviderDomainUsageDescription" = "Spine File Manager shows and manages the files in your cloud storage.";

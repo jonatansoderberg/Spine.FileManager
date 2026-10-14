@@ -34,6 +34,19 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- Shown in macOS's prompts the first time a protected folder is opened; translated in Resources/*.lproj/InfoPlist.strings. -->
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>Spine File Manager shows and manages the files in your Documents folder.</string>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>Spine File Manager shows and manages the files on your Desktop.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>Spine File Manager shows and manages the files in your Downloads folder.</string>
+	<key>NSRemovableVolumesUsageDescription</key>
+	<string>Spine File Manager shows and manages the files on removable drives.</string>
+	<key>NSNetworkVolumesUsageDescription</key>
+	<string>Spine File Manager shows and manages the files on network volumes.</string>
+	<key>NSFileProviderDomainUsageDescription</key>
+	<string>Spine File Manager shows and manages the files in your cloud storage.</string>
 	<key>XSAppIconAssets</key>
 	<string>Assets.xcassets/appicon.appiconset</string>
 </dict>

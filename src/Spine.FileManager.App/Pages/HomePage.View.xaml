@@ -6,11 +6,22 @@
     x:TypeArguments="HomePageViewModel"
     x:DataType="HomePageViewModel">
 
-    <ScrollView>
-        <VerticalStackLayout Padding="{x:Static HeaderBarConstants.PagePadding}" Spacing="8">
-            <Label Text="{String Home.Placeholder}" FontSize="17" />
-            <Label Text="{Binding Version}" FontSize="13" Opacity="0.6" />
-        </VerticalStackLayout>
-    </ScrollView>
+    <CollectionView ItemsSource="{Binding Places}" SafeArea.PageMargin="True">
+        <CollectionView.Header>
+            <Label Text="{String Home.Places}" FontSize="13" Opacity="0.6" Padding="0,16,0,6" />
+        </CollectionView.Header>
+        <CollectionView.ItemTemplate>
+            <DataTemplate x:DataType="PlaceRow">
+                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" Padding="0,8">
+                    <Label Text="{Binding Name}" FontSize="17" />
+                    <Label Grid.Column="1" Text="{Binding Kind}" FontSize="13" Opacity="0.6" VerticalOptions="Center" />
+                    <Label Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Path}" FontSize="12" Opacity="0.5" LineBreakMode="MiddleTruncation" />
+                </Grid>
+            </DataTemplate>
+        </CollectionView.ItemTemplate>
+        <CollectionView.Footer>
+            <Label Text="{Binding Version}" FontSize="13" Opacity="0.5" Padding="0,16" />
+        </CollectionView.Footer>
+    </CollectionView>
 
 </SpinePage>
