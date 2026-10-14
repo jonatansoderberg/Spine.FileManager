@@ -101,7 +101,7 @@ Node identity (§19) · Spike 5 — QR pairing (§20) · Other Devices (§21) ·
 ### Milestone D — Remote Explorer
 Result: other computers feel like more storage providers.
 
-RemoteStorageProvider (§24) · browse remote file systems · copy local ↔ remote · remote ↔ remote, controller separate from the data path (§25) · remote tabs/favorites/workspaces.
+RemoteStorageProvider (§24) · browse remote file systems · copy local ↔ remote · remote ↔ remote, controller separate from the data path (§25) · remote tabs/favorites/workspaces · MTP/PTP devices ([below](#mtp-and-ptp-devices), spike [#11](https://github.com/jonatansoderberg/Spine.FileManager/issues/11)).
 
 ### Milestone E — Mobile
 Result: full mobile client.
@@ -293,6 +293,26 @@ Other Devices
    └ Downloads
 ```
 
+### MTP and PTP devices
+
+Devices that cannot run our app connect over MTP rather than as a USB disk: a Garmin watch, an Android phone without the app, a Kindle, and cameras over PTP. macOS has no MTP support of its own (MacDroid and Android File Transfer fill the gap). Windows has it built in (Windows Portable Devices), and Android can be an MTP host over USB OTG. iOS cannot.
+
+An `MtpStorageProvider` presents such a device like any other:
+
+```text
+Other Devices
+└ Garmin Forerunner
+   └ Internal Storage
+      ├ GARMIN
+      └ Music
+```
+
+MTP fits the capability model with fewer flags: no `RandomAccess`, `NativePath` or `Watch`, uploads need the size up front, copy goes through streams, and only one program at a time can hold the device. Implementations: libmtp over libusb on the Mac, WPD on Windows, `android.mtp.MtpDevice` on Android.
+
+For a phone that runs our app, our own transfer (§23–27) beats MTP; MTP is for everything else. Until it exists, a File Provider such as MacDroid's shows up under `~/Library/CloudStorage` and the explorer already browses it.
+
+Spike first: [#11](https://github.com/jonatansoderberg/Spine.FileManager/issues/11), after the storage abstraction and the operations engine.
+
 ## 25. Phase 14 — Device-to-device transfer
 
 When the iPhone starts *Gaming PC → MacBook*, data goes Gaming PC → MacBook, never through the iPhone. Control and data planes are separate.
@@ -366,6 +386,7 @@ File → folder, other pane, tab, Other Device; external → File Manager; File 
 | Native copy | Which native APIs give the best local performance? |
 | Multi-window | Can tabs move reliably between MAUI windows? |
 | QR pairing | Are the trust model and reconnect right? |
+| MTP | Can we list and copy to a Garmin watch on Mac and Windows without MacDroid? |
 | QUIC/P2P | What throughput and reconnect do we get? |
 | iOS background | What exactly happens on lock/app switch? |
 | PhotoKit | Can originals and metadata be streamed robustly? |
@@ -397,4 +418,5 @@ Or workspace "Spine": pane 1 Maui.Spine, pane 2 Spine.FileManager, pane 3 build 
 - **2026-10-14 — Three projects to start** (App, Core, Tests); the other boundaries in §3 become projects when their code arrives.
 - **2026-10-14 — App id `se.cosmomedia.filemanager`, title "Spine File Manager"** — placeholders until a product name is chosen; an App ID cannot be renamed once registered with Apple, so decide before the first device build.
 - **2026-10-14 — English and Swedish from the start** through Spine's `ISpineStrings` (XML documents per culture, Spine 0.1.12+); English is the neutral fallback. `[NavigableRegion(Title = …)]` takes literal text and navigation writes it to the view model's `Title`, so a page sets its localised title in `OnAppearingAsync` until Spine accepts a string key there (see the capability map).
+- **2026-10-14 — MTP devices as a provider** (Garmin watch and the like) in milestone D, after a spike (#11); MacDroid's File Provider covers the Mac until then.
 - **2026-10-14 — Mac means Mac Catalyst**, sandboxed: folder access outside the container goes through security-scoped bookmarks (Spike 1 confirms).
