@@ -62,6 +62,7 @@ Solved in this repository for now (decision 2026-10-14); each could move into Sp
 - **Rebuilding a native menu per `MenuItems` change.** Filling a menu button's items one by one rebuilt the menu each time: 500 rows froze the window for 27 s (Spike 2). Build the `MenuItems` first and assign it once; a batch-update API in Spine would prevent the trap.
 - **CollectionViewHandler2 with 100 000 rows.** MAUI's compositional-layout handler lays out every row up front; the file lists use the flow-layout handler instead (`Controls/FileListView`). Worth knowing for Spine's DataGrid and HeroCollectionView with large lists.
 - **A sheet from the root page's first appearance does not show** on Mac Catalyst, and `ShowAsync` awaited there never returns, so the page stays empty. The explorer shows its first-run sheet after its first folder has loaded instead.
+- **An icon-only segment with a spoken name.** A `Segment` with a `Title` shows it as text beside the icon, so the toolbar's list/icons control has icons only and names the whole control instead (`Explorer.View`). A segment property for the name a screen reader says, without showing it, would give each segment its own.
 
 ## Observed while setting up
 

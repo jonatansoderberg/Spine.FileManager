@@ -58,6 +58,22 @@ public sealed class TabList<T> where T : class
             Activate(_tabs[(ActiveIndex + direction + _tabs.Count) % _tabs.Count]);
     }
 
+    /// <summary>
+    /// A tab dropped on the bar before the tab at <paramref name="index"/> (or at the end), counted as the bar shows
+    /// it before the drop: one of this list's own moves there, one from elsewhere joins and becomes active.
+    /// </summary>
+    public void Drop(T tab, int index)
+    {
+        if (_tabs.IndexOf(tab) is var from and >= 0)
+        {
+            Move(tab, from < index ? index - 1 : index);
+            return;
+        }
+        _tabs.Insert(Math.Clamp(index, 0, _tabs.Count), tab);
+        Active = tab;
+        Changed?.Invoke();
+    }
+
     public void Move(T tab, int toIndex)
     {
         if (!_tabs.Remove(tab))

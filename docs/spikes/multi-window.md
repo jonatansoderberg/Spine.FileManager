@@ -31,7 +31,9 @@ The run, through a scratch harness with a capture of each window:
 ## Limits found
 
 - **Spine sheets show in the main window only.** `INavigationService` belongs to the Spine host, so the Operation Center and the first-run sheet open over the main window even when asked from another. The explorer's own prompts and alerts already go to its own window.
-- **Attaching a tab back** into another window, and tear-off by dragging, wait for drag and drop (§38). The state already moves as an object, so attaching is the same move in the other direction.
+- **Attaching a tab back** into another window, and tear-off by dragging, came with #41: the state moves as the same object.
+- **A window opened at runtime draws shifted up** under its title bar (by about 100 pt) until it is resized: it is laid out at another window's size. `ExplorerWindows.SettleLayout` resizes it by a point and back once it is on screen.
+- **A drag between windows reaches the other window only when nothing modal is in front.** With a TCC prompt waiting, the other window never saw the drag.
 - **Info.plist changes need `obj/…/AppManifest.plist` removed** before a build picks them up. The first run had no scenes for that reason, and `OpenWindow` did nothing without a word.
 - **Windows (OS)** and the iPad: `OpenWindow` is MAUI's on both, but neither was run. The iPad also needs the scene manifest in `Platforms/iOS`.
 - **Windows are not restored after a restart.** That is the workspaces' job (#25).

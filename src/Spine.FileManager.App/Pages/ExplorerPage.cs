@@ -45,6 +45,62 @@ public partial class ExplorerPage
         };
     }
 
+    private void OnTabDragStarting(object? sender, DragStartingEventArgs e)
+    {
+        if (sender is not View { BindingContext: ExplorerTab tab } || BindingContext is not ExplorerPageViewModel vm)
+        {
+            e.Cancel = true;
+            return;
+        }
+#if IOS || MACCATALYST
+        // Nothing other apps can take: by default the tab would drop into Finder as a picture of itself.
+        e.PlatformArgs?.SetItemProvider(new Foundation.NSItemProvider());
+#endif
+        TabDrag.Start(vm, tab);
+    }
+
+    private void OnTabDropCompleted(object? sender, DropCompletedEventArgs e)
+    {
+        if (TabDrag.End() is { Dropped: false, OverWindow: false } drag)
+            drag.From.MoveTabToNewWindowCommand.Execute(drag.Tab);
+    }
+
+    private void OnTabDragOver(object? sender, DragEventArgs e)
+    {
+        e.AcceptedOperation = TabDrag.Current is null ? DataPackageOperation.None : DataPackageOperation.Copy;
+        if (TabDrag.Current is { } drag)
+            drag.OverWindow = true;
+    }
+
+    private async void OnTabDrop(object? sender, DropEventArgs e)
+    {
+        if (TabDrag.Current is not { } drag || BindingContext is not ExplorerPageViewModel vm)
+            return;
+        e.Handled = true;
+        drag.Dropped = true;
+        var index = vm.Tabs.Count;
+        if (sender is View { BindingContext: ExplorerTab over } view)
+        {
+            index = vm.Tabs.IndexOf(over);
+            if (e.GetPosition(view) is { } point && point.X > view.Width / 2)
+                index++;
+        }
+        await vm.ReceiveTab(drag.From, drag.Tab, index);
+    }
+
+    private void OnWindowDragOver(object? sender, DragEventArgs e)
+    {
+        e.AcceptedOperation = DataPackageOperation.None;
+        if (TabDrag.Current is { } drag)
+            drag.OverWindow = true;
+    }
+
+    private void OnWindowDragLeave(object? sender, DragEventArgs e)
+    {
+        if (TabDrag.Current is { } drag)
+            drag.OverWindow = false;
+    }
+
     // The second pane is an explorer of its own; this one keeps the sidebar and both answer to the menus by focus.
     private void ShowSecondPane(ExplorerPageViewModel vm)
     {

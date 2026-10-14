@@ -67,6 +67,7 @@
   <s key="Explorer.Subfolders">Undermappar</s>
   <s key="Explorer.AsList">Visa som lista</s>
   <s key="Explorer.AsIcons">Visa som symboler</s>
+  <s key="Explorer.View">Visning: lista eller symboler</s>
   <s key="Menu.AsList">som lista</s>
   <s key="Menu.AsIcons">som symboler</s>
   <s key="Menu.Duplicate">Duplicera</s>

@@ -14,6 +14,15 @@ public static class Breadcrumb
         return segments;
     }
 
+    /// <summary>How many segments, from the root down, a bar showing <paramref name="shown"/> can keep for <paramref name="next"/>.</summary>
+    public static int Shared(IReadOnlyList<StorageLocation> shown, IReadOnlyList<StorageLocation> next)
+    {
+        var kept = 0;
+        while (kept < shown.Count && kept < next.Count && shown[kept].Equals(next[kept]))
+            kept++;
+        return kept;
+    }
+
     /// <summary>A folder's subfolders for a segment's drop-down: folders only, hidden ones left out unless asked, in natural order.</summary>
     public static async Task<IReadOnlyList<StorageItem>> SubfoldersAsync(IStorageProvider provider, StorageLocation folder, bool includeHidden, int limit = 500, CancellationToken cancellationToken = default)
     {

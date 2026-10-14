@@ -84,6 +84,9 @@ public sealed partial class BreadcrumbSegment(StorageLocation location, string n
     /// </summary>
     [ObservableProperty]
     public partial Plugin.Maui.Spine.Core.MenuItems? Children { get; set; }
+
+    /// <summary>Whether <see cref="Children"/> lists hidden folders.</summary>
+    public bool ChildrenWithHidden { get; set; }
 }
 
 /// <summary>How a list's rows are worded: the culture and the kind names, shared by every row of one listing.</summary>
@@ -160,8 +163,51 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     public ObservableCollection<ExplorerTab> Tabs { get; } = [];
 
-    /// <summary>The tab bar shows from the second tab on, as in Finder.</summary>
-    public bool HasTabs => Tabs.Count > 1;
+    /// <summary>A tab dropped on this pane's bar before the tab at <paramref name="index"/>, from this pane or another.</summary>
+    public async Task ReceiveTab(ExplorerPageViewModel from, ExplorerTab tab, int index)
+    {
+        if (from == this)
+        {
+            _tabs.Drop(tab, index);
+            SyncTabs();
+            return;
+        }
+        if (!await from.Release(tab, emptyCloses: true))
+            return;
+        Remember();
+        _tabs.Drop(tab, index);
+        SyncTabs();
+        await Show(tab);
+    }
+
+    // The tab leaves this pane for another window or a window of its own. A pane's last tab can only leave for
+    // another pane (emptyCloses): the second pane then closes, and a window with no second pane closes with it. The
+    // main window stays, as Spine's sheets show only there.
+    private async Task<bool> Release(ExplorerTab tab, bool emptyCloses = false)
+    {
+        if (_tabs.Tabs.Count < 2)
+        {
+            if (!emptyCloses || (Partner is not null && !IsSecondary)
+                || (!IsSecondary && HostPage()?.Window == Application.Current?.Windows.FirstOrDefault()))
+                return false;
+            // After the drop has finished with the views of this pane.
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                if (IsSecondary)
+                    Partner!.IsSplit = false;
+                else if (HostPage()?.Window is { } window)
+                {
+                    IPlatformApplication.Current?.Services.GetService<SessionTracker>()?.Unregister(this);
+                    ExplorerWindows.Close(window);
+                }
+            });
+            return true;
+        }
+        if (tab == _tabs.Active)
+            Remember();
+        await CloseTab(tab);
+        return true;
+    }
 
     private void SyncTabs()
     {
@@ -172,7 +218,6 @@ public partial class ExplorerPageViewModel : ViewModelBase
             tab.IsActive = tab == _tabs.Active;
             Tabs.Add(tab);
         }
-        OnPropertyChanged(nameof(HasTabs));
     }
 
     [RelayCommand]
@@ -191,13 +236,19 @@ public partial class ExplorerPageViewModel : ViewModelBase
     }
 
     /// <summary>This window's tabs as the session saves them.</summary>
-    public WindowState Snapshot() => new(
-        [.. _tabs.Tabs.Where(t => t.Location is not null).Select(t => new TabState(t.Location!, t.Sort, t.ShowHidden, t.IsIcons))],
-        Math.Max(0, _tabs.Tabs.Where(t => t.Location is not null).ToList().IndexOf(_tabs.Active)));
+    // A tab opened in the background or restored and never shown has its folder only in its history.
+    public WindowState Snapshot()
+    {
+        var tabs = _tabs.Tabs.Where(t => (t.Location ?? t.History.Current) is not null).ToList();
+        return new([.. tabs.Select(t => new TabState((t.Location ?? t.History.Current)!, t.Sort, t.ShowHidden, t.IsIcons))], Math.Max(0, tabs.IndexOf(_tabs.Active)));
+    }
+
+    private static string TabTitle(StorageLocation location) =>
+        Path.GetFileName(location.DisplayPath.TrimEnd(Path.DirectorySeparatorChar)) is { Length: > 0 } name ? name : location.DisplayPath;
 
     private static ExplorerTab Tab(TabState state)
     {
-        var tab = new ExplorerTab { Sort = state.Sort, ShowHidden = state.ShowHidden, IsIcons = state.IsIcons };
+        var tab = new ExplorerTab { Sort = state.Sort, ShowHidden = state.ShowHidden, IsIcons = state.IsIcons, Title = TabTitle(state.Location) };
         tab.History.Navigate(state.Location);
         return tab;
     }
@@ -210,11 +261,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
     private async Task MoveTabToNewWindow(ExplorerTab? tab)
     {
         var moving = tab ?? _tabs.Active;
-        if (_tabs.Tabs.Count < 2)
+        if (!await Release(moving))
             return;
-        if (moving == _tabs.Active)
-            Remember();
-        await CloseTab(moving);
         moving.IsActive = true;
         ExplorerWindows.Open([moving]);
     }
@@ -330,6 +378,33 @@ public partial class ExplorerPageViewModel : ViewModelBase
     [ObservableProperty]
     public partial MenuItems TabMenu { get; private set; } = [];
 
+    /// <summary>The right-click menu of the list's empty space: the folder shown, not a row.</summary>
+    [ObservableProperty]
+    public partial MenuItems BackgroundMenu { get; private set; } = [];
+
+    [RelayCommand]
+    private void BackgroundFavorite()
+    {
+        _selection.Clear();
+        ApplySelection();
+        AddFavorite();
+    }
+
+    [RelayCommand]
+    private void BackgroundTerminal()
+    {
+        _selection.Clear();
+        ApplySelection();
+        OpenInTerminal(null);
+    }
+
+    [RelayCommand]
+    private void BackgroundPaste()
+    {
+        Focus();
+        Paste();
+    }
+
     private void BuildMenus(ISpineStrings strings)
     {
         RowMenu =
@@ -349,6 +424,26 @@ public partial class ExplorerPageViewModel : ViewModelBase
                 new MenuAction(strings["Menu.Duplicate"], null, RowDuplicateCommand),
             },
             new MenuAction(strings["Menu.Delete"], "Trashcan.svg", RowDeleteCommand) { IsDestructive = true },
+        ];
+        BackgroundMenu =
+        [
+            new MenuSection
+            {
+                new MenuAction(strings["Menu.NewFolder"], null, NewFolderCommand),
+                new MenuAction(strings["Menu.Paste"], null, BackgroundPasteCommand),
+            },
+            new MenuSection
+            {
+                new MenuAction(strings["Explorer.AsList"], "List.svg", ShowAsCommand) { CommandParameter = "List" },
+                new MenuAction(strings["Explorer.AsIcons"], "Grid.svg", ShowAsCommand) { CommandParameter = "Icons" },
+                new MenuAction(strings["Menu.ShowHidden"], null, ToggleHiddenCommand),
+                new MenuAction(strings["Menu.Refresh"], "Refresh.svg", RefreshCommand),
+            },
+            new MenuSection
+            {
+                new MenuAction(strings["Menu.AddFavorite"], "Star.svg", BackgroundFavoriteCommand),
+                new MenuAction(strings["Menu.OpenInTerminal"], null, BackgroundTerminalCommand) { IsVisible = TerminalLauncher.IsSupported },
+            },
         ];
         TabMenu =
         [
@@ -451,8 +546,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
     [RelayCommand]
     private Task RowDelete(ItemRow row) { Pick(row); return Delete(); }
 
-    [ObservableProperty]
-    public partial IReadOnlyList<BreadcrumbSegment> Segments { get; private set; } = [];
+    public ObservableCollection<BreadcrumbSegment> Segments { get; } = [];
 
     [ObservableProperty]
     public partial IReadOnlyList<ItemRow> Rows { get; private set; } = [];
@@ -502,8 +596,11 @@ public partial class ExplorerPageViewModel : ViewModelBase
         AppMenu.Explorer = this;
     }
 
+    /// <summary>The pane of this window the menus and the sidebar act on.</summary>
+    public ExplorerPageViewModel FocusedPane => Partner is { IsFocusedPane: true } partner ? partner : this;
+
     // The sidebar belongs to the first pane but opens its places in the pane in focus.
-    private ExplorerPageViewModel Target => Partner is { IsFocusedPane: true } partner ? partner : this;
+    private ExplorerPageViewModel Target => FocusedPane;
 
     [RelayCommand]
     private void ToggleSplit()
@@ -705,10 +802,17 @@ public partial class ExplorerPageViewModel : ViewModelBase
     private void Find() => FilterRequested?.Invoke();
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsList))]
+    [NotifyPropertyChangedFor(nameof(IsList), nameof(ViewIndex))]
     public partial bool IsIcons { get; private set; }
 
     public bool IsList => !IsIcons;
+
+    /// <summary>The view as the toolbar's segmented control picks it: 0 list, 1 icons.</summary>
+    public int ViewIndex
+    {
+        get => IsIcons ? 1 : 0;
+        set => IsIcons = value == 1;
+    }
 
     /// <summary>Columns of the icon grid, from the list's width.</summary>
     [ObservableProperty]
@@ -731,11 +835,10 @@ public partial class ExplorerPageViewModel : ViewModelBase
         var session = IPlatformApplication.Current!.Services.GetRequiredService<SessionTracker>();
         if (_startTabs is null && !IsSecondary && await session.RestoreAsync() is { Count: > 0 } windows)
         {
-            // The first explorer brings back the last session: its own tabs, and the other windows.
-            _startTabs = [.. windows[0].Tabs.Select(Tab)];
+            // The first explorer brings back the last session. The other windows' tabs come back as tabs here: a window
+            // opened while the app was still starting laid its content out shifted under the title bar (Mac Catalyst).
+            _startTabs = [.. windows.SelectMany(w => w.Tabs).Select(Tab)];
             _startActive = windows[0].Active;
-            foreach (var window in windows.Skip(1))
-                ExplorerWindows.Open([.. window.Tabs.Select(Tab)], window.Active);
         }
         if (_startTabs is { Count: > 0 } startTabs)
         {
@@ -801,6 +904,9 @@ public partial class ExplorerPageViewModel : ViewModelBase
     [RelayCommand]
     private void Tap(ItemRow row)
     {
+        // A click in a list makes its pane and window the one the menus and ⌘C/⌘V act on.
+        if (AppMenu.Explorer != this)
+            Focus();
         var index = IndexOf(row);
         if (index < 0)
             return;
@@ -1058,7 +1164,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
         tab.Location = location;
         SessionChanged();
         if (string.IsNullOrEmpty(tab.Title) || !location.Equals(Current))
-            tab.Title = Path.GetFileName(location.DisplayPath.TrimEnd(Path.DirectorySeparatorChar)) is { Length: > 0 } name ? name : location.DisplayPath;
+            tab.Title = TabTitle(location);
 
         Current = location;
         if (changedFolder)
@@ -1115,26 +1221,35 @@ public partial class ExplorerPageViewModel : ViewModelBase
         }
     }
 
-    // The segments show at once with their file names; display names and each segment's subfolders follow.
+    // Only the segments that differ change: the bar keeps those the new location shares with it, from the root down,
+    // names and drop-downs already read. New segments show at once with their file names; their display names and
+    // subfolders follow, as do the drop-downs not read yet or read with the other hidden-files setting.
     private async Task BuildBreadcrumb(IStorageProvider provider, StorageLocation location)
     {
-        var segments = Breadcrumb.Segments(provider, location)
-            .Select(l => new BreadcrumbSegment(l, Path.GetFileName(l.DisplayPath.TrimEnd(Path.DirectorySeparatorChar)) is { Length: > 0 } name ? name : l.DisplayPath))
-            .ToList();
-        Segments = segments;
+        var locations = Breadcrumb.Segments(provider, location);
+        var kept = Breadcrumb.Shared([.. Segments.Select(s => s.Location)], locations);
+        while (Segments.Count > kept)
+            Segments.RemoveAt(Segments.Count - 1);
+        foreach (var added in locations.Skip(kept))
+            Segments.Add(new(added, Path.GetFileName(added.DisplayPath.TrimEnd(Path.DirectorySeparatorChar)) is { Length: > 0 } name ? name : added.DisplayPath));
         var tab = _tabs.Active;
-        foreach (var segment in segments)
+        var last = Segments[^1];
+        if (last.Children is not null)
+            tab.Title = last.Name;
+        var showHidden = ShowHidden;
+        foreach (var segment in Segments.Where(s => s.Children is null || s.ChildrenWithHidden != showHidden).ToList())
         {
             if (!location.Equals(Current))
                 return;
             try
             {
                 segment.Name = (await provider.GetItemAsync(segment.Location)).DisplayName;
-                if (segment == segments[^1] && tab.Location?.Equals(location) == true)
+                if (segment == last && tab.Location?.Equals(location) == true)
                     tab.Title = segment.Name;
                 var menu = new Plugin.Maui.Spine.Core.MenuItems();
-                foreach (var folder in await Breadcrumb.SubfoldersAsync(provider, segment.Location, ShowHidden))
+                foreach (var folder in await Breadcrumb.SubfoldersAsync(provider, segment.Location, showHidden))
                     menu.Add(new Plugin.Maui.Spine.Core.MenuAction(folder.DisplayName, "folder.svg", OpenLocationCommand) { CommandParameter = folder.Location });
+                segment.ChildrenWithHidden = showHidden;
                 segment.Children = menu;
             }
             catch (StorageException)
@@ -1143,17 +1258,29 @@ public partial class ExplorerPageViewModel : ViewModelBase
         }
     }
 
+    // Started off the UI thread: on the Mac creating the watcher opens the folder, and for a protected folder (Desktop,
+    // Documents) that open waits for the TCC prompt — on the UI thread it froze every window until it was answered.
     private void Watch(IStorageProvider provider, StorageLocation folder)
     {
         _watch?.Dispose();
         _watch = null;
-        try
+        _ = Task.Run(() =>
         {
-            _watch = provider.Watch(folder, _ => ScheduleReload());
-        }
-        catch (Exception e) when (e is StorageException or IOException or ArgumentException)
-        {
-        }
+            try
+            {
+                var watch = provider.Watch(folder, _ => ScheduleReload());
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    if (folder.Equals(Current) && _watch is null)
+                        _watch = watch;
+                    else
+                        watch.Dispose();
+                });
+            }
+            catch (Exception e) when (e is StorageException or IOException or ArgumentException)
+            {
+            }
+        });
     }
 
     // A copy of a hundred files raises a hundred events; one reload after they settle is enough.
