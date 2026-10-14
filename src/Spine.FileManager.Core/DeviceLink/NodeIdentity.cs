@@ -34,6 +34,18 @@ public sealed class NodeIdentity : IDisposable
     /// <summary>The private key (PKCS#8) for the platform's secure storage — Keychain, Keystore, DPAPI.</summary>
     public byte[] ExportPrivateKey() => _key.ExportPkcs8PrivateKey();
 
+    /// <summary>
+    /// A self-signed TLS certificate on the node's own key, so a TLS connection authenticates the node itself: the peer
+    /// pins the key's fingerprint (the node id), not a certificate authority.
+    /// </summary>
+    public System.Security.Cryptography.X509Certificates.X509Certificate2 CreateCertificate()
+    {
+        var request = new System.Security.Cryptography.X509Certificates.CertificateRequest($"CN={NodeId}", _key, HashAlgorithmName.SHA256);
+        using var certificate = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddYears(10));
+        // An ephemeral key works for TLS on Windows and Linux; macOS and iOS need the identity as PKCS#12.
+        return System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12(certificate.Export(System.Security.Cryptography.X509Certificates.X509ContentType.Pkcs12), null);
+    }
+
     public byte[] Sign(ReadOnlySpan<byte> data) => _key.SignData(data, HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
 
     public static bool Verify(byte[] publicKey, ReadOnlySpan<byte> data, ReadOnlySpan<byte> signature)
