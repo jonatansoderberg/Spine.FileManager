@@ -11,7 +11,7 @@ namespace Spine.FileManager.Services;
 public static class AppMenu
 {
     /// <summary>The explorer the menu acts on; on the Mac also the end of the responder chain for the Edit menu.</summary>
-    public static ExplorerPageViewModel? Explorer { get; private set; }
+    public static ExplorerPageViewModel? Explorer { get; set; }
 
     /// <summary>Whether a menu with these item titles is one of the app's own (Mac: telling them from the system's).</summary>
     public static bool Owns(IEnumerable<string> titles)
@@ -23,7 +23,9 @@ public static class AppMenu
 
     public static void Install(ExplorerPage page, ExplorerPageViewModel vm)
     {
-        Explorer = vm;
+        Explorer ??= vm;
+        if (page.Window is { } window)
+            window.Activated += (_, _) => Explorer = vm;
         if (DeviceInfo.Idiom != DeviceIdiom.Desktop || page.Window?.Page is not Page host)
             return;
         var strings = SpineStrings.Current;
@@ -36,9 +38,15 @@ public static class AppMenu
         var mac = DeviceInfo.Platform == DevicePlatform.MacCatalyst;
         var command = mac ? KeyboardAcceleratorModifiers.Cmd : KeyboardAcceleratorModifiers.Ctrl;
 
-        MenuFlyoutItem Item(string key, ICommand action, KeyboardAcceleratorModifiers modifiers, string? shortcut, object? parameter = null)
+        // Every window has its explorer; a menu command goes to the one in the window that has focus.
+        MenuFlyoutItem Item(string key, Func<ExplorerPageViewModel, ICommand> action, KeyboardAcceleratorModifiers modifiers, string? shortcut, object? parameter = null)
         {
-            var item = new MenuFlyoutItem { Text = strings[key], Command = action, CommandParameter = parameter };
+            var forward = new Command<object?>(p =>
+            {
+                if (Explorer is { } explorer && action(explorer) is { } target && target.CanExecute(p))
+                    target.Execute(p);
+            });
+            var item = new MenuFlyoutItem { Text = strings[key], Command = forward, CommandParameter = parameter };
             if (shortcut is not null)
                 item.KeyboardAccelerators.Add(new KeyboardAccelerator { Modifiers = modifiers, Key = shortcut });
             return item;
@@ -54,53 +62,55 @@ public static class AppMenu
 
         host.MenuBarItems.Clear();
         host.MenuBarItems.Add(Menu("Menu.File",
-            Item("Menu.NewTab", vm.NewTabCommand, command, "T"),
-            Item("Menu.OpenInNewTab", vm.OpenInNewTabCommand, mac ? command | KeyboardAcceleratorModifiers.Ctrl : command | KeyboardAcceleratorModifiers.Shift, mac ? "O" : "T"),
-            Item("Menu.CloseTab", vm.CloseTabCommand, command, "W"),
+            Item("Menu.NewWindow", x => x.NewWindowCommand, command, "N"),
+            Item("Menu.NewTab", x => x.NewTabCommand, command, "T"),
+            Item("Menu.MoveTabToNewWindow", x => x.MoveTabToNewWindowCommand, KeyboardAcceleratorModifiers.None, null),
+            Item("Menu.OpenInNewTab", x => x.OpenInNewTabCommand, mac ? command | KeyboardAcceleratorModifiers.Ctrl : command | KeyboardAcceleratorModifiers.Shift, mac ? "O" : "T"),
+            Item("Menu.CloseTab", x => x.CloseTabCommand, command, "W"),
             new MenuFlyoutSeparator(),
-            Item("Menu.OpenInTerminal", vm.OpenInTerminalCommand, mac ? command | KeyboardAcceleratorModifiers.Alt : KeyboardAcceleratorModifiers.Ctrl | KeyboardAcceleratorModifiers.Shift, mac ? "T" : "Enter"),
+            Item("Menu.OpenInTerminal", x => x.OpenInTerminalCommand, mac ? command | KeyboardAcceleratorModifiers.Alt : KeyboardAcceleratorModifiers.Ctrl | KeyboardAcceleratorModifiers.Shift, mac ? "T" : "Enter"),
             new MenuFlyoutSeparator(),
-            Item("Menu.NewFolder", vm.NewFolderCommand, command | KeyboardAcceleratorModifiers.Shift, "N"),
-            Item("Menu.Open", vm.ActivateCommand, mac ? command : KeyboardAcceleratorModifiers.None, mac ? "O" : "Enter"),
-            Item("Menu.Rename", vm.RenameCommand, KeyboardAcceleratorModifiers.None, mac ? "Enter" : "F2"),
-            Item("Menu.Duplicate", vm.DuplicateCommand, command, mac ? "D" : null),
-            Item("Menu.AddFavorite", vm.AddFavoriteCommand, command | KeyboardAcceleratorModifiers.Ctrl, mac ? "T" : null),
+            Item("Menu.NewFolder", x => x.NewFolderCommand, command | KeyboardAcceleratorModifiers.Shift, "N"),
+            Item("Menu.Open", x => x.ActivateCommand, mac ? command : KeyboardAcceleratorModifiers.None, mac ? "O" : "Enter"),
+            Item("Menu.Rename", x => x.RenameCommand, KeyboardAcceleratorModifiers.None, mac ? "Enter" : "F2"),
+            Item("Menu.Duplicate", x => x.DuplicateCommand, command, mac ? "D" : null),
+            Item("Menu.AddFavorite", x => x.AddFavoriteCommand, command | KeyboardAcceleratorModifiers.Ctrl, mac ? "T" : null),
             new MenuFlyoutSeparator(),
-            Item("Menu.Delete", vm.DeleteCommand, mac ? command : KeyboardAcceleratorModifiers.None, mac ? "Back" : "Delete"),
-            Item("Menu.DeletePermanently", vm.DeletePermanentlyCommand, mac ? command | KeyboardAcceleratorModifiers.Alt : KeyboardAcceleratorModifiers.Shift, mac ? "Back" : "Delete")));
+            Item("Menu.Delete", x => x.DeleteCommand, mac ? command : KeyboardAcceleratorModifiers.None, mac ? "Back" : "Delete"),
+            Item("Menu.DeletePermanently", x => x.DeletePermanentlyCommand, mac ? command | KeyboardAcceleratorModifiers.Alt : KeyboardAcceleratorModifiers.Shift, mac ? "Back" : "Delete")));
         // On the Mac the system's Edit menu stays (text fields need it) and its Select All reaches the explorer through AppDelegate.
         if (!mac)
             host.MenuBarItems.Add(Menu("Menu.Edit",
-                Item("Menu.Cut", vm.CutCommand, command, "X"),
-                Item("Menu.Copy", vm.CopyCommand, command, "C"),
-                Item("Menu.Paste", vm.PasteCommand, command, "V"),
+                Item("Menu.Cut", x => x.CutCommand, command, "X"),
+                Item("Menu.Copy", x => x.CopyCommand, command, "C"),
+                Item("Menu.Paste", x => x.PasteCommand, command, "V"),
                 new MenuFlyoutSeparator(),
-                Item("Menu.SelectAll", vm.SelectAllCommand, command, "A")));
+                Item("Menu.SelectAll", x => x.SelectAllCommand, command, "A")));
         host.MenuBarItems.Add(Menu("Menu.View",
-            Item("Menu.AsList", vm.ShowAsCommand, mac ? command : command | KeyboardAcceleratorModifiers.Shift, mac ? "1" : "6", "List"),
-            Item("Menu.AsIcons", vm.ShowAsCommand, mac ? command : command | KeyboardAcceleratorModifiers.Shift, mac ? "2" : "2", "Icons"),
+            Item("Menu.AsList", x => x.ShowAsCommand, mac ? command : command | KeyboardAcceleratorModifiers.Shift, mac ? "1" : "6", "List"),
+            Item("Menu.AsIcons", x => x.ShowAsCommand, mac ? command : command | KeyboardAcceleratorModifiers.Shift, mac ? "2" : "2", "Icons"),
             new MenuFlyoutSeparator(),
-            Item("Menu.ShowHidden", vm.ToggleHiddenCommand, mac ? command | KeyboardAcceleratorModifiers.Shift : command, mac ? "." : "H"),
-            Item("Menu.Refresh", vm.RefreshCommand, mac ? command : KeyboardAcceleratorModifiers.None, mac ? "R" : "F5"),
-            Item("Menu.Operations", vm.ShowOperationsCommand, mac ? command | KeyboardAcceleratorModifiers.Alt : command | KeyboardAcceleratorModifiers.Shift, mac ? "L" : "J"),
+            Item("Menu.ShowHidden", x => x.ToggleHiddenCommand, mac ? command | KeyboardAcceleratorModifiers.Shift : command, mac ? "." : "H"),
+            Item("Menu.Refresh", x => x.RefreshCommand, mac ? command : KeyboardAcceleratorModifiers.None, mac ? "R" : "F5"),
+            Item("Menu.Operations", x => x.ShowOperationsCommand, mac ? command | KeyboardAcceleratorModifiers.Alt : command | KeyboardAcceleratorModifiers.Shift, mac ? "L" : "J"),
             new MenuFlyoutSeparator(),
-            Item("Menu.SortName", vm.SortByCommand, KeyboardAcceleratorModifiers.None, null, "Name"),
-            Item("Menu.SortModified", vm.SortByCommand, KeyboardAcceleratorModifiers.None, null, "Modified"),
-            Item("Menu.SortSize", vm.SortByCommand, KeyboardAcceleratorModifiers.None, null, "Size"),
-            Item("Menu.SortKind", vm.SortByCommand, KeyboardAcceleratorModifiers.None, null, "Kind")));
+            Item("Menu.SortName", x => x.SortByCommand, KeyboardAcceleratorModifiers.None, null, "Name"),
+            Item("Menu.SortModified", x => x.SortByCommand, KeyboardAcceleratorModifiers.None, null, "Modified"),
+            Item("Menu.SortSize", x => x.SortByCommand, KeyboardAcceleratorModifiers.None, null, "Size"),
+            Item("Menu.SortKind", x => x.SortByCommand, KeyboardAcceleratorModifiers.None, null, "Kind")));
         host.MenuBarItems.Add(Menu("Menu.Go",
-            Item("Menu.Back", vm.BackCommand, mac ? command : KeyboardAcceleratorModifiers.Alt, mac ? "[" : "Left"),
-            Item("Menu.Forward", vm.ForwardCommand, mac ? command : KeyboardAcceleratorModifiers.Alt, mac ? "]" : "Right"),
-            Item("Menu.Up", vm.UpCommand, mac ? command : KeyboardAcceleratorModifiers.Alt, "Up"),
-            Item("Menu.OpenSelected", vm.ActivateCommand, mac ? command : KeyboardAcceleratorModifiers.Alt, "Down"),
+            Item("Menu.Back", x => x.BackCommand, mac ? command : KeyboardAcceleratorModifiers.Alt, mac ? "[" : "Left"),
+            Item("Menu.Forward", x => x.ForwardCommand, mac ? command : KeyboardAcceleratorModifiers.Alt, mac ? "]" : "Right"),
+            Item("Menu.Up", x => x.UpCommand, mac ? command : KeyboardAcceleratorModifiers.Alt, "Up"),
+            Item("Menu.OpenSelected", x => x.ActivateCommand, mac ? command : KeyboardAcceleratorModifiers.Alt, "Down"),
             new MenuFlyoutSeparator(),
-            Item("Menu.NextTab", vm.StepTabCommand, mac ? command | KeyboardAcceleratorModifiers.Shift : KeyboardAcceleratorModifiers.Ctrl, mac ? "]" : "Tab", "1"),
-            Item("Menu.PreviousTab", vm.StepTabCommand, mac ? command | KeyboardAcceleratorModifiers.Shift : KeyboardAcceleratorModifiers.Ctrl | KeyboardAcceleratorModifiers.Shift, mac ? "[" : "Tab", "-1"),
+            Item("Menu.NextTab", x => x.StepTabCommand, mac ? command | KeyboardAcceleratorModifiers.Shift : KeyboardAcceleratorModifiers.Ctrl, mac ? "]" : "Tab", "1"),
+            Item("Menu.PreviousTab", x => x.StepTabCommand, mac ? command | KeyboardAcceleratorModifiers.Shift : KeyboardAcceleratorModifiers.Ctrl | KeyboardAcceleratorModifiers.Shift, mac ? "[" : "Tab", "-1"),
             new MenuFlyoutSeparator(),
-            Item("Menu.NextItem", vm.StepCommand, KeyboardAcceleratorModifiers.None, "Down", "1"),
-            Item("Menu.PreviousItem", vm.StepCommand, KeyboardAcceleratorModifiers.None, "Up", "-1"),
-            Item("Menu.ExtendDown", vm.StepCommand, KeyboardAcceleratorModifiers.Shift, "Down", "+1"),
-            Item("Menu.ExtendUp", vm.StepCommand, KeyboardAcceleratorModifiers.Shift, "Up", "+-1")));
+            Item("Menu.NextItem", x => x.StepCommand, KeyboardAcceleratorModifiers.None, "Down", "1"),
+            Item("Menu.PreviousItem", x => x.StepCommand, KeyboardAcceleratorModifiers.None, "Up", "-1"),
+            Item("Menu.ExtendDown", x => x.StepCommand, KeyboardAcceleratorModifiers.Shift, "Down", "+1"),
+            Item("Menu.ExtendUp", x => x.StepCommand, KeyboardAcceleratorModifiers.Shift, "Up", "+-1")));
 #if MACCATALYST
         // Asked again a moment later: a rebuild asked while the window was still coming up was sometimes skipped,
         // leaving the bar without the app's menus.

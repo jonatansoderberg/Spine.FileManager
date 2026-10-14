@@ -175,6 +175,33 @@ public partial class ExplorerPageViewModel : ViewModelBase
     [RelayCommand]
     private Task NewTab() => OpenTab(Current, activate: true);
 
+    private ExplorerTab? _startTab;
+    private StorageLocation? _startLocation;
+
+    /// <summary>For an explorer in a new window: start in <paramref name="tab"/> (moved from another window) or at <paramref name="location"/>.</summary>
+    public void Start(ExplorerTab? tab, StorageLocation? location)
+    {
+        _startTab = tab;
+        _startLocation = location;
+    }
+
+    [RelayCommand]
+    private void NewWindow() => ExplorerWindows.Open(from: Current);
+
+    /// <summary>The active tab leaves this window for a window of its own, with its folder, history and view.</summary>
+    [RelayCommand]
+    private async Task MoveTabToNewWindow(ExplorerTab? tab)
+    {
+        var moving = tab ?? _tabs.Active;
+        if (_tabs.Tabs.Count < 2)
+            return;
+        if (moving == _tabs.Active)
+            Remember();
+        await CloseTab(moving);
+        moving.IsActive = true;
+        ExplorerWindows.Open(moving);
+    }
+
     [RelayCommand]
     private async Task OpenInNewTab()
     {
@@ -281,6 +308,9 @@ public partial class ExplorerPageViewModel : ViewModelBase
     [ObservableProperty]
     public partial MenuItems FavoriteMenu { get; private set; } = [];
 
+    [ObservableProperty]
+    public partial MenuItems TabMenu { get; private set; } = [];
+
     private void BuildMenus(ISpineStrings strings)
     {
         RowMenu =
@@ -300,6 +330,11 @@ public partial class ExplorerPageViewModel : ViewModelBase
                 new MenuAction(strings["Menu.Duplicate"], null, RowDuplicateCommand),
             },
             new MenuAction(strings["Menu.Delete"], "Trashcan.svg", RowDeleteCommand) { IsDestructive = true },
+        ];
+        TabMenu =
+        [
+            new MenuAction(strings["Menu.MoveTabToNewWindow"], null, MoveTabToNewWindowCommand) { IsVisible = ExplorerWindows.IsSupported },
+            new MenuAction(strings["Menu.CloseTab"], null, CloseTabCommand),
         ];
         FavoriteMenu =
         [
@@ -458,14 +493,23 @@ public partial class ExplorerPageViewModel : ViewModelBase
     {
         if (Places.Count > 0)
             return;
+        if (_startTab is { } moved)
+        {
+            // A tab moved here from another window becomes this window's only tab, as it was.
+            _tabs.Add(moved);
+            _tabs.Close(_tabs.Tabs[0]);
+            _startTab = null;
+        }
         SyncTabs();
         UpdateInterrupted();
         await LoadFavorites();
         foreach (var provider in _providers.All)
             foreach (var root in await provider.GetRootsAsync())
                 Places.Add(new(root));
-        if (Places.FirstOrDefault() is { } home)
-            await Navigate(home.Root.Location);
+        if (_tabs.Active.History.Current is { } kept)
+            await Show(_tabs.Active);
+        else if ((_startLocation ?? Places.FirstOrDefault()?.Root.Location) is { } start)
+            await Navigate(start);
         // Presented from the root page's first appearance the sheet never showed; after the first folder it does.
         if (FirstRunPageViewModel.IsNeeded)
             MainThread.BeginInvokeOnMainThread(async () => await _navigation.ShowAsync<FirstRunPage>());
@@ -956,7 +1000,10 @@ public partial class ExplorerPageViewModel : ViewModelBase
         }
     }
 
-    private static Page? WindowPage => Application.Current?.Windows.FirstOrDefault()?.Page;
+    /// <summary>The page of the window this explorer is in, for its prompts; set by the page when it loads.</summary>
+    public Func<Page?> HostPage { get; set; } = () => Application.Current?.Windows.FirstOrDefault()?.Page;
+
+    private Page? WindowPage => HostPage();
 
     private async Task<string?> Prompt(string title, string message, string initial) =>
         WindowPage is { } page ? await page.DisplayPromptAsync(_strings[title], _strings[message], _strings["Explorer.OK"], _strings["Explorer.Cancel"], initialValue: initial) : null;
