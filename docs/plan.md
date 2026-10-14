@@ -101,7 +101,7 @@ Node identity (§19) · Spike 5 — QR pairing (§20) · Other Devices (§21) ·
 ### Milestone D — Remote Explorer
 Result: other computers feel like more storage providers.
 
-RemoteStorageProvider (§24) · browse remote file systems · copy local ↔ remote · remote ↔ remote, controller separate from the data path (§25) · remote tabs/favorites/workspaces.
+RemoteStorageProvider (§24) · browse remote file systems · copy local ↔ remote · remote ↔ remote, controller separate from the data path (§25) · remote tabs/favorites/workspaces · MTP/PTP devices ([below](#mtp-and-ptp-devices), spike [#11](https://github.com/jonatansoderberg/Spine.FileManager/issues/11)).
 
 ### Milestone E — Mobile
 Result: full mobile client.
@@ -293,6 +293,26 @@ Other Devices
    └ Downloads
 ```
 
+### MTP and PTP devices
+
+Devices that cannot run our app connect over MTP rather than as a USB disk: a Garmin watch, an Android phone without the app, a Kindle, and cameras over PTP. macOS has no MTP support of its own (MacDroid and Android File Transfer fill the gap). Windows has it built in (Windows Portable Devices), and Android can be an MTP host over USB OTG. iOS cannot.
+
+An `MtpStorageProvider` presents such a device like any other:
+
+```text
+Other Devices
+└ Garmin Forerunner
+   └ Internal Storage
+      ├ GARMIN
+      └ Music
+```
+
+MTP fits the capability model with fewer flags: no `RandomAccess`, `NativePath` or `Watch`, uploads need the size up front, copy goes through streams, and only one program at a time can hold the device. Implementations: libmtp over libusb on the Mac, WPD on Windows, `android.mtp.MtpDevice` on Android.
+
+For a phone that runs our app, our own transfer (§23–27) beats MTP; MTP is for everything else. Until it exists, a File Provider such as MacDroid's shows up under `~/Library/CloudStorage` and the explorer already browses it.
+
+Spike first: [#11](https://github.com/jonatansoderberg/Spine.FileManager/issues/11), after the storage abstraction and the operations engine.
+
 ## 25. Phase 14 — Device-to-device transfer
 
 When the iPhone starts *Gaming PC → MacBook*, data goes Gaming PC → MacBook, never through the iPhone. Control and data planes are separate.
@@ -366,6 +386,7 @@ File → folder, other pane, tab, Other Device; external → File Manager; File 
 | Native copy | Which native APIs give the best local performance? |
 | Multi-window | Can tabs move reliably between MAUI windows? |
 | QR pairing | Are the trust model and reconnect right? |
+| MTP | Can we list and copy to a Garmin watch on Mac and Windows without MacDroid? |
 | QUIC/P2P | What throughput and reconnect do we get? |
 | iOS background | What exactly happens on lock/app switch? |
 | PhotoKit | Can originals and metadata be streamed robustly? |
@@ -397,7 +418,11 @@ Or workspace "Spine": pane 1 Maui.Spine, pane 2 Spine.FileManager, pane 3 build 
 - **2026-10-14 — Three projects to start** (App, Core, Tests); the other boundaries in §3 become projects when their code arrives.
 - **2026-10-14 — App id `se.cosmomedia.filemanager`, title "Spine File Manager"** — placeholders until a product name is chosen; an App ID cannot be renamed once registered with Apple, so decide before the first device build.
 - **2026-10-14 — English and Swedish from the start** through Spine's `ISpineStrings` (XML documents per culture, Spine 0.1.12+); English is the neutral fallback. `[NavigableRegion(Title = …)]` takes literal text and navigation writes it to the view model's `Title`, so a page sets its localised title in `OnAppearingAsync` until Spine accepts a string key there (see the capability map).
+- **2026-10-14 — MTP devices as a provider** (Garmin watch and the like) in milestone D, after a spike (#11); MacDroid's File Provider covers the Mac until then.
 - **2026-10-14 — Mac means Mac Catalyst.** Spike 1: in the sandbox, picked folders work fully through System.IO and security-scoped bookmarks survive restarts; without it, the user's folders work after one TCC prompt each.
 - **2026-10-14 — The Mac app ships with Developer ID, without the App Sandbox** (notarised download). It then works like Finder: home, iCloud Drive, volumes and shares through plain paths, after one TCC prompt per protected folder (Documents, Desktop, Downloads, iCloud Drive, removable and network volumes). The prompts are gathered in a first-launch step that touches those folders on purpose, with Full Disk Access offered as the one-step alternative. It also keeps the embedded terminal possible (a shell started from a sandboxed app inherits the sandbox) and MTP over libusb simple (#11). Updates (e.g. Sparkle) when someone besides Jonatan uses it.
   **The Mac App Store stays open:** iOS is App Store–only and always sandboxed, so the storage model carries persisted grants (security-scoped bookmarks) from the start. A sandboxed Mac build is then a build variant with a "give access to your home folder" onboarding step, not a rewrite. Rules that keep it open: no code assumes a path is reachable without its provider's grant; no private APIs; process launching and USB access go through their own services, so a sandboxed variant can switch them off.
-- **2026-10-14 — Android needs All files access** (`MANAGE_EXTERNAL_STORAGE`) for a real file manager: without it the app cannot see other apps' files at all (Spike 1). SAF stays as the path for SD/USB volumes and a build without the permission.
+- **2026-10-14 — Android: All files access or SAF-only is open.** Spike 1: without `MANAGE_EXTERNAL_STORAGE` the app cannot see other apps' files at all; with it the whole shared storage works through System.IO. Play grants it to file managers after a declaration. SAF stays the path for SD/USB volumes either way. Decide before the Android provider (milestone E).
+- **2026-10-14 — Working mode while Jonatan is away:** Claude merges its own PRs once a step builds and is verified on the platforms it can run; Jonatan reviews afterwards and fixes go in new PRs. Spine gaps are solved in this repository first and noted in the capability map as Spine candidates; Maui.Spine is not touched.
+- **2026-10-14 — The explorer's default view is a details list with a sidebar**, like Windows Explorer: sidebar with Favorites and locations, breadcrumb on top, columns Name, Date modified, Size and Kind; an icon grid as the alternative view.
+- **2026-10-14 — Delete moves to the system's Trash / Recycle Bin;** Shift+Delete deletes permanently after a confirmation. Where a provider has no trash (SAF, MTP, network shares without one) the app asks first and says it is permanent.
