@@ -864,6 +864,10 @@
                         </BindableLayout.ItemTemplate>
                     </FlexLayout>
 
+                    <!-- Without a sidebar (a phone) This Device's places are here: Documents holds what other devices send. -->
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Places}" BindableLayout.ItemTemplate="{StaticResource PlaceTemplate}"
+                                         IsVisible="{Binding ShowsSidebar, Converter={StaticResource Not}}" Margin="-8,0,0,12" />
+
                     <Border Style="{StaticResource HomeCard}" WidthRequest="270" HorizontalOptions="Start">
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding OpenTrashCommand}" />

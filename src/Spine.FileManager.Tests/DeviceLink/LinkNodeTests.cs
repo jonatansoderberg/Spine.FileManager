@@ -150,11 +150,15 @@ public sealed class LinkNodeTests : IDisposable
         await Link(computer, phone);
         computer.PublicEndpoint = IPEndPoint.Parse("203.0.113.7:47821");
 
-        Assert.True(await phone.ExchangeEndpointsAsync(computer.Identity.NodeId));
+        var contacted = new TaskCompletionSource<string>();
+        computer.Contacted += contacted.SetResult;
+
+        Assert.NotNull(await phone.ExchangeEndpointsAsync(computer.Identity.NodeId));
+        Assert.Equal(phone.Identity.NodeId, await contacted.Task.WaitAsync(TimeSpan.FromSeconds(5)));
 
         Assert.Contains("203.0.113.7:47821", phone.Trust.Find(computer.Identity.NodeId)!.Endpoints);
         Assert.Equal(phone.Endpoints, computer.Trust.Find(phone.Identity.NodeId)!.Endpoints);
-        Assert.False(await phone.ExchangeEndpointsAsync("not-linked"));
+        Assert.Null(await phone.ExchangeEndpointsAsync("not-linked"));
     }
 
     [Fact]

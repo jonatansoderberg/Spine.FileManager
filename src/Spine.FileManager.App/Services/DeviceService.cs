@@ -4,8 +4,11 @@ using Spine.FileManager.DeviceLink;
 
 namespace Spine.FileManager.Services;
 
-/// <summary>How a linked device can be reached now: on the local network, or through a port its router opens.</summary>
-public enum LinkState { Checking, LocalNetwork, ViaRouter, Offline }
+/// <summary>
+/// How a linked device can be reached now: on the local network, through a port its router opens, or only from its
+/// side (a phone on mobile data that reaches this device but cannot be reached back).
+/// </summary>
+public enum LinkState { Checking, LocalNetwork, ViaRouter, ReachesUs, Offline }
 
 /// <summary>A device's reachability: how, at which address, and when it last answered.</summary>
 public sealed record LinkStatus(LinkState State, string? Endpoint = null, DateTimeOffset? LastSeen = null);
@@ -38,7 +41,14 @@ public sealed class DeviceService
     public event Action<string>? StatusChanged;
 
     private readonly Dictionary<string, LinkStatus> _status = [];
-    private readonly Dictionary<string, DateTimeOffset> _swapped = [];
+    private readonly Dictionary<string, DateTimeOffset> _contacted = [];
+
+    // A device that got in touch within two of its own checks is there.
+    private bool RecentlyContacted(string nodeId)
+    {
+        lock (_contacted)
+            return _contacted.TryGetValue(nodeId, out var at) && DateTimeOffset.Now - at < TimeSpan.FromSeconds(25);
+    }
 
     /// <summary>The port this machine's router forwards to it, when it does.</summary>
     public MappedPort? Mapped { get; private set; }
@@ -105,17 +115,14 @@ public sealed class DeviceService
         var node = await GetNodeAsync();
         await Task.WhenAll(Trust.All.Select(async device =>
         {
-            var wasOnline = StatusOf(device.NodeId).State is LinkState.LocalNetwork or LinkState.ViaRouter;
-            var endpoint = await node.ProbeAsync(device.NodeId, cancel);
-            SetStatus(device.NodeId, endpoint is null
-                ? new LinkStatus(LinkState.Offline, null, StatusOf(device.NodeId).LastSeen)
-                : new LinkStatus(StateOf(endpoint), endpoint, DateTimeOffset.Now));
-            // Met: swap current addresses at once, the router's public one included, then every couple of minutes.
-            if (endpoint is not null && (!wasOnline || !_swapped.TryGetValue(device.NodeId, out var last) || DateTimeOffset.Now - last > TimeSpan.FromMinutes(2)))
-            {
-                _swapped[device.NodeId] = DateTimeOffset.Now;
-                await node.ExchangeEndpointsAsync(device.NodeId, cancel);
-            }
+            // Each check is a hello over the authenticated channel that swaps current addresses, so the other side
+            // knows this one is there even when it cannot reach back.
+            var endpoint = await node.ExchangeEndpointsAsync(device.NodeId, cancel);
+            SetStatus(device.NodeId, endpoint is not null
+                ? new LinkStatus(StateOf(endpoint), endpoint, DateTimeOffset.Now)
+                : RecentlyContacted(device.NodeId)
+                ? new LinkStatus(LinkState.ReachesUs, null, DateTimeOffset.Now)
+                : new LinkStatus(LinkState.Offline, null, StatusOf(device.NodeId).LastSeen));
         }));
     }
 
@@ -170,6 +177,13 @@ public sealed class DeviceService
                     Received?.Invoke(Trust.Find(from)?.DisplayName ?? from, path);
                 };
                 node.Receiving += (from, name, received, size) => Receiving?.Invoke(from, name, received, size);
+                node.Contacted += from =>
+                {
+                    lock (_contacted)
+                        _contacted[from] = DateTimeOffset.Now;
+                    if (StatusOf(from).State is LinkState.Offline or LinkState.Checking)
+                        SetStatus(from, new LinkStatus(LinkState.ReachesUs, null, DateTimeOffset.Now));
+                };
                 node.Paired += trusted => Paired?.Invoke(trusted);
                 node.Confirm = joined => MainThread.InvokeOnMainThreadAsync(() => AskToLink(joined));
                 _node = node;

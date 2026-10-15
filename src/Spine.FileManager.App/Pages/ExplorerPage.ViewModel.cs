@@ -8,6 +8,7 @@ using Spine.FileManager.Storage.FileSystem;
 using Spine.FileManager.Workspaces;
 using MenuAction = Plugin.Maui.Spine.Core.MenuAction;
 using MenuItems = Plugin.Maui.Spine.Core.MenuItems;
+using SubMenu = Plugin.Maui.Spine.Core.SubMenu;
 using MenuSection = Plugin.Maui.Spine.Core.MenuSection;
 using Spine.FileManager.Services;
 
@@ -98,7 +99,7 @@ public sealed partial class DeviceRow(DeviceLink.TrustedNode node, string lifeti
     [NotifyPropertyChangedFor(nameof(IsOnline), nameof(IsOffline))]
     public partial Services.LinkState State { get; set; }
 
-    public bool IsOnline => State is Services.LinkState.LocalNetwork or Services.LinkState.ViaRouter;
+    public bool IsOnline => State is Services.LinkState.LocalNetwork or Services.LinkState.ViaRouter or Services.LinkState.ReachesUs;
 
     public bool IsOffline => State == Services.LinkState.Offline;
 
@@ -384,6 +385,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
         }
         DevicesHeight = Devices.Count * SidebarRowHeight;
         OnPropertyChanged(nameof(HasNoDevices));
+        FillSendTo();
     }
 
     [RelayCommand]
@@ -748,6 +750,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
             new MenuAction(strings["Menu.CopyPath"], null, RowCopyPathCommand) { IsVisible = path },
         ];
         MenuAction Trash() => new(strings["Menu.Delete"], "Delete.svg", RowDeleteCommand) { IsDestructive = true };
+        _sendTo = new SubMenu(strings["Preview.SendTo"], "Phone.svg");
         _folderMenu =
         [
             new MenuSection
@@ -758,9 +761,10 @@ public partial class ExplorerPageViewModel : ViewModelBase
                 new MenuAction(strings["Menu.AddFavorite"], "Star.svg", RowFavoriteCommand),
             },
             Edit(path: true),
+            new MenuSection { _sendTo },
             Trash(),
         ];
-        _fileMenu = [new MenuSection { new MenuAction(strings["Menu.Open"], null, RowOpenCommand) }, Edit(path: true), Trash()];
+        _fileMenu = [new MenuSection { new MenuAction(strings["Menu.Open"], null, RowOpenCommand) }, Edit(path: true), new MenuSection { _sendTo }, Trash()];
         _packageMenu =
         [
             new MenuSection
@@ -769,6 +773,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
                 new MenuAction(strings["Menu.ShowPackageContents"], null, RowShowPackageContentsCommand),
             },
             Edit(path: true),
+            new MenuSection { _sendTo },
             Trash(),
         ];
         // A photo has no path and no place in a terminal; it opens, copies out and goes to Recently Deleted.
@@ -793,6 +798,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
                 new MenuAction(strings["Menu.Duplicate"], null, RowDuplicateCommand),
                 new MenuAction(strings["Menu.CopyPaths"], null, RowCopyPathCommand),
             },
+            new MenuSection { _sendTo },
             Trash(),
         ];
         RowMenu = _fileMenu;
@@ -910,6 +916,29 @@ public partial class ExplorerPageViewModel : ViewModelBase
     private Task RowOpen(ItemRow row) { Pick(row); return Activate(row); }
 
     private MenuItems _folderMenu = [], _fileMenu = [], _packageMenu = [], _photoMenu = [], _multiMenu = [];
+
+    // Send to › each linked device, in the menus of files and folders; filled from Other Devices.
+    private SubMenu? _sendTo;
+
+    private void FillSendTo()
+    {
+        if (_sendTo is null)
+            return;
+        _sendTo.Items.Clear();
+        foreach (var device in Devices)
+            _sendTo.Items.Add(new MenuAction(device.Name, device.Glyph, new RelayCommand<ItemRow>(row => SendRows(device, row))));
+        if (Devices.Count == 0)
+            _sendTo.Items.Add(new MenuAction(_strings["Devices.Link"], null, LinkDeviceCommand));
+    }
+
+    // The item pressed, or the selection it belongs to; photos have no file to send yet and are left out.
+    private void SendRows(DeviceRow device, ItemRow? row)
+    {
+        if (row is not null)
+            Pick(row);
+        if (SelectedItems.Select(i => i.Location.NativePath).OfType<string>().ToList() is { Count: > 0 } paths)
+            _ = SendToDevice(device, paths);
+    }
     private MenuAction _multiTitle = new(""), _multiOpenTabs = new("");
 
     private MenuItems MenuFor(ItemRow row) =>

@@ -18,6 +18,9 @@ The plan is [docs/plans/peer-link.md](../docs/plans/peer-link.md); the owner app
 - `LinkNode.PublicEndpoint` joins `Endpoints`; `ExchangeEndpointsAsync` and the `U` connection swap current endpoints over the mutual-TLS channel.
 - `DeviceService` maps the node's port at start, renews it at half its lifetime (every five minutes without a router), swaps endpoints when it meets a device (at most every five minutes) and takes the port down when the Mac app quits.
 - The status "Via router" for a device that answered at a public address.
+- **"Send to" in the file menus:** files, folders, apps and several selected items get Send to › each linked device, on the phone too (it had no way to send a file).
+- **This Device's places on Home without a sidebar** (the phone): Documents, where received files land, and the others.
+- **A device that only reaches this one** (a phone on 5G) shows green with "Reaches this device": each check is now the authenticated endpoint swap, and the side that is reached raises `Contacted`; within 25 seconds of it the device counts as there. Sending to it waits for a way back (step 3).
 - **Within ten seconds (owner):** devices are checked every 10 seconds and at once when the network changes (Wi-Fi on or off), endpoints are swapped the moment two devices meet and then every two minutes, and a network change maps the router's port again.
 
 ## Decisions
