@@ -247,4 +247,6 @@
   <s key="Places.Hide">Dölj i sidomenyn</s>
   <s key="Settings.Hidden">Dolda i sidomenyn</s>
   <s key="Settings.Hidden.Show">Visa</s>
+  <s key="Explorer.Kind.Application">Program</s>
+  <s key="Menu.ShowPackageContents">Visa paketinnehåll</s>
 </strings>

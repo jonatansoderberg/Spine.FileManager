@@ -256,7 +256,7 @@ public partial class ExplorerPage
 
     private StorageLocation? DropFolder(object? sender) => (sender as BindableObject)?.BindingContext switch
     {
-        ItemRow { Item.IsFolder: true } row => row.Item.Location,
+        ItemRow { Item.IsBrowsable: true } row => row.Item.Location,
         ItemRow or ExplorerPageViewModel => (BindingContext as ExplorerPageViewModel)?.Current,
         ExplorerTab tab => tab.Location ?? tab.History.Current,
         PlaceRow place => place.Root.Location,
@@ -278,7 +278,7 @@ public partial class ExplorerPage
 
     private static void Highlight(object? sender, bool on)
     {
-        if (sender is BindableObject { BindingContext: ItemRow { Item.IsFolder: true } row })
+        if (sender is BindableObject { BindingContext: ItemRow { Item.IsBrowsable: true } row })
             row.IsDropTarget = on;
     }
 

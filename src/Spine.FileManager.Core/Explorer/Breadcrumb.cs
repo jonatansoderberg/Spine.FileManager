@@ -28,7 +28,7 @@ public static class Breadcrumb
     {
         var folders = new List<StorageItem>();
         await foreach (var item in provider.EnumerateAsync(folder, cancellationToken))
-            if (item.IsFolder && (includeHidden || !item.IsHidden))
+            if (item.IsBrowsable && (includeHidden || !item.IsHidden))
             {
                 folders.Add(item);
                 if (folders.Count == limit)

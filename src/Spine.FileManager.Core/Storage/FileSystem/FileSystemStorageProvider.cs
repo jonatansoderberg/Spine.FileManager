@@ -221,8 +221,14 @@ public sealed class FileSystemStorageProvider(IFileSystemPlatform platform) : IS
             CopyFolder(folder, Path.Combine(target, Path.GetFileName(folder)), cancellationToken);
     }
 
-    private StorageItem Named(StorageItem item) =>
-        item.IsFolder && platform.FolderDisplayName(item.Location.ItemId, item.Name) is { } shown && shown != item.Name ? item with { DisplayName = shown } : item;
+    private StorageItem Named(StorageItem item)
+    {
+        if (!item.IsFolder)
+            return item;
+        if (platform.IsPackage(item.Location.ItemId))
+            item = item with { IsPackage = true };
+        return platform.FolderDisplayName(item.Location.ItemId, item.Name) is { } shown && shown != item.Name ? item with { DisplayName = shown } : item;
+    }
 
     private static StorageItem Item(ref FileSystemEntry entry)
     {

@@ -28,6 +28,9 @@ public interface IFileSystemPlatform
 
     /// <summary>The name to show for a folder when it differs from its file name (localised system folders), or null.</summary>
     string? FolderDisplayName(string path, string name);
+
+    /// <summary>Whether the folder at <paramref name="path"/> is a package the system shows as one file (a Mac app).</summary>
+    bool IsPackage(string path);
 }
 
 /// <summary>Known folders through <see cref="Environment.SpecialFolder"/> and fixed volumes through <see cref="DriveInfo"/>; no trash.</summary>
@@ -68,6 +71,8 @@ public class DefaultFileSystemPlatform : IFileSystemPlatform
         throw new PlatformNotSupportedException("This platform has no trash.");
 
     public virtual string? FolderDisplayName(string path, string name) => null;
+
+    public virtual bool IsPackage(string path) => false;
 
     public virtual string? TrashFolder => null;
 

@@ -66,8 +66,12 @@ public sealed class MacFileSystemPlatform : DefaultFileSystemPlatform
     public override string? FolderDisplayName(string path, string name) =>
         path.Count(c => c == '/') == 1 || name.EndsWith(".localized", StringComparison.Ordinal)
             || name is "Desktop" or "Documents" or "Downloads" or "Movies" or "Music" or "Pictures" or "Public" or "Applications" or "Library"
+            // An app shows as Finder names it: without ".app", and localised ("Kalkylator").
+            || name.EndsWith(".app", StringComparison.OrdinalIgnoreCase)
             ? NSFileManager.DefaultManager.DisplayName(path)
             : null;
+
+    public override bool IsPackage(string path) => Flag(NSUrl.FromFilename(path), NSUrl.IsPackageKey) == true;
 
     static bool? Flag(NSUrl url, NSString key) => url.TryGetResource(key, out var value) && value is NSNumber number ? number.BoolValue : null;
 

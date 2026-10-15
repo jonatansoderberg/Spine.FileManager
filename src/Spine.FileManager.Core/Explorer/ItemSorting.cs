@@ -30,8 +30,8 @@ public sealed record ItemSort(SortColumn Column = SortColumn.Name, bool Descendi
         Array.Sort(order, (i, j) =>
         {
             StorageItem a = items[i], b = items[j];
-            if (a.IsFolder != b.IsFolder)
-                return a.IsFolder ? -1 : 1;
+            if (a.IsBrowsable != b.IsBrowsable)
+                return a.IsBrowsable ? -1 : 1;
             var result = Column switch
             {
                 SortColumn.Modified => Nullable.Compare(a.Modified, b.Modified),
@@ -54,8 +54,8 @@ public sealed record ItemSort(SortColumn Column = SortColumn.Name, bool Descendi
         names ??= NaturalComparer.Current;
         return Comparer<StorageItem>.Create((a, b) =>
         {
-            if (a.IsFolder != b.IsFolder)
-                return a.IsFolder ? -1 : 1;
+            if (a.IsBrowsable != b.IsBrowsable)
+                return a.IsBrowsable ? -1 : 1;
             var order = Column switch
             {
                 SortColumn.Modified => Nullable.Compare(a.Modified, b.Modified),

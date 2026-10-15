@@ -164,6 +164,7 @@ public sealed class RowFormat(ISpineStrings strings)
     public System.Globalization.CultureInfo Culture { get; } = System.Globalization.CultureInfo.CurrentCulture;
     public string Folder { get; } = strings["Explorer.Kind.Folder"];
     public string Document { get; } = strings["Explorer.Kind.Document"];
+    public string Application { get; } = strings["Explorer.Kind.Application"];
     public string FileKind { get; } = strings["Explorer.Kind.File"];
 }
 
@@ -175,7 +176,8 @@ public sealed partial class ItemRow(StorageItem item, RowFormat format) : Observ
 {
     public StorageItem Item { get; } = item;
     public string Name => Item.DisplayName;
-    public string Kind => Item.IsFolder ? format.Folder
+    public string Kind => Item.IsBrowsable ? format.Folder
+        : Item.IsPackage && Item.Extension.Equals("app", StringComparison.OrdinalIgnoreCase) ? format.Application
         : Item.Extension.Length > 0 ? string.Format(format.Culture, format.FileKind, Item.Extension.ToUpperInvariant())
         : format.Document;
     public string Modified => Item.Modified?.ToLocalTime().ToString("g", format.Culture) ?? "";
@@ -479,7 +481,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
     [RelayCommand]
     private async Task OpenInNewTab()
     {
-        foreach (var folder in SelectedItems.Where(i => i.IsFolder).ToList())
+        foreach (var folder in SelectedItems.Where(i => i.IsBrowsable).ToList())
             await OpenTab(folder.Location, activate: true);
     }
 
@@ -502,7 +504,10 @@ public partial class ExplorerPageViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private Task RowOpenInNewTab(ItemRow row) => row.Item.IsFolder ? OpenTab(row.Item.Location, activate: true) : Task.CompletedTask;
+    private Task RowShowPackageContents(ItemRow row) => row.Item.IsPackage ? Navigate(row.Item.Location) : Task.CompletedTask;
+
+    [RelayCommand]
+    private Task RowOpenInNewTab(ItemRow row) => row.Item.IsBrowsable ? OpenTab(row.Item.Location, activate: true) : Task.CompletedTask;
 
     private async Task OpenTab(StorageLocation? location, bool activate)
     {
@@ -653,6 +658,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
             {
                 new MenuAction(strings["Menu.Open"], null, RowOpenCommand),
                 new MenuAction(strings["Menu.OpenInNewTab"], null, RowOpenInNewTabCommand),
+                new MenuAction(strings["Menu.ShowPackageContents"], null, RowShowPackageContentsCommand),
                 new MenuAction(strings["Menu.OpenInTerminal"], null, RowOpenInTerminalCommand) { IsVisible = TerminalLauncher.IsSupported },
                 new MenuAction(strings["Menu.AddFavorite"], "Star.svg", RowFavoriteCommand),
             },
@@ -1119,7 +1125,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
         if (item.Created is { } created)
             facts.Add(_strings.Get("Preview.Created", created.ToLocalTime().ToString("g", culture)));
         PreviewDetails = string.Join("\n", facts);
-        PreviewImage = item.IsFolder ? "folder.png" : "file.png";
+        PreviewImage = item.IsPackage ? FileIcons.For(item) : item.IsFolder ? "folder.png" : "file.png";
         PreviewText = null;
         // The picture and the text come separately: a slow thumbnail must not hold the text back.
         _ = Task.Run(async () =>
@@ -1431,9 +1437,10 @@ public partial class ExplorerPageViewModel : ViewModelBase
             return;
         // Ctrl-double-click (⌘ on the Mac) opens a folder in a new tab, as in Windows' Explorer. Only a click: the menu's
         // Open has no row, and its shortcut holds the key.
-        if (item.IsFolder && row is not null && ModifierKeys.Command)
+        // An app or other package opens like a file; Show Package Contents browses into it.
+        if (item.IsBrowsable && row is not null && ModifierKeys.Command)
             await OpenTab(item.Location, activate: true);
-        else if (item.IsFolder)
+        else if (item.IsBrowsable)
             await Navigate(item.Location);
         else if (!await FileLauncher.OpenAsync(item))
             Error = _strings.Get("Explorer.Error.CannotOpen", item.Name);
