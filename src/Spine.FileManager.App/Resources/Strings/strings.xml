@@ -284,4 +284,9 @@
   <s key="Link.Introduced">“{0}” and “{1}” are linked.</s>
   <s key="Explorer.InAll">{0} in all</s>
   <s key="Explorer.Counting">counting… {0}</s>
+  <s key="Menu.CopyPath">Copy Path</s>
+  <s key="Menu.EditPath">Edit Path</s>
+  <s key="Explorer.Error.NoPath">There is no folder or file at {0}.</s>
+  <s key="Menu.OpenInNewTabs">Open in New Tabs</s>
+  <s key="Menu.CopyPaths">Copy Paths</s>
 </strings>

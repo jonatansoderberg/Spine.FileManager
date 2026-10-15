@@ -170,6 +170,9 @@ public sealed class RowFormat(ISpineStrings strings)
     public string Document { get; } = strings["Explorer.Kind.Document"];
     public string Application { get; } = strings["Explorer.Kind.Application"];
     public string FileKind { get; } = strings["Explorer.Kind.File"];
+
+    /// <summary>Picks a row's right-click menu; the explorer sets it.</summary>
+    public Func<ItemRow, MenuItems?>? MenuFor { get; init; }
 }
 
 /// <summary>
@@ -208,6 +211,11 @@ public sealed partial class ItemRow(StorageItem item, RowFormat format) : Observ
 
     [ObservableProperty]
     public partial bool IsSelected { get; set; }
+
+    /// <summary>The right-click menu: its kind's (folder, file, app, photo), or the selection's when it is one of several selected.</summary>
+    public MenuItems? Menu => format.MenuFor?.Invoke(this);
+
+    public void MenuChanged() => OnPropertyChanged(nameof(Menu));
 }
 
 /// <summary>
@@ -664,25 +672,64 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     private void BuildMenus(ISpineStrings strings)
     {
-        RowMenu =
+        // A menu for each kind of row, and one for a row among several selected: only what applies to it shows.
+        MenuSection Edit(bool path) =>
+        [
+            new MenuAction(strings["Menu.Rename"], "Edit.svg", RowRenameCommand),
+            new MenuAction(strings["Menu.Copy"], "Copy.svg", RowCopyCommand),
+            new MenuAction(strings["Menu.Cut"], null, RowCutCommand),
+            new MenuAction(strings["Menu.Duplicate"], null, RowDuplicateCommand),
+            new MenuAction(strings["Menu.CopyPath"], null, RowCopyPathCommand) { IsVisible = path },
+        ];
+        MenuAction Trash() => new(strings["Menu.Delete"], "Delete.svg", RowDeleteCommand) { IsDestructive = true };
+        _folderMenu =
         [
             new MenuSection
             {
                 new MenuAction(strings["Menu.Open"], null, RowOpenCommand),
                 new MenuAction(strings["Menu.OpenInNewTab"], null, RowOpenInNewTabCommand),
-                new MenuAction(strings["Menu.ShowPackageContents"], null, RowShowPackageContentsCommand),
                 new MenuAction(strings["Menu.OpenInTerminal"], null, RowOpenInTerminalCommand) { IsVisible = TerminalLauncher.IsSupported },
                 new MenuAction(strings["Menu.AddFavorite"], "Star.svg", RowFavoriteCommand),
             },
+            Edit(path: true),
+            Trash(),
+        ];
+        _fileMenu = [new MenuSection { new MenuAction(strings["Menu.Open"], null, RowOpenCommand) }, Edit(path: true), Trash()];
+        _packageMenu =
+        [
             new MenuSection
             {
-                new MenuAction(strings["Menu.Rename"], "Edit.svg", RowRenameCommand),
+                new MenuAction(strings["Menu.Open"], null, RowOpenCommand),
+                new MenuAction(strings["Menu.ShowPackageContents"], null, RowShowPackageContentsCommand),
+            },
+            Edit(path: true),
+            Trash(),
+        ];
+        // A photo has no path and no place in a terminal; it opens, copies out and goes to Recently Deleted.
+        _photoMenu =
+        [
+            new MenuSection
+            {
+                new MenuAction(strings["Menu.Open"], null, RowOpenCommand),
+                new MenuAction(strings["Menu.Copy"], "Copy.svg", RowCopyCommand),
+            },
+            Trash(),
+        ];
+        _multiTitle = new MenuAction("") { IsEnabled = false };
+        _multiOpenTabs = new MenuAction(strings["Menu.OpenInNewTabs"], null, RowOpenInNewTabCommand);
+        _multiMenu =
+        [
+            new MenuSection { _multiTitle, _multiOpenTabs },
+            new MenuSection
+            {
                 new MenuAction(strings["Menu.Copy"], "Copy.svg", RowCopyCommand),
                 new MenuAction(strings["Menu.Cut"], null, RowCutCommand),
                 new MenuAction(strings["Menu.Duplicate"], null, RowDuplicateCommand),
+                new MenuAction(strings["Menu.CopyPaths"], null, RowCopyPathCommand),
             },
-            new MenuAction(strings["Menu.Delete"], "Delete.svg", RowDeleteCommand) { IsDestructive = true },
+            Trash(),
         ];
+        RowMenu = _fileMenu;
         BackgroundMenu =
         [
             new MenuSection
@@ -795,6 +842,77 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     [RelayCommand]
     private Task RowOpen(ItemRow row) { Pick(row); return Activate(row); }
+
+    private MenuItems _folderMenu = [], _fileMenu = [], _packageMenu = [], _photoMenu = [], _multiMenu = [];
+    private MenuAction _multiTitle = new(""), _multiOpenTabs = new("");
+
+    private MenuItems MenuFor(ItemRow row) =>
+        row.IsSelected && _selection.Count > 1 ? _multiMenu
+        : row.Item.Location.NativePath is null ? _photoMenu
+        : row.Item.IsPackage ? _packageMenu
+        : row.Item.IsBrowsable ? _folderMenu
+        : _fileMenu;
+
+    /// <summary>A right-click selects the item under it first, as in Finder and Explorer; one already selected keeps the selection.</summary>
+    [RelayCommand]
+    private void RowSecondaryTap(ItemRow row) => Pick(row);
+
+    /// <summary>The full path of each selected item, file names included, one a line, ready for a terminal.</summary>
+    [RelayCommand]
+    private Task RowCopyPath(ItemRow row)
+    {
+        Pick(row);
+        return Clipboard.Default.SetTextAsync(string.Join("\n", SelectedItems.Select(i => i.Location.NativePath ?? i.Location.DisplayPath)));
+    }
+
+    // ---- The path field: the breadcrumb as text, to copy, type or paste a path ----
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsCrumbs), nameof(ShowsOverflow))]
+    public partial bool IsEditingPath { get; private set; }
+
+    [ObservableProperty]
+    public partial string PathEdit { get; set; } = "";
+
+    public bool ShowsCrumbs => ShowsFiles && !IsEditingPath;
+
+    /// <summary>Raised when the path field opens; the page focuses it with the path selected.</summary>
+    public event Action? PathEditRequested;
+
+    [RelayCommand]
+    private void EditPath()
+    {
+        if (Current is not { } here || IsHome)
+            return;
+        PathEdit = here.NativePath ?? here.DisplayPath;
+        IsEditingPath = true;
+        PathEditRequested?.Invoke();
+    }
+
+    // A folder opens; a file opens the folder it is in, selected; anything else says so and the field stays to be put right.
+    [RelayCommand]
+    private async Task CommitPath()
+    {
+        var text = PathEdit.Trim();
+        if (text is "~" || text.StartsWith("~/", StringComparison.Ordinal))
+            text = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), text.Length > 2 ? text[2..] : "");
+        if (Directory.Exists(text))
+        {
+            IsEditingPath = false;
+            await Navigate(Storage.FileSystem.FileSystemStorageProvider.Location(text));
+        }
+        else if (File.Exists(text) && Path.GetDirectoryName(Path.GetFullPath(text)) is { } folder)
+        {
+            IsEditingPath = false;
+            var file = Storage.FileSystem.FileSystemStorageProvider.Location(text);
+            await Navigate(Storage.FileSystem.FileSystemStorageProvider.Location(folder));
+            SelectWhere(i => i.Location.Equals(file));
+        }
+        else if (text.Length > 0)
+            Error = _strings.Get("Explorer.Error.NoPath", text);
+    }
+
+    public void CancelPathEdit() => IsEditingPath = false;
 
     [RelayCommand]
     private void RowFavorite(ItemRow row) { Pick(row); AddFavorite(); }
@@ -1365,10 +1483,12 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     /// <summary>The segments folded into « , nearest first as in Windows; null when everything fits.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasCollapsed))]
+    [NotifyPropertyChangedFor(nameof(HasCollapsed), nameof(ShowsOverflow))]
     public partial Plugin.Maui.Spine.Core.MenuItems? CollapsedMenu { get; private set; }
 
     public bool HasCollapsed => CollapsedMenu is not null;
+
+    public bool ShowsOverflow => HasCollapsed && !IsEditingPath;
 
     /// <summary>Folds the first <paramref name="count"/> segments, those nearest the root, into « .</summary>
     public void Collapse(int count)
@@ -1901,7 +2021,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     /// <summary>The active tab shows Home: the disks, linked devices and recent folders instead of a folder.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowsFiles), nameof(ShowsList), nameof(ShowsIconGrid), nameof(CanGoUp))]
+    [NotifyPropertyChangedFor(nameof(ShowsFiles), nameof(ShowsList), nameof(ShowsIconGrid), nameof(CanGoUp), nameof(ShowsCrumbs))]
     public partial bool IsHome { get; private set; }
 
     public bool ShowsFiles => !IsHome;
@@ -2307,7 +2427,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
     // icons, so the list does not draw them anew. A Rebuild (language, icon style) makes every row afresh.
     private ItemRow[] BuildRows(List<StorageItem> items, bool reuse = false)
     {
-        var format = new RowFormat(_strings);
+        var format = new RowFormat(_strings) { MenuFor = MenuFor };
         var filter = Filter;
         var visible = items.Where(i => (ShowHidden || !i.IsHidden) && NameFilter.Matches(i.DisplayName, filter)).ToArray();
         Sort.Sort(visible);
@@ -2332,7 +2452,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
         lock (found)
             items = [.. found];
         Sort.Sort(items);
-        var format = new RowFormat(_strings);
+        var format = new RowFormat(_strings) { MenuFor = MenuFor };
         var root = Current?.DisplayPath ?? "";
         return Array.ConvertAll(items, item => new ItemRow(item, format)
         {
@@ -2367,10 +2487,31 @@ public partial class ExplorerPageViewModel : ViewModelBase
         ApplySelection();
     }
 
+    private bool _wasMulti;
+
     private void ApplySelection()
     {
+        // A row's right-click menu follows: its own kind's, or the selection's once it is one of several.
+        var multi = _selection.Count > 1;
+        var multiChanged = multi != _wasMulti;
+        _wasMulti = multi;
         for (var i = 0; i < Rows.Count; i++)
-            Rows[i].IsSelected = _selection.Contains(i);
+        {
+            var row = Rows[i];
+            var selected = _selection.Contains(i);
+            if (row.IsSelected != selected)
+            {
+                row.IsSelected = selected;
+                row.MenuChanged();
+            }
+            else if (selected && multiChanged)
+                row.MenuChanged();
+        }
+        if (multi)
+        {
+            _multiTitle.Title = _strings.Get("Explorer.Items", _selection.Count);
+            _multiOpenTabs.IsVisible = SelectedItems.All(i => i.IsBrowsable);
+        }
         OnPropertyChanged(nameof(HasSelection));
         UpdateStatus();
         UpdatePreview();
