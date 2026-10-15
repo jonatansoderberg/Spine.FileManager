@@ -217,8 +217,8 @@ public static class AppMenu
             Item("Menu.ExtendDown", x => x.StepCommand, KeyboardAcceleratorModifiers.Shift, mac ? null : "Down", "+1"),
             Item("Menu.ExtendUp", x => x.StepCommand, KeyboardAcceleratorModifiers.Shift, mac ? null : "Up", "+-1"),
             new MenuFlyoutSeparator(),
-            Item("Menu.ScrollTop", x => x.ScrollListCommand, KeyboardAcceleratorModifiers.None, mac ? null : "Home", ListKey.Home),
-            Item("Menu.ScrollBottom", x => x.ScrollListCommand, KeyboardAcceleratorModifiers.None, mac ? null : "End", ListKey.End),
+            Item("Menu.FirstItem", x => x.ScrollListCommand, KeyboardAcceleratorModifiers.None, mac ? null : "Home", ListKey.Home),
+            Item("Menu.LastItem", x => x.ScrollListCommand, KeyboardAcceleratorModifiers.None, mac ? null : "End", ListKey.End),
             Item("Menu.PageUp", x => x.ScrollListCommand, KeyboardAcceleratorModifiers.None, mac ? null : "PageUp", ListKey.PageUp),
             Item("Menu.PageDown", x => x.ScrollListCommand, KeyboardAcceleratorModifiers.None, mac ? null : "PageDown", ListKey.PageDown)));
 #if MACCATALYST

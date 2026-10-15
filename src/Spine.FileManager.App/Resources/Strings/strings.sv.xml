@@ -58,8 +58,8 @@
   <s key="Menu.PreviousItem">Föregående objekt</s>
   <s key="Menu.ExtendDown">Utöka markering nedåt</s>
   <s key="Menu.ExtendUp">Utöka markering uppåt</s>
-  <s key="Menu.ScrollTop">Rulla högst upp</s>
-  <s key="Menu.ScrollBottom">Rulla längst ner</s>
+  <s key="Menu.FirstItem">Första objektet</s>
+  <s key="Menu.LastItem">Sista objektet</s>
   <s key="Menu.PageUp">En sida upp</s>
   <s key="Menu.PageDown">En sida ner</s>
   <s key="FirstRun.Title">Åtkomst till dina filer</s>
