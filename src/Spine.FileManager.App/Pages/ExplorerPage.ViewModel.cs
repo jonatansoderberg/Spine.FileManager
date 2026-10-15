@@ -186,7 +186,15 @@ public sealed partial class ItemRow(StorageItem item, RowFormat format) : Observ
         : format.Document;
     public string Modified => Item.Modified?.ToLocalTime().ToString("g", format.Culture) ?? "";
     public string Size => Item.Size is { } size ? ByteSize.Format(size, format.Culture) : "";
-    public ImageSource Icon => FileIcons.For(Item, () => OnPropertyChanged(nameof(Icon)));
+    // Kept by the row: a grid that rewraps reloads its cells, and a cell given the same source as before draws nothing
+    // again, where a new one was decoded anew and blinked. It changes only when the thumbnail arrives.
+    private ImageSource? _icon;
+
+    public ImageSource Icon => _icon ??= FileIcons.For(Item, () =>
+    {
+        _icon = null;
+        OnPropertyChanged(nameof(Icon));
+    });
     public double Dimmed => Item.IsHidden ? 0.5 : 1;
 
     /// <summary>In a search of the subfolders, the folder the item is in, from the folder searched.</summary>
@@ -2169,7 +2177,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
                     if (!shownEarly && items.Count == EarlyRows && clock.ElapsedMilliseconds > 150)
                     {
                         shownEarly = true;
-                        var early = BuildRows([.. items]);
+                        var early = BuildRows([.. items], reuse: true);
                         MainThread.BeginInvokeOnMainThread(() =>
                         {
                             if (tab == _tabs.Active && !cancel.IsCancellationRequested && _found is null)
@@ -2177,7 +2185,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
                         });
                     }
                 }
-                return (items, BuildRows(items));
+                return (items, BuildRows(items, reuse: true));
             }, cancel.Token);
             if (tab != _tabs.Active)
                 return;
@@ -2284,13 +2292,23 @@ public partial class ExplorerPageViewModel : ViewModelBase
         });
     }
 
-    private ItemRow[] BuildRows(List<StorageItem> items)
+    // A folder read again (a watcher's change, Refresh) keeps the rows of items that did not change, with their
+    // icons, so the list does not draw them anew. A Rebuild (language, icon style) makes every row afresh.
+    private ItemRow[] BuildRows(List<StorageItem> items, bool reuse = false)
     {
         var format = new RowFormat(_strings);
         var filter = Filter;
         var visible = items.Where(i => (ShowHidden || !i.IsHidden) && NameFilter.Matches(i.DisplayName, filter)).ToArray();
         Sort.Sort(visible);
-        return Array.ConvertAll(visible, item => new ItemRow(item, format));
+        Dictionary<StorageLocation, ItemRow>? previous = null;
+        if (reuse)
+        {
+            previous = [];
+            foreach (var row in Rows)
+                previous.TryAdd(row.Item.Location, row);
+        }
+        return Array.ConvertAll(visible, item =>
+            previous is not null && previous.TryGetValue(item.Location, out var row) && row.Item == item && row.Where is null ? row : new ItemRow(item, format));
     }
 
     private void Rebuild(bool keepSelection = false) =>
@@ -2321,7 +2339,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
         if (keep is { Count: > 0 })
             SelectWhere(item => keep.Contains(item.Location));
         else
-            UpdateStatus();
+            // Rows kept from the last listing still carry their highlight.
+            ApplySelection();
     }
 
     private void SelectWhere(Func<StorageItem, bool> predicate)
