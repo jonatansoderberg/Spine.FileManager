@@ -22,6 +22,16 @@ public sealed class DeviceService
     /// <summary>Where the node listens, when the port is free; a fixed port lets a device find it again after a restart.</summary>
     public const int Port = 47821;
 
+    /// <summary>
+    /// The tracker that tells linked devices where the others are (peer link plan, step 2); Preferences' "link.tracker"
+    /// overrides it, and an empty value turns the tracker off.
+    /// </summary>
+    public const string DefaultTracker = "";
+
+    public static string TrackerUrl => Preferences.Get("link.tracker", DefaultTracker);
+
+    private TrackerClient? _tracker;
+
     private const string KeyName = "node-key";
     private readonly SemaphoreSlim _starting = new(1, 1);
     private LinkNode? _node;
@@ -99,6 +109,7 @@ public sealed class DeviceService
         Connectivity.Current.ConnectivityChanged += (_, _) =>
         {
             _remap?.Cancel();
+            _ = _tracker?.PublishAsync();
             _ = CheckAllAsync(cancel.Token);
         };
         _ = Task.Run(async () =>
@@ -118,11 +129,25 @@ public sealed class DeviceService
             // Each check is a hello over the authenticated channel that swaps current addresses, so the other side
             // knows this one is there even when it cannot reach back.
             var endpoint = await node.ExchangeEndpointsAsync(device.NodeId, cancel);
+            DateTimeOffset? seen = null;
+            if (endpoint is null && _tracker is { IsConnected: true } tracker && await tracker.LookupAsync(device.NodeId, cancel) is { } found)
+            {
+                // Not where it was: the tracker knows where it listens now.
+                seen = found.LastSeen?.ToLocalTime();
+                if (found.Endpoints.Count > 0 && !found.Endpoints.SequenceEqual(device.Endpoints))
+                {
+                    Trust.SetEndpoints(device.NodeId, found.Endpoints);
+                    endpoint = await node.ExchangeEndpointsAsync(device.NodeId, cancel);
+                }
+                // Connected to the tracker but not reachable from here: ask it to reach out to this node instead.
+                if (endpoint is null && found.Online)
+                    await tracker.CallAsync(device.NodeId, node.Endpoints);
+            }
             SetStatus(device.NodeId, endpoint is not null
                 ? new LinkStatus(StateOf(endpoint), endpoint, DateTimeOffset.Now)
                 : RecentlyContacted(device.NodeId)
                 ? new LinkStatus(LinkState.ReachesUs, null, DateTimeOffset.Now)
-                : new LinkStatus(LinkState.Offline, null, StatusOf(device.NodeId).LastSeen));
+                : new LinkStatus(LinkState.Offline, null, seen ?? StatusOf(device.NodeId).LastSeen));
         }));
     }
 
@@ -168,6 +193,25 @@ public sealed class DeviceService
             strings["Transfer.Ask.Accept"], strings["Transfer.Ask.Decline"]);
     }
 
+    // Signed in with the node key, the tracker learns where this node listens and whom it trusts, finds the others, and
+    // passes on a call from a device that cannot reach this one: this one then reaches out to it.
+    private void StartTracker(LinkNode node)
+    {
+        if (!Uri.TryCreate(TrackerUrl, UriKind.Absolute, out var url))
+            return;
+        var tracker = _tracker = new TrackerClient(url, node.Identity,
+            () => new TrackerUpdate(node.Endpoints, [.. Trust.All.Select(n => TrackerProtocol.HashOf(n.NodeId))]));
+        tracker.Called += called =>
+        {
+            if (Trust.Find(called.From) is not { } caller)
+                return;
+            Trust.SetEndpoints(called.From, [.. called.Endpoints.Concat(caller.Endpoints).Distinct()]);
+            _ = node.ExchangeEndpointsAsync(called.From);
+        };
+        Trust.Changed += () => _ = tracker.PublishAsync();
+        tracker.Start();
+    }
+
     public async Task<LinkNode> GetNodeAsync()
     {
         if (_node is not null)
@@ -201,6 +245,7 @@ public sealed class DeviceService
                 };
                 node.Paired += trusted => Paired?.Invoke(trusted);
                 node.Confirm = joined => MainThread.InvokeOnMainThreadAsync(() => AskToLink(joined));
+                StartTracker(node);
                 node.AcceptTransfer = transfer => Trust.Find(transfer.NodeId) is { AskBeforeReceiving: false }
                     ? Task.FromResult(true)
                     : MainThread.InvokeOnMainThreadAsync(() => AskToReceive(transfer));
@@ -226,6 +271,7 @@ public sealed class DeviceService
             var mapped = await PortMapping.MapTcpAsync(node.Port, TimeSpan.FromHours(2));
             Mapped = mapped;
             node.PublicEndpoint = mapped?.Public;
+            _ = _tracker?.PublishAsync();
             System.Diagnostics.Debug.WriteLine(mapped is null ? "[Link] no router port" : $"[Link] {mapped.Method}: {mapped.Public} for {mapped.Lifetime}");
             // A network change cuts the wait short (WatchStatus).
             _remap = new CancellationTokenSource();

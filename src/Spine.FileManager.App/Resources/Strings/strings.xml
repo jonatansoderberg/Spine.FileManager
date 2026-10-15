@@ -175,6 +175,7 @@
   <s key="Devices.Status.ViaRouter">Via router</s>
   <s key="Devices.Status.ReachesUs">Reaches this device</s>
   <s key="Devices.Status.Offline">Offline</s>
+  <s key="Devices.Status.OfflineSeen">Offline · seen {0}</s>
   <s key="Devices.NotAnswering">{0} didn't answer. Is Spine File Manager open on it?</s>
   <s key="Devices.AskBeforeReceiving">Ask Before Receiving</s>
   <s key="Devices.Declined">{0} declined the files</s>

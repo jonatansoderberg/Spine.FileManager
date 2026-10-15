@@ -175,6 +175,7 @@
   <s key="Devices.Status.ViaRouter">Via routern</s>
   <s key="Devices.Status.ReachesUs">Når den här enheten</s>
   <s key="Devices.Status.Offline">Offline</s>
+  <s key="Devices.Status.OfflineSeen">Offline · sågs {0}</s>
   <s key="Devices.NotAnswering">{0} svarade inte. Är Spine File Manager öppen där?</s>
   <s key="Devices.AskBeforeReceiving">Fråga innan mottagning</s>
   <s key="Devices.Declined">{0} avböjde filerna</s>
