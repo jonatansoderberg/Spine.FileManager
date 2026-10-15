@@ -249,4 +249,8 @@
   <s key="Settings.Hidden.Show">Visa</s>
   <s key="Explorer.Kind.Application">Program</s>
   <s key="Menu.ShowPackageContents">Visa paketinnehåll</s>
+  <s key="Explorer.Trash.Title">Flytta till papperskorgen?</s>
+  <s key="Explorer.Trash.Message">{0} flyttas till papperskorgen. Du kan ångra eller lägga tillbaka från papperskorgen.</s>
+  <s key="Explorer.Trash.Confirm">Flytta till papperskorgen</s>
+  <s key="Settings.ConfirmTrash">Fråga innan flytt till papperskorgen</s>
 </strings>

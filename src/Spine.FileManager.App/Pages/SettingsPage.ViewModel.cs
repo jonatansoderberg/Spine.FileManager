@@ -13,6 +13,11 @@ public partial class SettingsPageViewModel(ISpineStrings strings, IThemeService 
 {
     private static readonly AppTheme[] Appearances = [AppTheme.Unspecified, AppTheme.Light, AppTheme.Dark];
 
+    [ObservableProperty]
+    public partial bool ConfirmTrash { get; set; } = Preferences.Get(ExplorerPageViewModel.ConfirmTrashKey, true);
+
+    partial void OnConfirmTrashChanged(bool value) => Preferences.Set(ExplorerPageViewModel.ConfirmTrashKey, value);
+
     /// <summary>Small, medium or large rows, icons and text in the lists and the sidebar.</summary>
     /// <summary>Places hidden from the sidebar, each with Show to bring it back.</summary>
     public ObservableCollection<HiddenPlace> HiddenPlaces { get; } = new(Services.HiddenPlaces.Items);

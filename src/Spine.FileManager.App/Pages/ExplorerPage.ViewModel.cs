@@ -1662,6 +1662,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
     [RelayCommand]
     private Task DeletePermanently() => Remove(permanently: true);
 
+    public const string ConfirmTrashKey = "delete.confirmTrash";
+
     private async Task Remove(bool permanently)
     {
         var items = SelectedItems.ToList();
@@ -1669,13 +1671,17 @@ public partial class ExplorerPageViewModel : ViewModelBase
             return;
         var provider = _providers[folder];
         var trash = !permanently && (await provider.GetCapabilitiesAsync(folder)).HasFlag(StorageCapabilities.Trash);
+        var what = items.Count == 1 ? $"“{items[0].DisplayName}”" : _strings.Get("Explorer.Items", items.Count);
         if (!trash)
         {
-            var what = items.Count == 1 ? $"“{items[0].Name}”" : _strings.Get("Explorer.Items", items.Count);
             var reason = permanently ? "" : _strings["Explorer.Delete.NoTrash"] + " ";
             if (!await Confirm(_strings["Explorer.Delete.Title"], reason + _strings.Get("Explorer.Delete.Message", what), _strings["Explorer.Delete.Confirm"]))
                 return;
         }
+        // As in Explorer, moving to the Trash asks too unless turned off in Settings; it can be undone, so it says so.
+        else if (Preferences.Get(ConfirmTrashKey, true)
+            && !await Confirm(_strings["Explorer.Trash.Title"], _strings.Get("Explorer.Trash.Message", what), _strings["Explorer.Trash.Confirm"]))
+            return;
         var first = _selection.Indices.FirstOrDefault();
         await Try(async () =>
         {

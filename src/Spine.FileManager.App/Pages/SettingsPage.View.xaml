@@ -22,6 +22,11 @@
                 <Segment Title="{String Settings.ItemSize.Large}" />
             </SegmentedControl>
 
+            <Grid ColumnDefinitions="*,Auto" Margin="0,8,0,0">
+                <Label Text="{String Settings.ConfirmTrash}" FontSize="14" VerticalOptions="Center" />
+                <Switch Grid.Column="1" IsToggled="{Binding ConfirmTrash}" VerticalOptions="Center" />
+            </Grid>
+
             <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasWindowMaterial}" Margin="0,8,0,0">
                 <VerticalStackLayout>
                     <Label Text="{String Settings.Material}" FontSize="14" />

@@ -80,9 +80,8 @@
         </Style>
         <Style x:Key="CommandGroup" TargetType="Border">
             <Setter Property="StrokeShape" Value="RoundRectangle 8" />
-            <Setter Property="StrokeThickness" Value="1" />
-            <Setter Property="Stroke" Value="{AppThemeBinding Light=#DADDE2, Dark=#3A3C40}" />
-            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#FFFFFF, Dark=#232427}" />
+            <Setter Property="StrokeThickness" Value="0" />
+            <Setter Property="BackgroundColor" Value="Transparent" />
             <Setter Property="Padding" Value="2,0" />
             <Setter Property="HeightRequest" Value="32" />
             <Setter Property="VerticalOptions" Value="Center" />
@@ -472,6 +471,8 @@
                 <ActivityIndicator Grid.Column="1" IsRunning="{Binding IsSearching}" IsVisible="{Binding IsSearching}" HeightRequest="16" WidthRequest="16" />
                 <Button Grid.Column="3" Text="{String Search.Stop}" Command="{Binding StopSearchingCommand}" IsVisible="{Binding IsSearching}" FontSize="13" />
             </Grid>
+            <!-- Divides the toolbar from the files, as in the concept image. -->
+            <BoxView HeightRequest="1" Color="{AppThemeBinding Light=#E3E5E8, Dark=#34363A}" />
             </VerticalStackLayout>
 
             <Label Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Error}" IsVisible="{Binding HasError}" FontSize="13" Padding="16,8"
