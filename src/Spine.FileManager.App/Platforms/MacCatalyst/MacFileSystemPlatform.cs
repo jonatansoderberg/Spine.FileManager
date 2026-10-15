@@ -68,6 +68,8 @@ public sealed class MacFileSystemPlatform : DefaultFileSystemPlatform
             || name is "Desktop" or "Documents" or "Downloads" or "Movies" or "Music" or "Pictures" or "Public" or "Applications" or "Library"
             // An app shows as Finder names it: without ".app", and localised ("Kalkylator").
             || name.EndsWith(".app", StringComparison.OrdinalIgnoreCase)
+            // The trash as Finder names it ("Trash", "Papperskorgen"), not ".Trash".
+            || path == TrashFolder
             ? NSFileManager.DefaultManager.DisplayName(path)
             : null;
 

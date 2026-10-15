@@ -2097,6 +2097,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
             place.IsCurrent = false;
         foreach (var favorite in Favorites)
             favorite.IsCurrent = false;
+        IsTrashCurrent = false;
         SessionChanged();
         _ = RefreshHome();
     }
@@ -2153,6 +2154,10 @@ public partial class ExplorerPageViewModel : ViewModelBase
     private Task OpenDisk(DiskRow disk) => Navigate(disk.Disk.Location);
 
     private static IFileSystemPlatform Platform => IPlatformApplication.Current!.Services.GetRequiredService<IFileSystemPlatform>();
+
+    /// <summary>Whether the trash is the folder shown, so its sidebar row is marked like a place's.</summary>
+    [ObservableProperty]
+    public partial bool IsTrashCurrent { get; private set; }
 
     public string TrashName => _strings[OperatingSystem.IsWindows() ? "Trash.Title.Windows" : "Trash.Title"];
 
@@ -2303,6 +2308,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
             place.IsCurrent = place.Root.Location.Equals(location);
         foreach (var favorite in Favorites)
             favorite.IsCurrent = favorite.Favorite.Location.Equals(location);
+        IsTrashCurrent = location.NativePath is { } shown && shown == Platform.TrashFolder;
         Error = null;
         IsLoading = true;
         if (changedFolder)
