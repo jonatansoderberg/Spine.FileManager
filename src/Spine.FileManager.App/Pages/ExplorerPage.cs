@@ -40,15 +40,14 @@ public partial class ExplorerPage
                     return;
                 }
                 // A wrapping grid, as Finder's: a CollectionView grid shares its width among its columns, so the cells
-                // moved apart as the pane grew. It is made exactly as wide as its whole columns (the room left goes to
-                // its right margin), so the icons stay where they are and only wrap when a column comes or goes.
+                // moved apart as the pane grew. Its content is made exactly as wide as its whole columns (the room left
+                // goes to its right inset), so the icons stay where they are and only wrap when a column comes or goes.
                 var pitch = ItemSizes.GridCellWidth;
                 var room = Icons.Width + Icons.Margin.Right - IconsMargin;
                 var span = Math.Max(1, (int)((room + GridSpacing) / pitch));
                 vm.GridSpan = span;
                 var spare = Math.Max(0, room - (span * pitch - GridSpacing));
-                if (Math.Abs(Icons.Margin.Right - IconsMargin - spare) > 0.5)
-                    Icons.Margin = new Thickness(IconsMargin, IconsMargin, IconsMargin + spare, 0);
+                SetIconsRightInset(IconsMargin + spare);
             }
         }
         SizeChanged += (_, _) => Fit();
@@ -153,6 +152,24 @@ public partial class ExplorerPage
 
     // As Windows' address bar: the current folder and as many of its parents as fit show, the rest fold from the root
     // end into « . Widths are those last laid out, so a folded segment still counts with its own width.
+    // On Apple platforms the room goes inside the scroll view, so the list still reaches the pane's edge and its
+    // scroll bar sits there; elsewhere it is the list's right margin.
+    private void SetIconsRightInset(double inset)
+    {
+#if IOS || MACCATALYST
+        if (FindScrollView(Icons.Handler?.PlatformView as UIKit.UIView) is { } scroll)
+        {
+            if (Math.Abs(scroll.ContentInset.Right - inset) > 0.5)
+                scroll.ContentInset = new UIKit.UIEdgeInsets(scroll.ContentInset.Top, scroll.ContentInset.Left, scroll.ContentInset.Bottom, (nfloat)inset);
+            if (Icons.Margin.Right != 0)
+                Icons.Margin = new Thickness(IconsMargin, IconsMargin, 0, 0);
+            return;
+        }
+#endif
+        if (Math.Abs(Icons.Margin.Right - inset) > 0.5)
+            Icons.Margin = new Thickness(IconsMargin, IconsMargin, inset, 0);
+    }
+
     private void FitCrumbs()
     {
         if (BindingContext is not ExplorerPageViewModel vm || CrumbArea.Width <= 0 || vm.Segments.Count == 0)
