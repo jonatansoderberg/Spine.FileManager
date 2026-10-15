@@ -19,6 +19,8 @@ public static class ItemSizes
     public static double FontSize => Pick(12, 14, 15);
     public static double GridIconSize => Pick(40, 52, 68);
     public static double GridCellWidth => Pick(88, 104, 128);
+    /// <summary>Two lines of the name under an icon.</summary>
+    public static double GridNameHeight => Pick(32, 36, 40);
 
     /// <summary>A sidebar row with its point of margin above and below.</summary>
     public static double SidebarRowHeight => Pick(28, 32, 36);
@@ -40,6 +42,7 @@ public static class ItemSizes
         resources["ItemIconSize"] = IconSize;
         resources["ItemFontSize"] = FontSize;
         resources["GridIconSize"] = GridIconSize;
+        resources["GridNameHeight"] = new GridLength(GridNameHeight);
         // The whole column less the grid's spacing: the gap between highlights is the same across as down.
         resources["GridCellWidth"] = GridCellWidth - 4;
         resources["SidebarItemHeight"] = SidebarRowHeight - 2;
