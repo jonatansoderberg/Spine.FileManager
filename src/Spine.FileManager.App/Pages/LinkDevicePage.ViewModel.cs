@@ -5,9 +5,10 @@ using Spine.FileManager.DeviceLink;
 namespace Spine.FileManager.Pages;
 
 /// <summary>
-/// Link Device (plan §19–21): this device shows a code for another to scan, or joins the code another device shows.
-/// The code is a one-time invitation that changes every two minutes; how long the other device is trusted here is
-/// chosen before it joins.
+/// Link Device (plan §19–21): first a choice, then this device shows a code for another to scan, joins the code another
+/// device shows (scanned on a phone, entered on a computer, which can try its camera), or, on a phone, links two
+/// computers. The code is a one-time invitation that changes every two minutes; how long the other device is trusted
+/// here is chosen before it joins.
 /// </summary>
 public partial class LinkDevicePageViewModel(ISpineStrings strings, INavigationService navigation, DeviceService devices) : ViewModelBase, IReceivesNavigationParameter<JoinRequest>
 {
@@ -16,10 +17,31 @@ public partial class LinkDevicePageViewModel(ISpineStrings strings, INavigationS
     private LinkNode? _node;
     private IDispatcherTimer? _renew;
 
+    private enum LinkMode { Choose, Show, Join, Bridge }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsChoosing), nameof(IsShowing), nameof(IsJoining), nameof(IsBridging))]
+    private partial LinkMode Mode { get; set; }
+
+    public bool IsChoosing => Mode == LinkMode.Choose;
+    public bool IsShowing => Mode == LinkMode.Show;
+    public bool IsJoining => Mode == LinkMode.Join;
+    public bool IsBridging => Mode == LinkMode.Bridge;
+
+    public string JoinTitle => strings[CanScan ? "Link.Choice.Scan" : "Link.Choice.Enter"];
+    public string JoinHint => strings[CanScan ? "Link.Choice.Scan.Hint" : "Link.Choice.Enter.Hint"];
+    public string ScanText => strings[CanScan ? "Link.Scan" : "Link.TryScan"];
+
+    /// <summary>Whether this device has a camera the scanner can use: a Mac with one can try it, Windows cannot.</summary>
+    public bool HasCamera => BarcodeScannerView.IsSupported;
+
+    public bool HasStatus => Status.Length > 0;
+
     [ObservableProperty]
     public partial string Link { get; private set; } = "";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasStatus))]
     public partial string Status { get; private set; } = "";
 
     [ObservableProperty]
@@ -42,11 +64,9 @@ public partial class LinkDevicePageViewModel(ISpineStrings strings, INavigationS
             return;
         _node = await devices.GetNodeAsync();
         devices.Paired += OnPaired;
-        Renew();
         _renew = Application.Current!.Dispatcher.CreateTimer();
         _renew.Interval = PairingInvitation.Lifetime - TimeSpan.FromSeconds(10);
         _renew.Tick += (_, _) => Renew();
-        _renew.Start();
         if (_pendingJoin is { } link)
         {
             _pendingJoin = null;
@@ -58,6 +78,7 @@ public partial class LinkDevicePageViewModel(ISpineStrings strings, INavigationS
     public async Task OnNavigationParameterAsync(JoinRequest parameter)
     {
         JoinLink = parameter.Link;
+        Mode = LinkMode.Join;
         if (_node is null)
             _pendingJoin = parameter.Link;
         else
@@ -68,7 +89,7 @@ public partial class LinkDevicePageViewModel(ISpineStrings strings, INavigationS
 
     private void Renew()
     {
-        if (_node is null)
+        if (_node is null || Mode != LinkMode.Show)
             return;
         Link = _node.Invite(Lifetime).ToUri();
         Status = strings["Link.Waiting"];
@@ -80,6 +101,34 @@ public partial class LinkDevicePageViewModel(ISpineStrings strings, INavigationS
         await Task.Delay(1200);
         await navigation.CloseAsync();
     });
+
+    [RelayCommand]
+    private void Choose()
+    {
+        // Back to the choice: a code that was shown is no longer good.
+        _renew?.Stop();
+        _node?.CancelInvitation();
+        Status = "";
+        Mode = LinkMode.Choose;
+    }
+
+    [RelayCommand]
+    private void ShowCode()
+    {
+        Mode = LinkMode.Show;
+        Renew();
+        _renew?.Start();
+    }
+
+    // A phone scans at once; a computer starts with the link entered, and can try its camera from there.
+    [RelayCommand]
+    private async Task JoinOther()
+    {
+        Status = "";
+        Mode = LinkMode.Join;
+        if (CanScan)
+            await Scan();
+    }
 
     [RelayCommand]
     private Task CopyLink() => Clipboard.Default.SetTextAsync(Link);
@@ -103,6 +152,8 @@ public partial class LinkDevicePageViewModel(ISpineStrings strings, INavigationS
     [RelayCommand]
     private async Task LinkTwoComputers()
     {
+        Status = "";
+        Mode = LinkMode.Bridge;
         if (await ScanInvitation() is not { } first)
             return;
         Status = strings.Get("Link.ScanSecond", first.Name);

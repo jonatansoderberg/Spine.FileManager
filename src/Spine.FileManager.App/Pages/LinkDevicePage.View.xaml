@@ -6,31 +6,111 @@
     x:TypeArguments="LinkDevicePageViewModel"
     x:DataType="LinkDevicePageViewModel">
 
+    <SpinePage.Resources>
+        <Style x:Key="Choice" TargetType="Border">
+            <Setter Property="StrokeShape" Value="RoundRectangle 12" />
+            <Setter Property="StrokeThickness" Value="1" />
+            <Setter Property="Stroke" Value="{AppThemeBinding Light=#E3E5E8, Dark=#34363A}" />
+            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#F7F8FA, Dark=#26272A}" />
+            <Setter Property="Padding" Value="14,12" />
+        </Style>
+        <Style x:Key="ChoiceIcon" TargetType="ImageButton">
+            <Setter Property="WidthRequest" Value="36" />
+            <Setter Property="HeightRequest" Value="36" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="BackgroundColor" Value="Transparent" />
+            <Setter Property="InputTransparent" Value="True" />
+            <Setter Property="VerticalOptions" Value="Center" />
+            <Setter Property="SvgImageSource.EnableSvg" Value="True" />
+            <Setter Property="SvgImageSource.Padding" Value="2" />
+            <Setter Property="SvgImageSource.LightTintColor" Value="#2F6FEB" />
+            <Setter Property="SvgImageSource.DarkTintColor" Value="#7FA6F5" />
+        </Style>
+        <Style x:Key="ChoiceTitle" TargetType="Label">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontAttributes" Value="Bold" />
+        </Style>
+        <Style x:Key="ChoiceHint" TargetType="Label">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Opacity" Value="0.65" />
+        </Style>
+    </SpinePage.Resources>
+
     <ScrollView>
-        <VerticalStackLayout Padding="{x:Static HeaderBarConstants.PagePadding}" Spacing="14">
-            <Label Text="{String Link.Intro}" FontSize="15" />
-            <BarcodeView Value="{Binding Link}" Options="{Binding QrOptions}" HeightRequest="300" WidthRequest="300" HorizontalOptions="Center" />
-            <Label Text="{Binding Status}" FontSize="14" HorizontalTextAlignment="Center" />
-            <Label Text="{String Link.Keep}" FontSize="13" Opacity="0.7" />
-            <SegmentedControl SelectedIndex="{Binding LifetimeIndex}">
-                <Segment Title="{String Link.Quick}" />
-                <Segment Title="{String Link.Session}" />
-                <Segment Title="{String Link.Remember}" />
-            </SegmentedControl>
-            <Button Text="{String Link.CopyLink}" Command="{Binding CopyLinkCommand}" HorizontalOptions="Start" />
+        <Grid Padding="{x:Static HeaderBarConstants.PagePadding}">
 
-            <Label Text="{String Link.JoinHeader}" FontSize="15" FontAttributes="Bold" Margin="0,12,0,0" />
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                <Entry Text="{Binding JoinLink}" Placeholder="{String Link.JoinPlaceholder}" FontSize="13" />
-                <Button Grid.Column="1" Text="{String Link.Join}" Command="{Binding JoinCommand}" />
-            </Grid>
-            <Button Text="{String Link.Scan}" Command="{Binding ScanCommand}" IsVisible="{Binding CanScan}" HorizontalOptions="Start" />
+            <!-- First a choice: show this device's code, join another device's (scanning it on a phone), or link two
+                 computers through the phone. -->
+            <VerticalStackLayout Spacing="12" IsVisible="{Binding IsChoosing}">
+                <Label Text="{String Link.Choose}" FontSize="15" Margin="0,0,0,4" />
+                <Border Style="{StaticResource Choice}">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+                        <ImageButton Style="{StaticResource ChoiceIcon}" SvgImageSource.Svg="QrCode.svg" />
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                            <Label Text="{String Link.Choice.Show}" Style="{StaticResource ChoiceTitle}" />
+                            <Label Text="{String Link.Choice.Show.Hint}" Style="{StaticResource ChoiceHint}" />
+                        </VerticalStackLayout>
+                        <!-- A button takes the click, so the choice answers to the keyboard and accessibility. -->
+                        <Button Grid.ColumnSpan="2" BackgroundColor="Transparent" Padding="0" Margin="-14,-12" Command="{Binding ShowCodeCommand}" SemanticProperties.Description="{String Link.Choice.Show}" />
+                    </Grid>
+                </Border>
+                <Border Style="{StaticResource Choice}">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+                        <ImageButton Style="{StaticResource ChoiceIcon}" SvgImageSource.Svg="Link.svg" />
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                            <Label Text="{Binding JoinTitle}" Style="{StaticResource ChoiceTitle}" />
+                            <Label Text="{Binding JoinHint}" Style="{StaticResource ChoiceHint}" />
+                        </VerticalStackLayout>
+                        <!-- A button takes the click, so the choice answers to the keyboard and accessibility. -->
+                        <Button Grid.ColumnSpan="2" BackgroundColor="Transparent" Padding="0" Margin="-14,-12" Command="{Binding JoinOtherCommand}" SemanticProperties.Description="{Binding JoinTitle}" />
+                    </Grid>
+                </Border>
+                <Border Style="{StaticResource Choice}" IsVisible="{Binding CanScan}">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+                        <ImageButton Style="{StaticResource ChoiceIcon}" SvgImageSource.Svg="Phone.svg" />
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                            <Label Text="{String Link.TwoComputers}" Style="{StaticResource ChoiceTitle}" />
+                            <Label Text="{String Link.TwoComputers.Hint}" Style="{StaticResource ChoiceHint}" />
+                        </VerticalStackLayout>
+                        <!-- A button takes the click, so the choice answers to the keyboard and accessibility. -->
+                        <Button Grid.ColumnSpan="2" BackgroundColor="Transparent" Padding="0" Margin="-14,-12" Command="{Binding LinkTwoComputersCommand}" SemanticProperties.Description="{String Link.TwoComputers}" />
+                    </Grid>
+                </Border>
+            </VerticalStackLayout>
 
-            <!-- A phone links two computers: it scans both codes and they link with each other. -->
-            <Label Text="{String Link.TwoComputers}" FontSize="15" FontAttributes="Bold" Margin="0,12,0,0" IsVisible="{Binding CanScan}" />
-            <Label Text="{String Link.TwoComputers.Hint}" FontSize="13" Opacity="0.7" IsVisible="{Binding CanScan}" />
-            <Button Text="{String Link.TwoComputers.Start}" Command="{Binding LinkTwoComputersCommand}" IsVisible="{Binding CanScan}" HorizontalOptions="Start" />
-        </VerticalStackLayout>
+            <VerticalStackLayout Spacing="14" IsVisible="{Binding IsChoosing, Converter={StaticResource Not}}">
+                <!-- This device's code. -->
+                <VerticalStackLayout Spacing="14" IsVisible="{Binding IsShowing}">
+                    <Label Text="{String Link.Intro}" FontSize="15" />
+                    <BarcodeView Value="{Binding Link}" Options="{Binding QrOptions}" HeightRequest="300" WidthRequest="300" HorizontalOptions="Center" />
+                    <Button Text="{String Link.CopyLink}" Command="{Binding CopyLinkCommand}" HorizontalOptions="Center" />
+                </VerticalStackLayout>
+
+                <!-- Another device's link, pasted, or scanned again on a phone. -->
+                <VerticalStackLayout Spacing="14" IsVisible="{Binding IsJoining}">
+                    <Label Text="{String Link.JoinIntro}" FontSize="15" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <Entry Text="{Binding JoinLink}" Placeholder="{String Link.JoinPlaceholder}" FontSize="13" ReturnCommand="{Binding JoinCommand}" />
+                        <Button Grid.Column="1" Text="{String Link.Join}" Command="{Binding JoinCommand}" />
+                    </Grid>
+                    <Button Text="{Binding ScanText}" Command="{Binding ScanCommand}" IsVisible="{Binding HasCamera}" HorizontalOptions="Start" />
+                </VerticalStackLayout>
+
+                <Label Text="{Binding Status}" FontSize="14" HorizontalTextAlignment="Center" IsVisible="{Binding HasStatus}" />
+
+                <VerticalStackLayout Spacing="8" IsVisible="{Binding IsBridging, Converter={StaticResource Not}}">
+                    <Label Text="{String Link.Keep}" FontSize="13" Opacity="0.7" />
+                    <SegmentedControl SelectedIndex="{Binding LifetimeIndex}">
+                        <Segment Title="{String Link.Quick}" />
+                        <Segment Title="{String Link.Session}" />
+                        <Segment Title="{String Link.Remember}" />
+                    </SegmentedControl>
+                </VerticalStackLayout>
+
+                <Button Text="{String Link.OtherWays}" Command="{Binding ChooseCommand}" BackgroundColor="Transparent" HorizontalOptions="Center" Margin="0,8,0,0"
+                        TextColor="{AppThemeBinding Light=#2F6FEB, Dark=#7FA6F5}" />
+            </VerticalStackLayout>
+        </Grid>
     </ScrollView>
 
 </SpinePage>
