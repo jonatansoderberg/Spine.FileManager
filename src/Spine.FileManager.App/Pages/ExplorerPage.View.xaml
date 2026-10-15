@@ -49,15 +49,19 @@
             <Setter Property="SvgImageSource.LightTintColor" Value="{StaticResource Accent}" />
             <Setter Property="SvgImageSource.DarkTintColor" Value="{StaticResource AccentDark}" />
         </Style>
+        <!-- The chevron glyph fills only the middle half of its square and its stroke is thin, so the square is large and
+             pulled in by its margin to keep the header's height. -->
         <Style x:Key="SortChevron" TargetType="ImageButton">
-            <Setter Property="WidthRequest" Value="18" />
-            <Setter Property="HeightRequest" Value="18" />
+            <Setter Property="WidthRequest" Value="28" />
+            <Setter Property="HeightRequest" Value="28" />
+            <Setter Property="Margin" Value="-3,-5,-6,-5" />
             <Setter Property="Padding" Value="0" />
             <Setter Property="BackgroundColor" Value="Transparent" />
             <Setter Property="InputTransparent" Value="True" />
             <Setter Property="VerticalOptions" Value="Center" />
-            <Setter Property="Opacity" Value="0.35" />
+            <Setter Property="Opacity" Value="0.45" />
             <Setter Property="SvgImageSource.EnableSvg" Value="True" />
+            <Setter Property="SvgImageSource.Padding" Value="0" />
             <Setter Property="SvgImageSource.LightTintColor" Value="#1B1B1B" />
             <Setter Property="SvgImageSource.DarkTintColor" Value="#E8E8E8" />
         </Style>
@@ -668,7 +672,7 @@
                 </FileListView.ItemsLayout>
                 <FileListView.ItemTemplate>
                     <DataTemplate x:DataType="ItemRow">
-                        <Grid RowDefinitions="Auto,34" WidthRequest="{DynamicResource GridCellWidth}" HorizontalOptions="Center" Padding="4" Opacity="{Binding Dimmed}"
+                        <Grid WidthRequest="{DynamicResource GridCellWidth}" HorizontalOptions="Center" Padding="4" Opacity="{Binding Dimmed}"
                               ContextMenu.Items="{Binding Menu}" ContextMenu.CommandParameter="{Binding .}">
                             <Grid.Triggers>
                                 <DataTrigger TargetType="Grid" Binding="{Binding IsSelected}" Value="True">
@@ -686,8 +690,13 @@
                                 <TapGestureRecognizer Command="{Binding TapCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
                                 <TapGestureRecognizer Buttons="Secondary" Command="{Binding RowSecondaryTapCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
                             </Grid.GestureRecognizers>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="{DynamicResource GridNameHeight}" />
+                            </Grid.RowDefinitions>
                             <Image Source="{Binding Icon}" WidthRequest="{DynamicResource GridIconSize}" HeightRequest="{DynamicResource GridIconSize}" Margin="0,4" />
-                            <Label Grid.Row="1" Text="{Binding Name}" FontSize="{DynamicResource SidebarFontSize}" HorizontalTextAlignment="Center" MaxLines="2" LineBreakMode="MiddleTruncation" />
+                            <!-- UIKit truncates in the middle only on a single line; a tail cut lets the name wrap to two, as in Finder. -->
+                            <Label Grid.Row="1" Text="{Binding Name}" FontSize="{DynamicResource SidebarFontSize}" HorizontalTextAlignment="Center" VerticalTextAlignment="Start" MaxLines="2" LineBreakMode="TailTruncation" />
                         </Grid>
                     </DataTemplate>
                 </FileListView.ItemTemplate>
