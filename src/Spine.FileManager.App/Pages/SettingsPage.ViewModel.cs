@@ -95,7 +95,7 @@ public partial class SettingsPageViewModel(ISpineStrings strings, IThemeService 
         };
         var endpoints = devices.Endpoints;
         LocalAddresses = endpoints.Where(e => System.Net.IPEndPoint.TryParse(e, out var a) && DeviceLink.PortMapping.IsPrivate(a.Address)) is { } local && local.Any()
-            ? string.Join(", ", local) : strings["Settings.Link.NotListening"];
+            ? string.Join(", ", local) : strings[devices.IsListening ? "Settings.Link.NoLocalNetwork" : "Settings.Link.NotListening"];
         RouterPort = devices.Mapped is { } mapped ? $"{mapped.Public} ({mapped.Method})" : strings["Settings.Link.NoRouter"];
     }
 

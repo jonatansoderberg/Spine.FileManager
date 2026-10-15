@@ -238,6 +238,7 @@
   <s key="Settings.Link.Router">Router</s>
   <s key="Settings.Link.NoRouter">Routern öppnar ingen port</s>
   <s key="Settings.Link.NotListening">Lyssnar inte än</s>
+  <s key="Settings.Link.NoLocalNetwork">Inte på något lokalt nätverk</s>
   <s key="Settings.Received">Mottagna filer</s>
   <s key="Settings.ShowReceived">Visa mottagna filer</s>
   <s key="Home.Title">Hem</s>

@@ -238,6 +238,7 @@
   <s key="Settings.Link.Router">Router</s>
   <s key="Settings.Link.NoRouter">The router opens no port</s>
   <s key="Settings.Link.NotListening">Not listening yet</s>
+  <s key="Settings.Link.NoLocalNetwork">Not on a local network</s>
   <s key="Settings.Received">Received files</s>
   <s key="Settings.ShowReceived">Show Received Files</s>
   <s key="Home.Title">Home</s>

@@ -35,6 +35,9 @@ public sealed class DeviceService
     /// <summary>The tracker's line, for Settings: null when no tracker is set or the node has not started.</summary>
     public TrackerClient? Tracker => _tracker;
 
+    /// <summary>Whether the node has started listening for linked devices.</summary>
+    public bool IsListening => _node is not null;
+
     /// <summary>Where this device listens now, the router's port included; empty before the node starts.</summary>
     public IReadOnlyList<string> Endpoints => _node?.Endpoints ?? [];
 
