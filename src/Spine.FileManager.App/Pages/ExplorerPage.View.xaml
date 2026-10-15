@@ -11,10 +11,12 @@
         <Color x:Key="SelectionDark">#2B4C80</Color>
         <Color x:Key="Accent">#2F6FEB</Color>
         <Color x:Key="AccentDark">#7FA6F5</Color>
+        <!-- Spine draws the SVG at the button's size inside its own padding; a button padding would shrink it a second time. -->
         <Style x:Key="ToolButton" TargetType="ImageButton">
             <Setter Property="WidthRequest" Value="32" />
             <Setter Property="HeightRequest" Value="32" />
-            <Setter Property="Padding" Value="4" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="SvgImageSource.Padding" Value="3" />
             <Setter Property="CornerRadius" Value="6" />
             <Setter Property="BackgroundColor" Value="Transparent" />
             <Setter Property="SvgImageSource.EnableSvg" Value="True" />
@@ -70,11 +72,11 @@
             <Setter Property="HorizontalOptions" Value="Center" />
             <Setter Property="Color" Value="{AppThemeBinding Light=#D5D7DB, Dark=#3A3C40}" />
         </Style>
-        <!-- Spine's glyphs leave a fifth of their box empty: less padding draws them about 18 points tall, as in the concept image. -->
+        <!-- Spine's glyphs leave a fifth of their box empty: with little padding they draw about 18 points tall, as in the concept image. -->
         <Style x:Key="CommandIcon" TargetType="ImageButton" BasedOn="{StaticResource ToolButton}">
             <Setter Property="WidthRequest" Value="36" />
             <Setter Property="HeightRequest" Value="30" />
-            <Setter Property="Padding" Value="6,2" />
+            <Setter Property="SvgImageSource.Padding" Value="2" />
         </Style>
         <Style x:Key="CommandGroup" TargetType="Border">
             <Setter Property="StrokeShape" Value="RoundRectangle 8" />
@@ -85,6 +87,25 @@
             <Setter Property="HeightRequest" Value="32" />
             <Setter Property="VerticalOptions" Value="Center" />
         </Style>
+        <!-- A place in This Device or Cloud: a click opens it, files dropped on it go there, right-click hides it. -->
+        <DataTemplate x:Key="PlaceTemplate" x:DataType="PlaceRow">
+                        <Border Padding="8,0" Margin="8,1" HeightRequest="{DynamicResource SidebarItemHeight}" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent"
+                ContextMenu.Items="{Binding PlaceMenu, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" ContextMenu.CommandParameter="{Binding .}">
+                            <Border.Triggers>
+                                <DataTrigger TargetType="Border" Binding="{Binding IsCurrent}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SelectionLight}, Dark={StaticResource SelectionDark}}" />
+                                </DataTrigger>
+                            </Border.Triggers>
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenPlaceCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
+                                <DropGestureRecognizer DragOver="OnFileDragOver" DragLeave="OnFileDragLeave" Drop="OnFileDrop" />
+                            </Border.GestureRecognizers>
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="{Binding Glyph}" />
+                                <Label Grid.Column="1" Text="{Binding Name}" FontSize="{DynamicResource SidebarFontSize}" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
         <Style x:Key="SidebarSection" TargetType="Label">
             <Setter Property="FontSize" Value="11" />
             <Setter Property="FontAttributes" Value="Bold" />
@@ -139,7 +160,7 @@
               BackgroundColor="{AppThemeBinding Light=#F3F4F6, Dark=#1E1F22}">
             <!-- Everything but Settings scrolls when the window is lower than the sidebar. -->
             <ScrollView VerticalScrollBarVisibility="Never">
-            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
             <Border Padding="8,0" Margin="8,10,8,1" HeightRequest="{DynamicResource SidebarItemHeight}" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent">
                 <Border.Triggers>
                     <DataTrigger TargetType="Border" Binding="{Binding IsHome}" Value="True">
@@ -180,26 +201,8 @@
             </CollectionView>
             <Label Grid.Row="3" Text="{String Explorer.FavoritesHint}" IsVisible="{Binding HasNoFavorites}" FontSize="12" Opacity="0.5" Padding="16,0,16,8" />
             <Label Grid.Row="4" Text="{String Home.ThisDevice}" Style="{StaticResource SidebarSection}" />
-            <CollectionView Grid.Row="5" ItemsSource="{Binding Places}" SelectionMode="None" HeightRequest="{Binding PlacesHeight}" VerticalScrollBarVisibility="Never">
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="PlaceRow">
-                        <Border Padding="8,0" Margin="8,1" HeightRequest="{DynamicResource SidebarItemHeight}" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent">
-                            <Border.Triggers>
-                                <DataTrigger TargetType="Border" Binding="{Binding IsCurrent}" Value="True">
-                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SelectionLight}, Dark={StaticResource SelectionDark}}" />
-                                </DataTrigger>
-                            </Border.Triggers>
-                            <Border.GestureRecognizers>
-                                <TapGestureRecognizer Command="{Binding OpenPlaceCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
-                                <DropGestureRecognizer DragOver="OnFileDragOver" DragLeave="OnFileDragLeave" Drop="OnFileDrop" />
-                            </Border.GestureRecognizers>
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                                <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="{Binding Glyph}" />
-                                <Label Grid.Column="1" Text="{Binding Name}" FontSize="{DynamicResource SidebarFontSize}" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
+            <CollectionView Grid.Row="5" ItemsSource="{Binding Places}" SelectionMode="None" HeightRequest="{Binding PlacesHeight}" VerticalScrollBarVisibility="Never"
+                            ItemTemplate="{StaticResource PlaceTemplate}">
             </CollectionView>
 
             <!-- The trash closes This Device, as in Finder's Dock and Explorer's desktop. -->
@@ -213,9 +216,14 @@
                 </Grid>
             </Border>
 
+            <!-- Cloud: iCloud Drive and the other providers, apart from the disks of This Device. -->
+            <Label Grid.Row="7" Text="{String Places.Cloud}" Style="{StaticResource SidebarSection}" IsVisible="{Binding HasCloud}" />
+            <CollectionView Grid.Row="8" ItemsSource="{Binding CloudPlaces}" SelectionMode="None" HeightRequest="{Binding CloudHeight}" VerticalScrollBarVisibility="Never"
+                            ItemTemplate="{StaticResource PlaceTemplate}" IsVisible="{Binding HasCloud}" />
+
             <!-- Other Devices: linked devices; files dropped on one are sent there. -->
-            <Label Grid.Row="7" Text="{String Devices.Title}" Style="{StaticResource SidebarSection}" />
-            <CollectionView Grid.Row="8" ItemsSource="{Binding Devices}" SelectionMode="None" HeightRequest="{Binding DevicesHeight}" VerticalScrollBarVisibility="Never">
+            <Label Grid.Row="9" Text="{String Devices.Title}" Style="{StaticResource SidebarSection}" />
+            <CollectionView Grid.Row="10" ItemsSource="{Binding Devices}" SelectionMode="None" HeightRequest="{Binding DevicesHeight}" VerticalScrollBarVisibility="Never">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="DeviceRow">
                         <Border Padding="8,0" Margin="8,1" HeightRequest="{DynamicResource SidebarItemHeight}" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent"
@@ -237,17 +245,17 @@
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>
-            <Button Grid.Row="9" Text="{String Devices.Link}" Command="{Binding LinkDeviceCommand}" FontSize="12" Padding="12,0" HeightRequest="26" CornerRadius="13"
+            <Button Grid.Row="11" Text="{String Devices.Link}" Command="{Binding LinkDeviceCommand}" FontSize="12" Padding="12,0" HeightRequest="26" CornerRadius="13"
                     Margin="16,6,16,0" HorizontalOptions="Start" BackgroundColor="{AppThemeBinding Light=#E4ECFD, Dark=#25324D}" TextColor="{AppThemeBinding Light=#2F6FEB, Dark=#9BB9F7}" />
 
             <!-- Not built yet: shown dimmed so the sidebar has the concept image's sections. -->
-            <Label Grid.Row="10" Text="{String Explorer.Network}" Style="{StaticResource SidebarSection}" />
-            <Grid Grid.Row="11" ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="16,0" HeightRequest="{DynamicResource SidebarItemHeight}" Margin="0,1" Opacity="0.4">
+            <Label Grid.Row="12" Text="{String Explorer.Network}" Style="{StaticResource SidebarSection}" />
+            <Grid Grid.Row="13" ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="16,0" HeightRequest="{DynamicResource SidebarItemHeight}" Margin="0,1" Opacity="0.4">
                 <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="Globe.svg" />
                 <Label Grid.Column="1" Text="{String Explorer.Network.Soon}" FontSize="{DynamicResource SidebarFontSize}" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
             </Grid>
-            <Label Grid.Row="12" Text="{String Explorer.Backups}" Style="{StaticResource SidebarSection}" />
-            <Grid Grid.Row="13" ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="16,0" HeightRequest="{DynamicResource SidebarItemHeight}" Margin="0,1,0,8" Opacity="0.4">
+            <Label Grid.Row="14" Text="{String Explorer.Backups}" Style="{StaticResource SidebarSection}" />
+            <Grid Grid.Row="15" ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="16,0" HeightRequest="{DynamicResource SidebarItemHeight}" Margin="0,1,0,8" Opacity="0.4">
                 <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="Clock.svg" />
                 <Label Grid.Column="1" Text="{String Explorer.Backups.Soon}" FontSize="{DynamicResource SidebarFontSize}" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
             </Grid>

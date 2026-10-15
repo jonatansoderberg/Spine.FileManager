@@ -39,6 +39,9 @@ Eleven steps toward the concept image, written in `docs/plans/concept-ui.md` bef
 - **Command bar and sizes** (branch issue/55-toolbar-and-sizes):
   - The command bar as in the concept image, with glyphs about 18 points instead of 13.
   - Settings › Size of files and folders, Small / Medium / Large (asked 2026-10-15). It sets row height, file icons and text in the list, the icon grid and the sidebar. The sizes are app resources (`Services/ItemSizes.cs`) the views take as DynamicResource, so every window follows a change. The lists measure their first row again.
+- **Cloud section and hiding** (branch issue/55-cloud-section): iCloud Drive and the CloudStorage providers in a Cloud section of their own; right-click › Hide from Sidebar, with the hidden places listed in Settings to show again (asked 2026-10-15; MacDroid left folders behind after it was turned off).
+- **Apps:** a Mac package (`NSURLIsPackageKey`) shows its own icon and Finder's name, sorts among the files, opens on double-click, takes no drops and has Show Package Contents (`StorageItem.IsPackage`, `IsBrowsable`).
+- **Toolbar glyphs:** Spine renders an SVG at the button's size inside its own padding (5 by default), so the button's padding shrank it twice; buttons now set `SvgImageSource.Padding` only.
 - **Selection rectangle:** in the details list a drag that does not start on a name or icon draws a selection rectangle (Cmd/Ctrl keeps the selection); it follows the wheel and scrolls by itself near the top and bottom edge. Files are dragged only by name or icon.
 - **Fixes on the way:**
   - The Dual Pane divider is a grip like the sidebar's: the old one took no drags.

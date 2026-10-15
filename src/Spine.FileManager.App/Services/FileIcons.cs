@@ -49,12 +49,15 @@ public static class FileIcons
 
     public static ImageSource For(StorageItem item)
     {
-        var extension = item.IsFolder ? "" : item.Extension.ToLowerInvariant();
-        // An app bundle has its own icon, so it is looked up by itself rather than by its extension.
-        var key = item.IsFolder ? (extension == "app" ? item.Location.ItemId : "/folder") : extension;
+        var extension = item.IsBrowsable ? "" : item.Extension.ToLowerInvariant();
+        // A package (an app) has its own icon: it is looked up by itself rather than by its extension, and in every
+        // style, since no theme can draw another app's icon.
+        var key = item.IsPackage ? item.Location.ItemId : item.IsFolder ? "/folder" : extension;
         lock (Cache)
             if (Cache.TryGetValue(key, out var cached))
                 return cached;
+        if (item.IsPackage)
+            return SystemIcon(item, key) ?? Spine(false, extension);
         if (Style == SystemStyle)
             return SystemIcon(item, key) ?? Spine(item.IsFolder, extension);
         var source = (_theme?.IconFor(item.IsFolder, extension) is { } picture ? ImageSource.FromFile(picture) : null) ?? Spine(item.IsFolder, extension);

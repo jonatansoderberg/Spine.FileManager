@@ -164,6 +164,7 @@ public sealed class RowFormat(ISpineStrings strings)
     public System.Globalization.CultureInfo Culture { get; } = System.Globalization.CultureInfo.CurrentCulture;
     public string Folder { get; } = strings["Explorer.Kind.Folder"];
     public string Document { get; } = strings["Explorer.Kind.Document"];
+    public string Application { get; } = strings["Explorer.Kind.Application"];
     public string FileKind { get; } = strings["Explorer.Kind.File"];
 }
 
@@ -175,7 +176,8 @@ public sealed partial class ItemRow(StorageItem item, RowFormat format) : Observ
 {
     public StorageItem Item { get; } = item;
     public string Name => Item.DisplayName;
-    public string Kind => Item.IsFolder ? format.Folder
+    public string Kind => Item.IsBrowsable ? format.Folder
+        : Item.IsPackage && Item.Extension.Equals("app", StringComparison.OrdinalIgnoreCase) ? format.Application
         : Item.Extension.Length > 0 ? string.Format(format.Culture, format.FileKind, Item.Extension.ToUpperInvariant())
         : format.Document;
     public string Modified => Item.Modified?.ToLocalTime().ToString("g", format.Culture) ?? "";
@@ -237,17 +239,50 @@ public partial class ExplorerPageViewModel : ViewModelBase
         _strings.Changed += (_, _) => Rebuild(keepSelection: true);
         FileIcons.Changed += () => MainThread.BeginInvokeOnMainThread(() => Rebuild(keepSelection: true));
         FileIcons.Refreshed += () => MainThread.BeginInvokeOnMainThread(() => Rebuild(keepSelection: true));
+        HiddenPlaces.Changed += () => MainThread.BeginInvokeOnMainThread(ShowPlaces);
         // A list measures its first row once: a new size needs its rows again, the sidebar's lists new heights.
         ItemSizes.Changed += () =>
         {
             Rebuild(keepSelection: true);
             PlacesHeight = Places.Count * SidebarRowHeight;
+            CloudHeight = CloudPlaces.Count * SidebarRowHeight;
             FavoritesHeight = Favorites.Count * SidebarRowHeight;
             DevicesHeight = Devices.Count * SidebarRowHeight;
         };
     }
 
+    /// <summary>This Device: known folders and disks the user has not hidden.</summary>
     public ObservableCollection<PlaceRow> Places { get; } = [];
+
+    /// <summary>The Cloud section: iCloud Drive and the providers in ~/Library/CloudStorage (OneDrive, Google Drive …).</summary>
+    public ObservableCollection<PlaceRow> CloudPlaces { get; } = [];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCloud))]
+    public partial double CloudHeight { get; private set; }
+
+    public bool HasCloud => CloudHeight > 0;
+
+    private readonly List<PlaceRow> _allPlaces = [];
+
+    [ObservableProperty]
+    public partial MenuItems PlaceMenu { get; private set; } = [];
+
+    private void ShowPlaces()
+    {
+        Places.Clear();
+        CloudPlaces.Clear();
+        foreach (var place in _allPlaces.Where(p => !HiddenPlaces.Contains(p.Root.Location)))
+        {
+            place.IsCurrent = !IsHome && place.Root.Location.Equals(Current);
+            (place.Root.Kind == StorageRootKind.Cloud ? CloudPlaces : Places).Add(place);
+        }
+        PlacesHeight = Places.Count * SidebarRowHeight;
+        CloudHeight = CloudPlaces.Count * SidebarRowHeight;
+    }
+
+    [RelayCommand]
+    private void HidePlace(PlaceRow place) => HiddenPlaces.Hide(place.Root.Location, place.Name);
 
     private readonly DeviceService _devices;
 
@@ -446,7 +481,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
     [RelayCommand]
     private async Task OpenInNewTab()
     {
-        foreach (var folder in SelectedItems.Where(i => i.IsFolder).ToList())
+        foreach (var folder in SelectedItems.Where(i => i.IsBrowsable).ToList())
             await OpenTab(folder.Location, activate: true);
     }
 
@@ -469,7 +504,10 @@ public partial class ExplorerPageViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private Task RowOpenInNewTab(ItemRow row) => row.Item.IsFolder ? OpenTab(row.Item.Location, activate: true) : Task.CompletedTask;
+    private Task RowShowPackageContents(ItemRow row) => row.Item.IsPackage ? Navigate(row.Item.Location) : Task.CompletedTask;
+
+    [RelayCommand]
+    private Task RowOpenInNewTab(ItemRow row) => row.Item.IsBrowsable ? OpenTab(row.Item.Location, activate: true) : Task.CompletedTask;
 
     private async Task OpenTab(StorageLocation? location, bool activate)
     {
@@ -620,6 +658,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
             {
                 new MenuAction(strings["Menu.Open"], null, RowOpenCommand),
                 new MenuAction(strings["Menu.OpenInNewTab"], null, RowOpenInNewTabCommand),
+                new MenuAction(strings["Menu.ShowPackageContents"], null, RowShowPackageContentsCommand),
                 new MenuAction(strings["Menu.OpenInTerminal"], null, RowOpenInTerminalCommand) { IsVisible = TerminalLauncher.IsSupported },
                 new MenuAction(strings["Menu.AddFavorite"], "Star.svg", RowFavoriteCommand),
             },
@@ -661,6 +700,11 @@ public partial class ExplorerPageViewModel : ViewModelBase
         [
             new MenuAction(strings["Devices.Rename"], "Edit.svg", RenameDeviceCommand),
             new MenuAction(strings["Devices.Forget"], "Trashcan.svg", ForgetDeviceCommand) { IsDestructive = true },
+        ];
+        PlaceMenu =
+        [
+            new MenuAction(strings["Menu.Open"], null, OpenPlaceCommand),
+            new MenuAction(strings["Places.Hide"], "EyeOff.svg", HidePlaceCommand),
         ];
         FavoriteMenu =
         [
@@ -1081,7 +1125,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
         if (item.Created is { } created)
             facts.Add(_strings.Get("Preview.Created", created.ToLocalTime().ToString("g", culture)));
         PreviewDetails = string.Join("\n", facts);
-        PreviewImage = item.IsFolder ? "folder.png" : "file.png";
+        PreviewImage = item.IsPackage ? FileIcons.For(item) : item.IsFolder ? "folder.png" : "file.png";
         PreviewText = null;
         // The picture and the text come separately: a slow thumbnail must not hold the text back.
         _ = Task.Run(async () =>
@@ -1280,7 +1324,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     public override async Task OnAppearingAsync(NavigationDirection navigationDirection)
     {
-        if (Places.Count > 0)
+        if (_allPlaces.Count > 0)
             return;
         var session = IPlatformApplication.Current!.Services.GetRequiredService<SessionTracker>();
         if (_startTabs is null && !IsSecondary && await session.RestoreAsync() is { Count: > 0 } windows)
@@ -1311,17 +1355,17 @@ public partial class ExplorerPageViewModel : ViewModelBase
         await LoadFavorites();
         foreach (var provider in _providers.All)
             foreach (var root in await provider.GetRootsAsync())
-                Places.Add(new(root));
+                _allPlaces.Add(new(root));
         // This Device ends with the disks, as in the concept image, unless the provider already lists one.
         foreach (var disk in await Task.Run(ListDisks))
-            if (!Places.Any(p => p.Root.Location.Equals(disk.Location)))
-                Places.Add(new(new StorageRoot(disk.Location, disk.Name, disk.Kind switch
+            if (!_allPlaces.Any(p => p.Root.Location.Equals(disk.Location)))
+                _allPlaces.Add(new(new StorageRoot(disk.Location, disk.Name, disk.Kind switch
                 {
                     DiskKind.Network => StorageRootKind.NetworkVolume,
                     DiskKind.External => StorageRootKind.RemovableVolume,
                     _ => StorageRootKind.Volume,
                 })));
-        PlacesHeight = Places.Count * SidebarRowHeight;
+        ShowPlaces();
         LoadDevices();
         if (!IsSecondary)
             _devices.StartIfLinked();
@@ -1393,9 +1437,10 @@ public partial class ExplorerPageViewModel : ViewModelBase
             return;
         // Ctrl-double-click (⌘ on the Mac) opens a folder in a new tab, as in Windows' Explorer. Only a click: the menu's
         // Open has no row, and its shortcut holds the key.
-        if (item.IsFolder && row is not null && ModifierKeys.Command)
+        // An app or other package opens like a file; Show Package Contents browses into it.
+        if (item.IsBrowsable && row is not null && ModifierKeys.Command)
             await OpenTab(item.Location, activate: true);
-        else if (item.IsFolder)
+        else if (item.IsBrowsable)
             await Navigate(item.Location);
         else if (!await FileLauncher.OpenAsync(item))
             Error = _strings.Get("Explorer.Error.CannotOpen", item.Name);
@@ -1697,7 +1742,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
         Filter = "";
         CanGoBack = tab.History.CanGoBack;
         CanGoForward = tab.History.CanGoForward;
-        foreach (var place in Places)
+        foreach (var place in _allPlaces)
             place.IsCurrent = false;
         foreach (var favorite in Favorites)
             favorite.IsCurrent = false;
@@ -1890,14 +1935,14 @@ public partial class ExplorerPageViewModel : ViewModelBase
         if (string.IsNullOrEmpty(tab.Title) || !location.Equals(Current) || leftHome)
             tab.Title = TabTitle(location);
         if (changedFolder || leftHome)
-            Recent?.Add(location, Places.FirstOrDefault(p => p.Root.Location.Equals(location))?.Name ?? TabTitle(location), DateTimeOffset.Now);
+            Recent?.Add(location, _allPlaces.FirstOrDefault(p => p.Root.Location.Equals(location))?.Name ?? TabTitle(location), DateTimeOffset.Now);
 
         Current = location;
         if (changedFolder)
             _ = BuildBreadcrumb(provider, location);
         CanGoBack = _history.CanGoBack;
         CanGoForward = _history.CanGoForward;
-        foreach (var place in Places)
+        foreach (var place in _allPlaces)
             place.IsCurrent = place.Root.Location.Equals(location);
         foreach (var favorite in Favorites)
             favorite.IsCurrent = favorite.Favorite.Location.Equals(location);

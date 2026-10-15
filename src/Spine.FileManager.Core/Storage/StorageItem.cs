@@ -18,10 +18,19 @@ public sealed record StorageItem(StorageLocation Location, string Name, StorageI
     public bool IsReadOnly { get; init; }
     public bool IsLink { get; init; }
 
+    /// <summary>
+    /// A folder the system shows as one file, as the Mac shows an app or a bundle: it opens rather than being browsed
+    /// into. It is still a folder to copy and move.
+    /// </summary>
+    public bool IsPackage { get; init; }
+
     public bool IsFolder => Kind == StorageItemKind.Folder;
 
-    /// <summary>The part after the last dot, without the dot, or empty for folders and names without one.</summary>
-    public string Extension => IsFolder ? "" : System.IO.Path.GetExtension(Name).TrimStart('.');
+    /// <summary>A folder to browse into: a folder that is not a package.</summary>
+    public bool IsBrowsable => IsFolder && !IsPackage;
+
+    /// <summary>The part after the last dot, without the dot, or empty for folders (not packages) and names without one.</summary>
+    public string Extension => IsBrowsable ? "" : System.IO.Path.GetExtension(Name).TrimStart('.');
 }
 
 public enum StorageRootKind

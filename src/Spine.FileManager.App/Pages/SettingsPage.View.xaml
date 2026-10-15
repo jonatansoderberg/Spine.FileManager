@@ -34,6 +34,19 @@
             <Picker ItemsSource="{Binding IconStyles}" ItemDisplayBinding="{Binding Title, x:DataType=IconStyleChoice}" SelectedItem="{Binding IconStyle}" />
             <Button Text="{String Menu.Icons.OpenThemes}" Command="{Binding OpenThemesCommand}" HorizontalOptions="Start" />
 
+            <Label Text="{String Settings.Hidden}" FontSize="13" FontAttributes="Bold" Margin="0,12,0,0" IsVisible="{Binding HasHiddenPlaces}" />
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding HiddenPlaces}" IsVisible="{Binding HasHiddenPlaces}">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="HiddenPlace">
+                        <Grid ColumnDefinitions="*,Auto" Padding="0,2">
+                            <Label Text="{Binding Name}" FontSize="13" VerticalOptions="Center" LineBreakMode="TailTruncation" />
+                            <Button Grid.Column="1" Text="{String Settings.Hidden.Show}" FontSize="12" Padding="10,0" HeightRequest="26"
+                                    Command="{Binding ShowPlaceCommand, Source={RelativeSource AncestorType={x:Type SettingsPageViewModel}}}" CommandParameter="{Binding .}" />
+                        </Grid>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+
             <Label Text="{String Settings.Received}" FontSize="13" FontAttributes="Bold" Margin="0,12,0,0" />
             <Label Text="{Binding ReceivedFolder}" FontSize="13" Opacity="0.7" LineBreakMode="MiddleTruncation" />
             <Button Text="{String Settings.ShowReceived}" Command="{Binding ShowReceivedCommand}" HorizontalOptions="Start" />

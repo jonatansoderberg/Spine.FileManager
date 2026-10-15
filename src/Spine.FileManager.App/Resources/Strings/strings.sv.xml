@@ -243,4 +243,10 @@
   <s key="Settings.ItemSize.Medium">Medel</s>
   <s key="Settings.ItemSize.Large">Stor</s>
   <s key="Commands.New">Ny</s>
+  <s key="Places.Cloud">Moln</s>
+  <s key="Places.Hide">Dölj i sidomenyn</s>
+  <s key="Settings.Hidden">Dolda i sidomenyn</s>
+  <s key="Settings.Hidden.Show">Visa</s>
+  <s key="Explorer.Kind.Application">Program</s>
+  <s key="Menu.ShowPackageContents">Visa paketinnehåll</s>
 </strings>
