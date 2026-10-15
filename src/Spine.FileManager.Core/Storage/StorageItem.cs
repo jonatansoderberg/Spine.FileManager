@@ -36,7 +36,7 @@ public sealed record StorageItem(StorageLocation Location, string Name, StorageI
 public enum StorageRootKind
 {
     Home, Desktop, Documents, Downloads, Pictures, Music, Videos,
-    Volume, RemovableVolume, NetworkVolume, Cloud, AppData, Other,
+    Volume, RemovableVolume, NetworkVolume, Cloud, AppData, Other, PhotoLibrary,
 }
 
 /// <summary>A place the sidebar offers: a known folder, a volume, a cloud folder.</summary>

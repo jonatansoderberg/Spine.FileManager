@@ -253,4 +253,5 @@
   <s key="Explorer.Trash.Message">{0} will be moved to the Trash. You can undo this or put it back from the Trash.</s>
   <s key="Explorer.Trash.Confirm">Move to Trash</s>
   <s key="Settings.ConfirmTrash">Ask before moving to the Trash</s>
+  <s key="Photos.Library">Photo Library</s>
 </strings>
