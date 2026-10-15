@@ -4,8 +4,11 @@ using Spine.FileManager.DeviceLink;
 
 namespace Spine.FileManager.Services;
 
-/// <summary>How a linked device can be reached now. Only the local network for now; the link ladder adds more ways.</summary>
-public enum LinkState { Checking, LocalNetwork, Offline }
+/// <summary>
+/// How a linked device can be reached now: on the local network, through a port its router opens, or only from its
+/// side (a phone on mobile data that reaches this device but cannot be reached back).
+/// </summary>
+public enum LinkState { Checking, LocalNetwork, ViaRouter, ReachesUs, Offline }
 
 /// <summary>A device's reachability: how, at which address, and when it last answered.</summary>
 public sealed record LinkStatus(LinkState State, string? Endpoint = null, DateTimeOffset? LastSeen = null);
@@ -38,6 +41,21 @@ public sealed class DeviceService
     public event Action<string>? StatusChanged;
 
     private readonly Dictionary<string, LinkStatus> _status = [];
+    private readonly Dictionary<string, DateTimeOffset> _contacted = [];
+
+    // A device that got in touch within two of its own checks is there.
+    private bool RecentlyContacted(string nodeId)
+    {
+        lock (_contacted)
+            return _contacted.TryGetValue(nodeId, out var at) && DateTimeOffset.Now - at < TimeSpan.FromSeconds(25);
+    }
+
+    /// <summary>The port this machine's router forwards to it, when it does.</summary>
+    public MappedPort? Mapped { get; private set; }
+
+    // A private address answered on the local network; a public one through the other device's router.
+    private static LinkState StateOf(string? endpoint) =>
+        System.Net.IPEndPoint.TryParse(endpoint ?? "", out var address) && !PortMapping.IsPrivate(address.Address) ? LinkState.ViaRouter : LinkState.LocalNetwork;
     private CancellationTokenSource? _watching;
 
     public LinkStatus StatusOf(string nodeId)
@@ -61,8 +79,11 @@ public sealed class DeviceService
     }
 
     /// <summary>A device answered: a transfer to or from it got through.</summary>
-    public void Seen(string nodeId, string? endpoint = null) =>
-        SetStatus(nodeId, new LinkStatus(LinkState.LocalNetwork, endpoint ?? StatusOf(nodeId).Endpoint, DateTimeOffset.Now));
+    public void Seen(string nodeId, string? endpoint = null)
+    {
+        endpoint ??= StatusOf(nodeId).Endpoint;
+        SetStatus(nodeId, new LinkStatus(StateOf(endpoint), endpoint, DateTimeOffset.Now));
+    }
 
     /// <summary>
     /// Checks every linked device now and then every <paramref name="every"/> while the app runs: a connection to its
@@ -74,6 +95,12 @@ public sealed class DeviceService
             return;
         var cancel = _watching = new CancellationTokenSource();
         Trust.Changed += () => _ = CheckAllAsync(cancel.Token);
+        // Wi-Fi on or off, another network: the addresses and the router's port change, so both are looked at now.
+        Connectivity.Current.ConnectivityChanged += (_, _) =>
+        {
+            _remap?.Cancel();
+            _ = CheckAllAsync(cancel.Token);
+        };
         _ = Task.Run(async () =>
         {
             using var timer = new PeriodicTimer(every);
@@ -88,10 +115,14 @@ public sealed class DeviceService
         var node = await GetNodeAsync();
         await Task.WhenAll(Trust.All.Select(async device =>
         {
-            var endpoint = await node.ProbeAsync(device.NodeId, cancel);
-            SetStatus(device.NodeId, endpoint is null
-                ? new LinkStatus(LinkState.Offline, null, StatusOf(device.NodeId).LastSeen)
-                : new LinkStatus(LinkState.LocalNetwork, endpoint, DateTimeOffset.Now));
+            // Each check is a hello over the authenticated channel that swaps current addresses, so the other side
+            // knows this one is there even when it cannot reach back.
+            var endpoint = await node.ExchangeEndpointsAsync(device.NodeId, cancel);
+            SetStatus(device.NodeId, endpoint is not null
+                ? new LinkStatus(StateOf(endpoint), endpoint, DateTimeOffset.Now)
+                : RecentlyContacted(device.NodeId)
+                ? new LinkStatus(LinkState.ReachesUs, null, DateTimeOffset.Now)
+                : new LinkStatus(LinkState.Offline, null, StatusOf(device.NodeId).LastSeen));
         }));
     }
 
@@ -146,9 +177,17 @@ public sealed class DeviceService
                     Received?.Invoke(Trust.Find(from)?.DisplayName ?? from, path);
                 };
                 node.Receiving += (from, name, received, size) => Receiving?.Invoke(from, name, received, size);
+                node.Contacted += from =>
+                {
+                    lock (_contacted)
+                        _contacted[from] = DateTimeOffset.Now;
+                    if (StatusOf(from).State is LinkState.Offline or LinkState.Checking)
+                        SetStatus(from, new LinkStatus(LinkState.ReachesUs, null, DateTimeOffset.Now));
+                };
                 node.Paired += trusted => Paired?.Invoke(trusted);
                 node.Confirm = joined => MainThread.InvokeOnMainThreadAsync(() => AskToLink(joined));
                 _node = node;
+                _ = KeepMappedAsync(node);
             }
             return _node;
         }
@@ -158,13 +197,43 @@ public sealed class DeviceService
         }
     }
 
+    /// <summary>
+    /// Asks the router to forward the node's port and renews it at half its lifetime; without a router that answers
+    /// (a phone on mobile data, a strict network) it asks again every few minutes, as the network may have changed.
+    /// </summary>
+    private async Task KeepMappedAsync(LinkNode node)
+    {
+        while (true)
+        {
+            var mapped = await PortMapping.MapTcpAsync(node.Port, TimeSpan.FromHours(2));
+            Mapped = mapped;
+            node.PublicEndpoint = mapped?.Public;
+            System.Diagnostics.Debug.WriteLine(mapped is null ? "[Link] no router port" : $"[Link] {mapped.Method}: {mapped.Public} for {mapped.Lifetime}");
+            // A network change cuts the wait short (WatchStatus).
+            _remap = new CancellationTokenSource();
+            try
+            {
+                await Task.Delay(mapped is null ? TimeSpan.FromMinutes(5) : mapped.Lifetime / 2, _remap.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(1));
+            }
+        }
+    }
+
+    private CancellationTokenSource? _remap;
+
+    /// <summary>Takes the router's port down when the app quits; the router drops it at the end of its lifetime anyway.</summary>
+    public Task UnmapAsync() => Mapped is { } mapped && _node is { } node ? PortMapping.UnmapTcpAsync(mapped, node.Port) : Task.CompletedTask;
+
     /// <summary>Starts listening at launch when some device is already linked, so it can send files here.</summary>
     public void StartIfLinked()
     {
         if (Trust.All.Count == 0)
             return;
         _ = GetNodeAsync();
-        WatchStatus(TimeSpan.FromSeconds(30));
+        WatchStatus(TimeSpan.FromSeconds(10));
     }
 
     public async Task SendAsync(string nodeId, IReadOnlyList<string> paths, Action<long, long> progress)

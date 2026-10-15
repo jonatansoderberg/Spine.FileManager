@@ -25,6 +25,7 @@ public sealed class LinkNode(NodeIdentity identity, TrustStore trust, string nam
     private const byte Pair = (byte)'P';
     private const byte Transfer = (byte)'T';
     private const byte Introduce = (byte)'I';
+    private const byte Update = (byte)'U';
 
     /// <summary>How long the user has to answer a request to link before it counts as turned down.</summary>
     public static readonly TimeSpan ConfirmTimeout = TimeSpan.FromMinutes(2);
@@ -53,8 +54,55 @@ public sealed class LinkNode(NodeIdentity identity, TrustStore trust, string nam
     /// laptop that changes networks gets new addresses while the app keeps running.
     /// </summary>
     public IReadOnlyList<string> Endpoints => _listener is null ? []
-        : _address is not null && !_address.Equals(IPAddress.Any) ? [$"{_address}:{_port}"]
-        : [.. LocalAddresses().Select(a => $"{a}:{_port}")];
+        : [.. _address is not null && !_address.Equals(IPAddress.Any) ? [$"{_address}:{_port}"] : LocalAddresses().Select(a => $"{a}:{_port}"),
+            .. PublicEndpoint is { } mapped ? [mapped.ToString()] : Array.Empty<string>()];
+
+    /// <summary>The port the router forwards here, when it does: the address a device outside the local network uses.</summary>
+    public IPEndPoint? PublicEndpoint { get; set; }
+
+    /// <summary>The port this node listens on.</summary>
+    public int Port => _port;
+
+    /// <summary>A trusted node reached this one and proved who it is: its node id. It is there, even when this node cannot reach it back.</summary>
+    public event Action<string>? Contacted;
+
+    /// <summary>
+    /// Swaps current endpoints with a trusted node over the authenticated channel, so each keeps the other's latest
+    /// addresses, its router's public one included, without pairing again. The address that answered, or null.
+    /// </summary>
+    public async Task<string?> ExchangeEndpointsAsync(string nodeId, CancellationToken cancel = default)
+    {
+        if (trust.Find(nodeId) is not { } node)
+            return null;
+        try
+        {
+            using var client = await ConnectAsync(node.Endpoints, cancel);
+            var answered = client.Client.RemoteEndPoint?.ToString();
+            var connection = client.GetStream();
+            connection.WriteByte(Update);
+            await using var channel = await SecureChannel.ConnectAsync(connection, identity, nodeId, cancel);
+            await FileTransfer.WriteAsync(channel, new LinkEndpoints(Endpoints), cancel);
+            var theirs = await FileTransfer.ReadAsync<LinkEndpoints>(channel, cancel);
+            trust.SetEndpoints(nodeId, theirs.Endpoints);
+            return answered;
+        }
+        catch (Exception e) when (e is IOException or SocketException or ChannelException or System.Text.Json.JsonException)
+        {
+            return null;
+        }
+    }
+
+    private async Task HostUpdate(NetworkStream stream)
+    {
+        var (channel, peer) = await SecureChannel.AcceptAsync(stream, identity, id => trust.Find(id) is not null);
+        await using (channel)
+        {
+            var theirs = await FileTransfer.ReadAsync<LinkEndpoints>(channel);
+            await FileTransfer.WriteAsync(channel, new LinkEndpoints(Endpoints));
+            trust.SetEndpoints(peer, theirs.Endpoints);
+        }
+        Contacted?.Invoke(peer);
+    }
 
     /// <summary>A device paired through this node's invitation.</summary>
     public event Action<TrustedNode>? Paired;
@@ -192,6 +240,9 @@ public sealed class LinkNode(NodeIdentity identity, TrustStore trust, string nam
                                 break;
                             case Introduce:
                                 await HostIntroduction(stream);
+                                break;
+                            case Update:
+                                await HostUpdate(stream);
                                 break;
                         }
                     }
