@@ -1518,6 +1518,20 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     public bool HasSelection => _selection.Count > 0;
 
+    public IReadOnlyCollection<int> SelectedIndices => [.. _selection.Indices];
+
+    /// <summary>Selects the rows a selection rectangle covers, <paramref name="first"/> to <paramref name="last"/>, beside <paramref name="kept"/>.</summary>
+    public void SelectRows(int first, int last, IReadOnlyCollection<int> kept)
+    {
+        if (AppMenu.Explorer != this)
+            Focus();
+        last = Math.Min(last, Rows.Count - 1);
+        if (first > last)
+            first = last = -1;
+        _selection.Box(first, last, kept);
+        ApplySelection();
+    }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasOperation), nameof(ShowsOperation), nameof(ShowsInterrupted))]
     public partial string? OperationText { get; private set; }

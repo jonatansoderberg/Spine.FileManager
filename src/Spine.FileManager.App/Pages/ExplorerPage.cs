@@ -66,6 +66,11 @@ public partial class ExplorerPage
 #endif
             // Name, Date modified, Size and Kind need about 560 points; a narrower pane shows Name and Size.
             List.SizeChanged += (_, _) => vm.HasColumns = List.Width >= 560;
+            List.Scrolled += (_, e) =>
+            {
+                _listOffset = e.VerticalOffset;
+                UpdateBox();
+            };
             // Focused once the field has folded out.
             vm.FilterRequested += () => Dispatcher.Dispatch(() => FilterField.Focus());
             Keys.Pressed += vm.OnListKey;
@@ -385,7 +390,119 @@ public partial class ExplorerPage
     }
 
     // A click in the list gives it the keyboard (arrows, Return, Space, typing); a click in a text field takes it back.
-    private void OnListPressed(object? sender, PointerEventArgs e) => Keys.Activate();
+    /// <summary>A row of the details list; the selection rectangle finds rows by it.</summary>
+    public const double RowHeight = 28;
+
+    private Point? _pressed;
+    private Point? _namePressed;
+    private double _listOffset;
+    private bool _boxing;
+    private Point _boxStart;
+    private Point _boxPress;
+    private Point _boxTotal;
+    private IReadOnlyCollection<int> _boxKept = [];
+    private IDispatcherTimer? _autoScroll;
+
+    private void OnListPressed(object? sender, PointerEventArgs e)
+    {
+        Keys.Activate();
+        _pressed = e.GetPosition(List);
+    }
+
+    private void OnNamePressed(object? sender, PointerEventArgs e) => _namePressed = e.GetPosition(List);
+
+    // As in Finder and Explorer, a drag from a name or icon moves the files and a drag from anywhere else in the list
+    // draws a selection rectangle. It keeps its start in the list's content, so it stretches as the list scrolls: by
+    // the wheel, or on its own while the pointer is near the top or bottom edge.
+    private void OnListPanned(object? sender, PanUpdatedEventArgs e)
+    {
+        if (BindingContext is not ExplorerPageViewModel vm)
+            return;
+        switch (e.StatusType)
+        {
+            case GestureStatus.Started:
+                if (_pressed is not { } start || _namePressed is { } name && start.Distance(name) < 4)
+                    return;
+                _boxing = true;
+                _boxPress = start;
+                _boxStart = new Point(start.X, start.Y + _listOffset);
+                _boxTotal = Point.Zero;
+                _boxKept = ModifierKeys.Command ? vm.SelectedIndices : [];
+                Marquee.IsVisible = true;
+                _autoScroll ??= CreateAutoScroll();
+                _autoScroll.Start();
+                UpdateBox();
+                break;
+            case GestureStatus.Running when _boxing:
+                _boxTotal = new Point(e.TotalX, e.TotalY);
+                UpdateBox();
+                break;
+            case GestureStatus.Completed or GestureStatus.Canceled:
+                _boxing = false;
+                _namePressed = null;
+                _autoScroll?.Stop();
+                Marquee.IsVisible = false;
+                break;
+        }
+    }
+
+    // The pointer in the list's frame now: where the press was, moved by the drag.
+    private Point BoxPointer => new(_boxPress.X + _boxTotal.X, _boxPress.Y + _boxTotal.Y);
+
+    private void UpdateBox()
+    {
+        if (!_boxing || BindingContext is not ExplorerPageViewModel vm)
+            return;
+        var pointer = BoxPointer;
+        var left = Math.Max(0, Math.Min(_boxStart.X, pointer.X));
+        var right = Math.Min(List.Width, Math.Max(_boxStart.X, pointer.X));
+        var top = Math.Min(_boxStart.Y, pointer.Y + _listOffset);
+        var bottom = Math.Max(_boxStart.Y, pointer.Y + _listOffset);
+        // Drawn in the list's visible part only.
+        var shownTop = Math.Clamp(top - _listOffset, 0, List.Height);
+        var shownBottom = Math.Clamp(bottom - _listOffset, 0, List.Height);
+        Marquee.TranslationX = left;
+        Marquee.TranslationY = shownTop;
+        Marquee.WidthRequest = Math.Max(0, right - left);
+        Marquee.HeightRequest = Math.Max(0, shownBottom - shownTop);
+        vm.SelectRows((int)Math.Floor(Math.Max(0, top) / RowHeight), (int)Math.Floor(bottom / RowHeight), _boxKept);
+    }
+
+    private IDispatcherTimer CreateAutoScroll()
+    {
+        var timer = Dispatcher.CreateTimer();
+        timer.Interval = TimeSpan.FromMilliseconds(16);
+        timer.Tick += (_, _) =>
+        {
+            const double edge = 24;
+            var y = BoxPointer.Y;
+            var step = y < edge ? -(edge - y) : y > List.Height - edge ? y - (List.Height - edge) : 0;
+            if (step != 0)
+                ScrollListBy(Math.Clamp(step / 2, -24, 24));
+        };
+        return timer;
+    }
+
+    private void ScrollListBy(double dy)
+    {
+#if IOS || MACCATALYST
+        if (FindScrollView(List.Handler?.PlatformView as UIKit.UIView) is { } scroll)
+        {
+            var max = Math.Max(0, scroll.ContentSize.Height + scroll.AdjustedContentInset.Bottom - scroll.Bounds.Height);
+            var y = Math.Clamp(scroll.ContentOffset.Y + dy, 0, max);
+            scroll.SetContentOffset(new CoreGraphics.CGPoint(scroll.ContentOffset.X, y), false);
+        }
+#endif
+    }
+
+#if IOS || MACCATALYST
+    private static UIKit.UIScrollView? FindScrollView(UIKit.UIView? view) => view switch
+    {
+        null => null,
+        UIKit.UIScrollView scroll => scroll,
+        _ => view.Subviews.Select(FindScrollView).FirstOrDefault(s => s is not null),
+    };
+#endif
 
     private double _gripStart;
 

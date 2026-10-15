@@ -480,10 +480,12 @@
                           ContextMenu.Items="{Binding BackgroundMenu}">
                 <FileListView.GestureRecognizers>
                     <PointerGestureRecognizer PointerPressed="OnListPressed" />
+                    <!-- A drag that does not start on a name or icon draws a selection rectangle. -->
+                    <PanGestureRecognizer PanUpdated="OnListPanned" />
                 </FileListView.GestureRecognizers>
                 <FileListView.ItemTemplate>
                     <DataTemplate x:DataType="ItemRow">
-                        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" HeightRequest="28" Padding="16,0,8,0" Opacity="{Binding Dimmed}"
+                        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" HeightRequest="{x:Static ExplorerPage.RowHeight}" Padding="16,0,8,0" Opacity="{Binding Dimmed}"
                               ContextMenu.Items="{Binding RowMenu, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" ContextMenu.CommandParameter="{Binding .}">
                             <Grid.Triggers>
                                 <DataTrigger TargetType="Grid" Binding="{Binding IsSelected}" Value="True">
@@ -494,14 +496,23 @@
                                 </DataTrigger>
                             </Grid.Triggers>
                             <Grid.GestureRecognizers>
-                                <DragGestureRecognizer DragStarting="OnRowDragStarting" DropCompleted="OnRowDropCompleted" />
                                 <DropGestureRecognizer DragOver="OnFileDragOver" DragLeave="OnFileDragLeave" Drop="OnFileDrop" />
                                 <TapGestureRecognizer NumberOfTapsRequired="2" Command="{Binding ActivateCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
                                 <TapGestureRecognizer Command="{Binding TapCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
                             </Grid.GestureRecognizers>
-                            <Image Source="{Binding Icon}" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
+                            <!-- Files are dragged by their icon or name, as in Finder and Explorer; the name is only as wide as its text. -->
+                            <Image Source="{Binding Icon}" WidthRequest="18" HeightRequest="18" VerticalOptions="Center">
+                                <Image.GestureRecognizers>
+                                    <DragGestureRecognizer DragStarting="OnRowDragStarting" DropCompleted="OnRowDropCompleted" />
+                                    <PointerGestureRecognizer PointerPressed="OnNamePressed" />
+                                </Image.GestureRecognizers>
+                            </Image>
                             <!-- A search result also says which folder it is in. -->
-                            <Label Grid.Column="1" Style="{StaticResource Cell}">
+                            <Label Grid.Column="1" Style="{StaticResource Cell}" HorizontalOptions="Start">
+                                <Label.GestureRecognizers>
+                                    <DragGestureRecognizer DragStarting="OnRowDragStarting" DropCompleted="OnRowDropCompleted" />
+                                    <PointerGestureRecognizer PointerPressed="OnNamePressed" />
+                                </Label.GestureRecognizers>
                                 <Label.FormattedText>
                                     <FormattedString>
                                         <Span Text="{Binding Name}" />
@@ -519,6 +530,9 @@
                     <Label Text="{String Explorer.Empty}" IsVisible="{Binding IsLoading, Converter={StaticResource Not}}" Opacity="0.5" HorizontalTextAlignment="Center" Padding="24" />
                 </FileListView.EmptyView>
             </FileListView>
+            <Border x:Name="Marquee" Grid.Row="3" IsVisible="False" InputTransparent="True" HorizontalOptions="Start" VerticalOptions="Start" ZIndex="2"
+                    StrokeThickness="1" StrokeShape="Rectangle" Stroke="{AppThemeBinding Light=#2F6FEB, Dark=#5B8DEF}"
+                    BackgroundColor="{AppThemeBinding Light=#332F6FEB, Dark=#335B8DEF}" />
 
             <!-- Icons: a second list rather than a new ItemsLayout, which a shown CollectionView ignores on iOS. -->
             <FileListView x:Name="Icons" Grid.Row="2" Grid.RowSpan="2" ItemsSource="{Binding Rows}" SelectionMode="None" ItemSizingStrategy="MeasureFirstItem" IsVisible="{Binding ShowsIconGrid}" Margin="8,8,8,0"
