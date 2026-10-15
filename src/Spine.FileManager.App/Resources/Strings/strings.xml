@@ -172,6 +172,7 @@
   <s key="Devices.Receiving">Receiving {0} from {1} — {2} %</s>
   <s key="Devices.Status.Checking">Checking…</s>
   <s key="Devices.Status.LocalNetwork">Local network</s>
+  <s key="Devices.Status.ViaRouter">Via router</s>
   <s key="Devices.Status.Offline">Offline</s>
   <s key="Devices.NotAnswering">{0} didn't answer. Is Spine File Manager open on it?</s>
   <s key="Link.Title">Link Device</s>

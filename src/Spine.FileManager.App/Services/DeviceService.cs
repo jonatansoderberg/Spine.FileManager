@@ -4,8 +4,8 @@ using Spine.FileManager.DeviceLink;
 
 namespace Spine.FileManager.Services;
 
-/// <summary>How a linked device can be reached now. Only the local network for now; the link ladder adds more ways.</summary>
-public enum LinkState { Checking, LocalNetwork, Offline }
+/// <summary>How a linked device can be reached now: on the local network, or through a port its router opens.</summary>
+public enum LinkState { Checking, LocalNetwork, ViaRouter, Offline }
 
 /// <summary>A device's reachability: how, at which address, and when it last answered.</summary>
 public sealed record LinkStatus(LinkState State, string? Endpoint = null, DateTimeOffset? LastSeen = null);
@@ -38,6 +38,14 @@ public sealed class DeviceService
     public event Action<string>? StatusChanged;
 
     private readonly Dictionary<string, LinkStatus> _status = [];
+    private readonly Dictionary<string, DateTimeOffset> _swapped = [];
+
+    /// <summary>The port this machine's router forwards to it, when it does.</summary>
+    public MappedPort? Mapped { get; private set; }
+
+    // A private address answered on the local network; a public one through the other device's router.
+    private static LinkState StateOf(string? endpoint) =>
+        System.Net.IPEndPoint.TryParse(endpoint ?? "", out var address) && !PortMapping.IsPrivate(address.Address) ? LinkState.ViaRouter : LinkState.LocalNetwork;
     private CancellationTokenSource? _watching;
 
     public LinkStatus StatusOf(string nodeId)
@@ -61,8 +69,11 @@ public sealed class DeviceService
     }
 
     /// <summary>A device answered: a transfer to or from it got through.</summary>
-    public void Seen(string nodeId, string? endpoint = null) =>
-        SetStatus(nodeId, new LinkStatus(LinkState.LocalNetwork, endpoint ?? StatusOf(nodeId).Endpoint, DateTimeOffset.Now));
+    public void Seen(string nodeId, string? endpoint = null)
+    {
+        endpoint ??= StatusOf(nodeId).Endpoint;
+        SetStatus(nodeId, new LinkStatus(StateOf(endpoint), endpoint, DateTimeOffset.Now));
+    }
 
     /// <summary>
     /// Checks every linked device now and then every <paramref name="every"/> while the app runs: a connection to its
@@ -91,7 +102,13 @@ public sealed class DeviceService
             var endpoint = await node.ProbeAsync(device.NodeId, cancel);
             SetStatus(device.NodeId, endpoint is null
                 ? new LinkStatus(LinkState.Offline, null, StatusOf(device.NodeId).LastSeen)
-                : new LinkStatus(LinkState.LocalNetwork, endpoint, DateTimeOffset.Now));
+                : new LinkStatus(StateOf(endpoint), endpoint, DateTimeOffset.Now));
+            // Met again: swap current addresses, the router's public one included, at most every few minutes.
+            if (endpoint is not null && (!_swapped.TryGetValue(device.NodeId, out var last) || DateTimeOffset.Now - last > TimeSpan.FromMinutes(5)))
+            {
+                _swapped[device.NodeId] = DateTimeOffset.Now;
+                await node.ExchangeEndpointsAsync(device.NodeId, cancel);
+            }
         }));
     }
 
@@ -149,6 +166,7 @@ public sealed class DeviceService
                 node.Paired += trusted => Paired?.Invoke(trusted);
                 node.Confirm = joined => MainThread.InvokeOnMainThreadAsync(() => AskToLink(joined));
                 _node = node;
+                _ = KeepMappedAsync(node);
             }
             return _node;
         }
@@ -157,6 +175,25 @@ public sealed class DeviceService
             _starting.Release();
         }
     }
+
+    /// <summary>
+    /// Asks the router to forward the node's port and renews it at half its lifetime; without a router that answers
+    /// (a phone on mobile data, a strict network) it asks again every few minutes, as the network may have changed.
+    /// </summary>
+    private async Task KeepMappedAsync(LinkNode node)
+    {
+        while (true)
+        {
+            var mapped = await PortMapping.MapTcpAsync(node.Port, TimeSpan.FromHours(2));
+            Mapped = mapped;
+            node.PublicEndpoint = mapped?.Public;
+            System.Diagnostics.Debug.WriteLine(mapped is null ? "[Link] no router port" : $"[Link] {mapped.Method}: {mapped.Public} for {mapped.Lifetime}");
+            await Task.Delay(mapped is null ? TimeSpan.FromMinutes(5) : mapped.Lifetime / 2);
+        }
+    }
+
+    /// <summary>Takes the router's port down when the app quits; the router drops it at the end of its lifetime anyway.</summary>
+    public Task UnmapAsync() => Mapped is { } mapped && _node is { } node ? PortMapping.UnmapTcpAsync(mapped, node.Port) : Task.CompletedTask;
 
     /// <summary>Starts listening at launch when some device is already linked, so it can send files here.</summary>
     public void StartIfLinked()

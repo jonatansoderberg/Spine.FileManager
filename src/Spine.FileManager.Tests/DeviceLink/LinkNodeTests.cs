@@ -143,6 +143,21 @@ public sealed class LinkNodeTests : IDisposable
     }
 
     [Fact]
+    public async Task Linked_devices_swap_their_current_endpoints_with_the_routers_public_one()
+    {
+        var computer = Node("computer");
+        var phone = Node("phone");
+        await Link(computer, phone);
+        computer.PublicEndpoint = IPEndPoint.Parse("203.0.113.7:47821");
+
+        Assert.True(await phone.ExchangeEndpointsAsync(computer.Identity.NodeId));
+
+        Assert.Contains("203.0.113.7:47821", phone.Trust.Find(computer.Identity.NodeId)!.Endpoints);
+        Assert.Equal(phone.Endpoints, computer.Trust.Find(phone.Identity.NodeId)!.Endpoints);
+        Assert.False(await phone.ExchangeEndpointsAsync("not-linked"));
+    }
+
+    [Fact]
     public async Task A_device_trusted_for_one_transfer_is_forgotten_after_it()
     {
         var computer = Node("computer");

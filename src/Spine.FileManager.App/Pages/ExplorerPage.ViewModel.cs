@@ -98,7 +98,7 @@ public sealed partial class DeviceRow(DeviceLink.TrustedNode node, string lifeti
     [NotifyPropertyChangedFor(nameof(IsOnline), nameof(IsOffline))]
     public partial Services.LinkState State { get; set; }
 
-    public bool IsOnline => State == Services.LinkState.LocalNetwork;
+    public bool IsOnline => State is Services.LinkState.LocalNetwork or Services.LinkState.ViaRouter;
 
     public bool IsOffline => State == Services.LinkState.Offline;
 

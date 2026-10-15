@@ -19,6 +19,13 @@ public class AppDelegate : MauiUIApplicationDelegate
 		return base.FinishedLaunching(application, launchOptions);
 	}
 
+	// The router's port for linked devices goes down with the app; a second is enough for the router to answer.
+	public override void WillTerminate(UIApplication application)
+	{
+		IPlatformApplication.Current?.Services.GetService<Services.DeviceService>()?.UnmapAsync().Wait(TimeSpan.FromSeconds(1));
+		base.WillTerminate(application);
+	}
+
 	// The app's own File and View menus (AppMenu) replace the system's; the system's Edit menu stays for text fields,
 	// and its commands that reach the end of the responder chain act on the explorer instead.
 	// MAUI lets an app menu titled exactly "File" or "View" take the system menu's place (English), and adds it beside

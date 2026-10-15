@@ -172,6 +172,7 @@
   <s key="Devices.Receiving">Tar emot {0} från {1} — {2} %</s>
   <s key="Devices.Status.Checking">Söker…</s>
   <s key="Devices.Status.LocalNetwork">Lokalt nätverk</s>
+  <s key="Devices.Status.ViaRouter">Via routern</s>
   <s key="Devices.Status.Offline">Offline</s>
   <s key="Devices.NotAnswering">{0} svarade inte. Är Spine File Manager öppen där?</s>
   <s key="Link.Title">Länka enhet</s>
