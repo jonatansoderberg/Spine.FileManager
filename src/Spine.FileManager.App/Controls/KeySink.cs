@@ -1,10 +1,10 @@
 namespace Spine.FileManager.Controls;
 
-public enum ListKey { Up, Down, Return, Space, Text }
+public enum ListKey { Up, Down, Return, Space, Text, Home, End, PageUp, PageDown, Delete }
 
 /// <summary>
-/// Keys for the file list while it, not a text field, has the keyboard: arrows, Return, Space and typing to jump to a
-/// name. On the Mac menu shortcuts without a modifier would take these keys from text fields too, so they live here
+/// Keys for the file list while it, not a text field, has the keyboard: arrows, Return, Space, Home, End, Page Up and
+/// Down, Delete and typing to jump to a name. On the Mac menu shortcuts without a modifier would take these keys from text fields too, so they live here
 /// (a first responder of its own, see KeySinkHandler). Elsewhere the menu's shortcuts cover them.
 /// </summary>
 public class KeySink : ContentView

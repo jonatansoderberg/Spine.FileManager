@@ -58,6 +58,10 @@
   <s key="Menu.PreviousItem">Previous Item</s>
   <s key="Menu.ExtendDown">Extend Selection Down</s>
   <s key="Menu.ExtendUp">Extend Selection Up</s>
+  <s key="Menu.ScrollTop">Scroll to Top</s>
+  <s key="Menu.ScrollBottom">Scroll to Bottom</s>
+  <s key="Menu.PageUp">Page Up</s>
+  <s key="Menu.PageDown">Page Down</s>
   <s key="FirstRun.Title">Access to your files</s>
   <s key="FirstRun.Intro">macOS protects some folders and asks once before an app may open them.</s>
   <s key="FirstRun.Folders">Choose Continue and allow access to your Desktop, Documents, Downloads and cloud folders when macOS asks. You can change it later in System Settings › Privacy &amp; Security.</s>

@@ -58,6 +58,10 @@
   <s key="Menu.PreviousItem">Föregående objekt</s>
   <s key="Menu.ExtendDown">Utöka markering nedåt</s>
   <s key="Menu.ExtendUp">Utöka markering uppåt</s>
+  <s key="Menu.ScrollTop">Rulla högst upp</s>
+  <s key="Menu.ScrollBottom">Rulla längst ner</s>
+  <s key="Menu.PageUp">En sida upp</s>
+  <s key="Menu.PageDown">En sida ner</s>
   <s key="FirstRun.Title">Åtkomst till dina filer</s>
   <s key="FirstRun.Intro">macOS skyddar vissa mappar och frågar en gång innan en app får öppna dem.</s>
   <s key="FirstRun.Folders">Välj Fortsätt och tillåt åtkomst till Skrivbord, Dokument, Hämtade filer och molnmappar när macOS frågar. Du kan ändra det senare i Systeminställningar › Integritet och säkerhet.</s>

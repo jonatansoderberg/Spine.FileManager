@@ -1,5 +1,6 @@
 using System.Windows.Input;
 using Plugin.Maui.Spine.Common;
+using Spine.FileManager.Controls;
 using Spine.FileManager.Pages;
 
 namespace Spine.FileManager.Services;
@@ -214,7 +215,12 @@ public static class AppMenu
             Item("Menu.NextItem", x => x.StepCommand, KeyboardAcceleratorModifiers.None, mac ? null : "Down", "1"),
             Item("Menu.PreviousItem", x => x.StepCommand, KeyboardAcceleratorModifiers.None, mac ? null : "Up", "-1"),
             Item("Menu.ExtendDown", x => x.StepCommand, KeyboardAcceleratorModifiers.Shift, mac ? null : "Down", "+1"),
-            Item("Menu.ExtendUp", x => x.StepCommand, KeyboardAcceleratorModifiers.Shift, mac ? null : "Up", "+-1")));
+            Item("Menu.ExtendUp", x => x.StepCommand, KeyboardAcceleratorModifiers.Shift, mac ? null : "Up", "+-1"),
+            new MenuFlyoutSeparator(),
+            Item("Menu.ScrollTop", x => x.ScrollListCommand, KeyboardAcceleratorModifiers.None, mac ? null : "Home", ListKey.Home),
+            Item("Menu.ScrollBottom", x => x.ScrollListCommand, KeyboardAcceleratorModifiers.None, mac ? null : "End", ListKey.End),
+            Item("Menu.PageUp", x => x.ScrollListCommand, KeyboardAcceleratorModifiers.None, mac ? null : "PageUp", ListKey.PageUp),
+            Item("Menu.PageDown", x => x.ScrollListCommand, KeyboardAcceleratorModifiers.None, mac ? null : "PageDown", ListKey.PageDown)));
 #if MACCATALYST
         // Asked again a moment later: a rebuild asked while the window was still coming up was sometimes skipped,
         // leaving the bar without the app's menus.
