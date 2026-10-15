@@ -27,7 +27,10 @@ public static class WindowAppearance
                 theme.Changed += (_, _) => FollowAll();
             }
             if (notification.Object is { } window)
+            {
+                Follow(Send(Class.GetHandle("NSApplication"), "sharedApplication"));
                 Follow(window.Handle);
+            }
         });
         // A sheet need not become key (the app in the background): its window is followed when it begins.
         NSNotificationCenter.DefaultCenter.AddObserver(new NSString("NSWindowWillBeginSheetNotification"), _ =>
@@ -36,6 +39,8 @@ public static class WindowAppearance
 
     private static void FollowAll()
     {
+        // The app itself too, for what AppKit draws outside the windows (menus, alerts).
+        Follow(Send(Class.GetHandle("NSApplication"), "sharedApplication"));
         if (ObjCRuntime.Runtime.GetNSObject<NSArray>(Send(Send(Class.GetHandle("NSApplication"), "sharedApplication"), "windows")) is { } windows)
             for (nuint i = 0; i < windows.Count; i++)
                 Follow(windows.ValueAt(i));
