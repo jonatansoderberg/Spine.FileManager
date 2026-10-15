@@ -28,4 +28,4 @@ The plan is [docs/plans/peer-link.md](../docs/plans/peer-link.md); the owner app
 **Verified 2026-10-15:** the phone on 5G showed the Mac as "Via routern", the Mac showed the phone as "Reaches this device", and a file sent from the phone over 5G arrived in the Mac's Downloads.
 
 ## Decisions
-- **Built in the file manager for now.** Where the link lives (a Spine package, as the plan proposes, or here) is still open with the owner; step 1 is moved together with the rest if the answer is Spine.
+- **The link lives in this repository** (owner, 2026-10-15): nothing else is to share it now, and changes reach the phone faster without a Spine release in between. The tracker is a project here too.

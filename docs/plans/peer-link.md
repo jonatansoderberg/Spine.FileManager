@@ -51,7 +51,7 @@ Already on master (#90): a dot and "Local network / Offline", checked every 30 s
 
 ## Where the code lives
 
-A device link is a general building block, not a file-manager feature. The proposal: a Spine package (`Plugin.Maui.Spine.PeerLink`: node identity, the ladder, port mapping, ICE + KCP) and a server part beside `Plugin.Maui.Spine.Server` (the tracker). The file manager keeps pairing, trust, transfers and its UI. The WebRTC findings also feed the AI plan's Q31 (WebRTC for realtime voice).
+In this repository (owner, 2026-10-15: nothing else is to share it now). The client stays in `Spine.FileManager.Core` (`DeviceLink`) and the app's `DeviceService`; the tracker is its own small ASP.NET Core project here. The link code stays separate from the explorer, so it could move later. The WebRTC findings also feed the Spine AI plan's Q31 (WebRTC for realtime voice).
 
 ## Steps
 
@@ -68,6 +68,6 @@ A device link is a general building block, not a file-manager feature. The propo
 ## Open questions for the owner
 
 1. **Azure subscription.** The one signed in on the Mac is the Knowit subscription. Which subscription should the tracker live in?
-2. **Spine or the file manager.** Build the link as a Spine package plus a server part (proposed), or inside the file manager first and move it later?
+2. ~~Spine or the file manager.~~ The file manager (owner, 2026-10-15).
 3. **Order.** Steps 1–3 first (the case the spike proved), then 4 (pieces), then 5 and 6?
 4. **Wake through push.** Worth it in this round? It needs the app's push setup (APNs key, FCM).
