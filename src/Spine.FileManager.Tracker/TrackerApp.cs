@@ -121,7 +121,7 @@ public sealed class Registry
                         await line.SendAsync(Find(id, lookup), cancel);
                         break;
                     case TrackerCall call when Trusts(call.Node, id, out var target) && target.Line is { } other:
-                        await other.SendAsync(new TrackerCalled(id, call.Endpoints), cancel);
+                        await other.SendAsync(new TrackerCalled(id, call.Endpoints, call.Purpose), cancel);
                         break;
                 }
             }

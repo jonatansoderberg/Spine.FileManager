@@ -33,6 +33,13 @@ The plan is [docs/plans/peer-link.md](../docs/plans/peer-link.md); the owner app
 - Three tests against a real tracker on localhost: lookup with trust and a stranger who finds nothing, a call that reaches only a device that trusts the caller, endpoints published later.
 - A flaky test was seen again once, on the first run after a build; five runs with fresh builds passed. Test output is now kept to catch it.
 
+**Step 3 — the return path, and things the phone lacked:**
+- **Return path:** when a device cannot be reached, the sender asks it through the tracker (`TrackerCall` with purpose `send`) to connect back. It connects, writes `R` and its node id, then acts as the receiver (TLS server, the usual request and answer); the sender pins that node id in TLS, so a stranger who connects first only spoils the attempt and gets no files. `LinkNode.WaitForCallbackAsync` / `ConnectBackAsync`, a test where the computer reaches the phone only this way. The tracker in Azure was published again for the purpose field.
+- **Settings:** "Linked devices" shows the tracker's state (connected, or why not, with its address), this device's local addresses and the router's port with its method.
+- **The phone:** a tap opens a folder or file (a long press gives the menu); Settings sit on Home after the places, as there is no sidebar.
+
+**Verified 2026-10-16:** with the phone on 5G, the Mac sent a file to it over the return path; the phone asked first and both sides showed progress. A tap on Received crashed the phone at first: iOS fires the secondary-button tap recognizer on an ordinary tap, after the first tap had already opened the folder; the secondary tap is now ignored on touch screens.
+
 **Verified 2026-10-15:** the phone on 5G showed the Mac as "Via routern", the Mac showed the phone as "Reaches this device", and a file sent from the phone over 5G arrived in the Mac's Downloads.
 
 ## Decisions

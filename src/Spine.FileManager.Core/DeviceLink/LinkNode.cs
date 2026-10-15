@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -41,6 +42,9 @@ public sealed class LinkNode(NodeIdentity identity, TrustStore trust, string nam
     private const byte Transfer = (byte)'T';
     private const byte Introduce = (byte)'I';
     private const byte Update = (byte)'U';
+    private const byte Callback = (byte)'R';
+
+    private readonly ConcurrentDictionary<string, TaskCompletionSource<TcpClient>> _callbacks = new();
 
     /// <summary>How long the user has to answer a request to link before it counts as turned down.</summary>
     public static readonly TimeSpan ConfirmTimeout = TimeSpan.FromMinutes(2);
@@ -197,16 +201,18 @@ public sealed class LinkNode(NodeIdentity identity, TrustStore trust, string nam
     /// Sends files and folders to a trusted node, folders with everything in them; <paramref name="progress"/> gets bytes
     /// sent of the total. A node trusted for one transfer is forgotten after it.
     /// </summary>
-    public async Task SendAsync(string nodeId, IReadOnlyList<string> paths, Action<long, long>? progress = null, CancellationToken cancel = default)
+    public async Task SendAsync(string nodeId, IReadOnlyList<string> paths, Action<long, long>? progress = null, CancellationToken cancel = default, TcpClient? over = null)
     {
         var node = trust.Find(nodeId) ?? throw new IOException("This device is not linked any more.");
         var files = paths.SelectMany(Expand).ToList();
         var total = files.Sum(f => new FileInfo(f.Path).Length);
         long done = 0;
-        using (var client = await ConnectAsync(node.Endpoints, cancel))
+        // Over a connection the other device opened (the return path), or one this node opens.
+        using (var client = over ?? await ConnectAsync(node.Endpoints, cancel))
         {
             var connection = client.GetStream();
-            connection.WriteByte(Transfer);
+            if (over is null)
+                connection.WriteByte(Transfer);
             await using var channel = await SecureChannel.ConnectAsync(connection, identity, nodeId, cancel);
             var names = paths.Select(p => Path.GetFileName(Path.TrimEndingDirectorySeparator(p))).ToList();
             await FileTransfer.WriteAsync(channel, new TransferRequest(names, files.Count, total), cancel);
@@ -252,13 +258,17 @@ public sealed class LinkNode(NodeIdentity identity, TrustStore trust, string nam
             }
             _ = Task.Run(async () =>
             {
-                using (client)
+                var handedOver = false;
+                try
                 {
                     try
                     {
                         var stream = client.GetStream();
                         switch (stream.ReadByte())
                         {
+                            case Callback:
+                                handedOver = await TakeCallback(client, stream);
+                                break;
                             case Pair:
                                 await HostPairing(stream);
                                 break;
@@ -277,6 +287,11 @@ public sealed class LinkNode(NodeIdentity identity, TrustStore trust, string nam
                     {
                         // The other device gets the reason from its own side; this one keeps listening.
                     }
+                }
+                finally
+                {
+                    if (!handedOver)
+                        client.Dispose();
                 }
             });
         }
@@ -372,6 +387,50 @@ public sealed class LinkNode(NodeIdentity identity, TrustStore trust, string nam
         {
             await FileTransfer.WriteAsync(stream, new IntroductionResult(false, e.Message));
         }
+    }
+
+    /// <summary>
+    /// Waits for <paramref name="nodeId"/> to connect back after a call through the tracker (the return path: a device
+    /// this one cannot reach, which can reach this one). The connection it opens, for <see cref="SendAsync"/>.
+    /// </summary>
+    public async Task<TcpClient?> WaitForCallbackAsync(string nodeId, TimeSpan timeout, CancellationToken cancel = default)
+    {
+        var waiting = new TaskCompletionSource<TcpClient>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _callbacks[nodeId] = waiting;
+        try
+        {
+            return await waiting.Task.WaitAsync(timeout, cancel);
+        }
+        catch (TimeoutException)
+        {
+            return null;
+        }
+        finally
+        {
+            _callbacks.TryRemove(new KeyValuePair<string, TaskCompletionSource<TcpClient>>(nodeId, waiting));
+        }
+    }
+
+    // The node says who it is in the clear; the TLS that follows proves it, as the sender pins that node id.
+    private async Task<bool> TakeCallback(TcpClient client, NetworkStream stream)
+    {
+        var nodeId = await FileTransfer.ReadAsync<string>(stream);
+        return _callbacks.TryGetValue(nodeId, out var waiting) && waiting.TrySetResult(client);
+    }
+
+    /// <summary>
+    /// The other half of the return path: <paramref name="nodeId"/> asked through the tracker to be connected to, as
+    /// it has files and cannot reach this node. This node connects to it and receives as if it had been reached.
+    /// </summary>
+    public async Task ConnectBackAsync(string nodeId, IReadOnlyList<string> endpoints, CancellationToken cancel = default)
+    {
+        if (trust.Find(nodeId) is not { } node)
+            return;
+        using var client = await ConnectAsync([.. endpoints, .. node.Endpoints], cancel);
+        var stream = client.GetStream();
+        stream.WriteByte(Callback);
+        await FileTransfer.WriteAsync(stream, identity.NodeId, cancel);
+        await ReceiveFiles(stream);
     }
 
     private async Task ReceiveFiles(NetworkStream stream)

@@ -9,7 +9,7 @@ public sealed record IconStyleChoice(string Style, string Title);
 /// Settings, from the sidebar's foot (as in the concept image) or File › Settings: the appearance (the system's, light
 /// or dark, kept by Spine's theme service), the Mac's window material, the file icons and where received files go.
 /// </summary>
-public partial class SettingsPageViewModel(ISpineStrings strings, IThemeService theme, INavigationService navigation) : ViewModelBase
+public partial class SettingsPageViewModel(ISpineStrings strings, IThemeService theme, INavigationService navigation, DeviceService devices) : ViewModelBase
 {
     private static readonly AppTheme[] Appearances = [AppTheme.Unspecified, AppTheme.Light, AppTheme.Dark];
 
@@ -68,10 +68,52 @@ public partial class SettingsPageViewModel(ISpineStrings strings, IThemeService 
 
     public string ReceivedFolder => DeviceService.Inbox;
 
+    // ---- Linked devices: how this device is reached, and its line to the tracker ----
+
+    [ObservableProperty]
+    public partial string TrackerStatus { get; private set; } = "";
+
+    [ObservableProperty]
+    public partial string LocalAddresses { get; private set; } = "";
+
+    [ObservableProperty]
+    public partial string RouterPort { get; private set; } = "";
+
+    public string TrackerAddress => DeviceService.TrackerUrl;
+
+    private IDispatcherTimer? _linkTimer;
+
+    private void ShowLink()
+    {
+        TrackerStatus = devices.Tracker switch
+        {
+            null when string.IsNullOrEmpty(DeviceService.TrackerUrl) => strings["Settings.Link.Off"],
+            null => strings["Settings.Link.NotStarted"],
+            { IsConnected: true } => strings["Settings.Link.Connected"],
+            { LastError: { } error } => strings.Get("Settings.Link.NotConnected", error),
+            _ => strings["Settings.Link.Connecting"],
+        };
+        var endpoints = devices.Endpoints;
+        LocalAddresses = endpoints.Where(e => System.Net.IPEndPoint.TryParse(e, out var a) && DeviceLink.PortMapping.IsPrivate(a.Address)) is { } local && local.Any()
+            ? string.Join(", ", local) : strings[devices.IsListening ? "Settings.Link.NoLocalNetwork" : "Settings.Link.NotListening"];
+        RouterPort = devices.Mapped is { } mapped ? $"{mapped.Public} ({mapped.Method})" : strings["Settings.Link.NoRouter"];
+    }
+
     public override Task OnAppearingAsync(NavigationDirection navigationDirection)
     {
         Title = strings["Settings.Title"];
         IconStyle = IconStyles.FirstOrDefault(s => s.Style == FileIcons.Style) ?? IconStyles[0];
+        ShowLink();
+        _linkTimer ??= Application.Current!.Dispatcher.CreateTimer();
+        _linkTimer.Interval = TimeSpan.FromSeconds(2);
+        _linkTimer.Tick += (_, _) => ShowLink();
+        _linkTimer.Start();
+        return Task.CompletedTask;
+    }
+
+    public override Task OnDismissedAsync()
+    {
+        _linkTimer?.Stop();
         return Task.CompletedTask;
     }
 

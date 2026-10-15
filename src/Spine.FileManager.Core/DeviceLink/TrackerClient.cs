@@ -129,8 +129,8 @@ public sealed class TrackerClient(Uri url, NodeIdentity identity, Func<TrackerUp
     }
 
     /// <summary>Asks <paramref name="nodeId"/>, through the tracker, to connect to this node at <paramref name="endpoints"/>.</summary>
-    public Task CallAsync(string nodeId, IReadOnlyList<string> endpoints) =>
-        IsConnected ? SendAsync(new TrackerCall(nodeId, endpoints)) : Task.CompletedTask;
+    public Task CallAsync(string nodeId, IReadOnlyList<string> endpoints, string purpose = TrackerProtocol.Hello) =>
+        IsConnected ? SendAsync(new TrackerCall(nodeId, endpoints, purpose)) : Task.CompletedTask;
 
     private async Task SendAsync(TrackerMessage message)
     {
