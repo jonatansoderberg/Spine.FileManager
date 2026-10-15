@@ -88,6 +88,31 @@ public sealed partial class DeviceRow(DeviceLink.TrustedNode node, string lifeti
 
     [ObservableProperty]
     public partial bool IsDropTarget { get; set; }
+
+    /// <summary>How the device can be reached now, for the dot by its glyph and the line under its name.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsOnline), nameof(IsOffline), nameof(StatusLine))]
+    public partial string StatusText { get; set; } = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsOnline), nameof(IsOffline))]
+    public partial Services.LinkState State { get; set; }
+
+    public bool IsOnline => State == Services.LinkState.LocalNetwork;
+
+    public bool IsOffline => State == Services.LinkState.Offline;
+
+    /// <summary>The Home card's second line and the sidebar's tooltip: how it is reached, then how long it is trusted.</summary>
+    public string StatusLine => $"{StatusText} · {Lifetime}";
+
+    /// <summary>A transfer to or from it: how far it has come, 0–1; null when nothing is moving.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsTransferring), nameof(ProgressText))]
+    public partial double? Progress { get; set; }
+
+    public bool IsTransferring => Progress is not null;
+
+    public string ProgressText => Progress is { } done ? $"{done * 100:F0} %" : "";
 }
 
 public sealed partial class FavoriteRow(Favorite favorite) : ObservableObject
@@ -242,7 +267,24 @@ public partial class ExplorerPageViewModel : ViewModelBase
     public ExplorerPageViewModel(ISpineStrings strings, StorageProviders providers, INavigationService navigation, OperationQueue operations, FavoritesStore favorites, DeviceService devices)
     {
         _devices = devices;
-        _devices.Trust.Changed += () => MainThread.BeginInvokeOnMainThread(LoadDevices);
+        _devices.Trust.Changed += () => MainThread.BeginInvokeOnMainThread(() =>
+        {
+            LoadDevices();
+            _devices.WatchStatus(TimeSpan.FromSeconds(30));
+        });
+        _devices.StatusChanged += nodeId => MainThread.BeginInvokeOnMainThread(() =>
+        {
+            if (Devices.FirstOrDefault(d => d.Node.NodeId == nodeId) is { } row)
+                ShowStatus(row);
+        });
+        _devices.Receiving += (nodeId, name, received, size) => MainThread.BeginInvokeOnMainThread(() =>
+        {
+            var row = Devices.FirstOrDefault(d => d.Node.NodeId == nodeId);
+            var done = size > 0 ? (double)received / size : 1;
+            if (row is not null)
+                row.Progress = received < size ? done : null;
+            DeviceActivity = received < size ? _strings.Get("Devices.Receiving", name, row?.Name ?? "", $"{done * 100:F0}") : "";
+        });
         _devices.Received += (from, path) => MainThread.BeginInvokeOnMainThread(() => DeviceActivity = _strings.Get("Devices.Received", Path.GetFileName(path), from));
         _favorites = favorites;
         // Created with the first explorer, so the first finished operation is already recorded.
@@ -324,11 +366,22 @@ public partial class ExplorerPageViewModel : ViewModelBase
     [ObservableProperty]
     public partial MenuItems DeviceMenu { get; private set; } = [];
 
+    private void ShowStatus(DeviceRow row)
+    {
+        var status = _devices.StatusOf(row.Node.NodeId);
+        row.State = status.State;
+        row.StatusText = _strings[$"Devices.Status.{status.State}"];
+    }
+
     private void LoadDevices()
     {
         Devices.Clear();
         foreach (var node in _devices.Trust.All.OrderBy(n => n.DisplayName, StringComparer.CurrentCultureIgnoreCase))
-            Devices.Add(new DeviceRow(node, _strings[$"Devices.Lifetime.{node.Lifetime}"]));
+        {
+            var row = new DeviceRow(node, _strings[$"Devices.Lifetime.{node.Lifetime}"]);
+            ShowStatus(row);
+            Devices.Add(row);
+        }
         DevicesHeight = Devices.Count * SidebarRowHeight;
         OnPropertyChanged(nameof(HasNoDevices));
     }
@@ -362,13 +415,26 @@ public partial class ExplorerPageViewModel : ViewModelBase
         try
         {
             DeviceActivity = _strings.Get("Devices.Sending", name, 0);
-            await _devices.SendAsync(row.Node.NodeId, paths, (sent, total) =>
-                MainThread.BeginInvokeOnMainThread(() => DeviceActivity = _strings.Get("Devices.Sending", name, total > 0 ? sent * 100 / total : 100)));
+            row.Progress = 0;
+            await _devices.SendAsync(row.Node.NodeId, paths, (sent, total) => MainThread.BeginInvokeOnMainThread(() =>
+            {
+                row.Progress = total > 0 ? (double)sent / total : 1;
+                DeviceActivity = _strings.Get("Devices.Sending", name, total > 0 ? sent * 100 / total : 100);
+            }));
             DeviceActivity = _strings.Get("Devices.Sent", name);
+        }
+        catch (DeviceLink.LinkNode.UnreachableException)
+        {
+            // A phone receives only while the app is open there; iOS stops it listening in the background.
+            DeviceActivity = _strings.Get("Devices.NotAnswering", name);
         }
         catch (Exception e) when (e is IOException or System.Net.Sockets.SocketException or Transfer.ChannelException)
         {
             DeviceActivity = _strings.Get("Devices.SendFailed", name, e.Message);
+        }
+        finally
+        {
+            row.Progress = null;
         }
     }
 

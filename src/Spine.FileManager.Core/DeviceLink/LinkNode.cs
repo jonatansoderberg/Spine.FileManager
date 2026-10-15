@@ -62,6 +62,28 @@ public sealed class LinkNode(NodeIdentity identity, TrustStore trust, string nam
     /// <summary>A file arrived from a trusted node: its node id and where the file now is.</summary>
     public event Action<string, string>? Received;
 
+    /// <summary>A file is arriving from a trusted node: its node id, the file's name, bytes so far and its size.</summary>
+    public event Action<string, string, long, long>? Receiving;
+
+    /// <summary>
+    /// Whether a trusted node answers at one of its addresses now: the address that answered, or null. Only a connection
+    /// is opened and closed; the node takes it for nothing.
+    /// </summary>
+    public async Task<string?> ProbeAsync(string nodeId, CancellationToken cancel = default)
+    {
+        if (trust.Find(nodeId) is not { Endpoints.Count: > 0 } node)
+            return null;
+        try
+        {
+            using var client = await ConnectAsync(node.Endpoints, cancel);
+            return client.Client.RemoteEndPoint?.ToString();
+        }
+        catch (Exception e) when (e is IOException or SocketException)
+        {
+            return null;
+        }
+    }
+
     /// <summary>Listens on <paramref name="port"/> (0: any free one), on every address or only on <paramref name="address"/>.</summary>
     public void Start(int port = 0, IPAddress? address = null)
     {
@@ -266,7 +288,9 @@ public sealed class LinkNode(NodeIdentity identity, TrustStore trust, string nam
         {
             // Each top-level name gets a free name in the inbox once; its folder's files follow it there.
             var tops = new Dictionary<string, string>();
-            while (await FileTransfer.ReceiveAsync(channel, offer => Target(offer.Name, tops)) is { } path)
+            FileOffer? current = null;
+            while (await FileTransfer.ReceiveAsync(channel, offer => Target((current = offer).Name, tops),
+                received => Receiving?.Invoke(peer, Path.GetFileName(current!.Name), received, current.Size)) is { } path)
                 Received?.Invoke(peer, path);
         }
         if (trust.Find(peer) is { Lifetime: TrustLifetime.QuickTransfer })
@@ -286,31 +310,53 @@ public sealed class LinkNode(NodeIdentity identity, TrustStore trust, string nam
         return Path.Combine([inbox, top, .. parts[1..]]);
     }
 
+    /// <summary>Thrown when a device answers at none of its addresses: it is off, asleep, or the app is not open there.</summary>
+    public sealed class UnreachableException(string message) : IOException(message);
+
+    // Every address at once, the first to answer wins: a phone's addresses include some that never answer (another
+    // network's), and trying them one by one cost seconds each before the one that does.
     private static async Task<TcpClient> ConnectAsync(IReadOnlyList<string> endpoints, CancellationToken cancel)
     {
-        foreach (var endpoint in endpoints)
+        var addresses = endpoints.Select(e => IPEndPoint.TryParse(e, out var a) ? a : null).OfType<IPEndPoint>().Distinct().ToList();
+        using var race = CancellationTokenSource.CreateLinkedTokenSource(cancel);
+        race.CancelAfter(TimeSpan.FromSeconds(3));
+        var attempts = addresses.Select(async address =>
         {
-            if (!IPEndPoint.TryParse(endpoint, out var address))
-                continue;
             var client = new TcpClient { NoDelay = true };
             try
             {
-                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancel);
-                timeout.CancelAfter(TimeSpan.FromSeconds(3));
-                await client.ConnectAsync(address, timeout.Token);
+                await client.ConnectAsync(address, race.Token);
                 return client;
             }
-            catch (Exception e) when (e is SocketException or OperationCanceledException && !cancel.IsCancellationRequested)
+            catch (Exception e) when (e is SocketException or OperationCanceledException)
             {
                 client.Dispose();
+                return null;
+            }
+        }).ToList();
+        TcpClient? winner = null;
+        while (attempts.Count > 0)
+        {
+            var done = await Task.WhenAny(attempts);
+            attempts.Remove(done);
+            if (await done is { } client)
+            {
+                winner = client;
+                break;
             }
         }
-        throw new IOException("The other device could not be reached at any of its addresses.");
+        race.Cancel();
+        // The ones still connecting give up now; any that connected meanwhile are closed.
+        foreach (var late in attempts)
+            _ = late.ContinueWith(t => t.Result?.Dispose(), TaskScheduler.Default);
+        cancel.ThrowIfCancellationRequested();
+        return winner ?? throw new UnreachableException("The other device could not be reached at any of its addresses.");
     }
 
-    // The machine's own network: virtual bridges (the iOS Simulator's, virtual machines'), VPN tunnels and AirDrop's
-    // link are left out, so the invitation's QR code stays small.
-    private static readonly string[] Virtual = ["bridge", "vmnet", "utun", "awdl", "llw", "anpi", "ap", "vEthernet", "docker"];
+    // The machine's own network: virtual bridges (the iOS Simulator's, virtual machines'), VPN tunnels, AirDrop's link
+    // and a phone's mobile data (pdp_ip, and 192.0.0.x, the address iOS gives IPv4 over an IPv6-only operator) are left
+    // out: nobody on the local network reaches them, and the invitation's QR code stays small.
+    private static readonly string[] Virtual = ["bridge", "vmnet", "utun", "awdl", "llw", "anpi", "ap", "vEthernet", "docker", "pdp_ip", "ipsec"];
 
     private static IEnumerable<IPAddress> LocalAddresses() =>
         NetworkInterface.GetAllNetworkInterfaces()
@@ -318,7 +364,8 @@ public sealed class LinkNode(NodeIdentity identity, TrustStore trust, string nam
                 && !Virtual.Any(prefix => n.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
             .SelectMany(n => n.GetIPProperties().UnicastAddresses)
             .Select(a => a.Address)
-            .Where(a => a.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(a));
+            .Where(a => a.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(a) && a.GetAddressBytes() is not [192, 0, 0, _])
+            .Distinct();
 
     public void Dispose() => _listener?.Stop();
 }
