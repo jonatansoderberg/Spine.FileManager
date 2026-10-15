@@ -58,7 +58,7 @@ In this repository (owner, 2026-10-15: nothing else is to share it now). The cli
 | Step | What | Depends on |
 |---|---|---|
 | 1 | Router port mapping (NAT-PMP, PCP, UPnP) for the node's TCP port; the badge "Via router" — **done** (#93): the phone on 5G sent a file to the Mac at home | — |
-| 2 | Tracker: register with a signed challenge, look up, last seen; free tier in Azure | — |
+| 2 | Tracker: register with a signed challenge, look up, last seen; free tier in Azure — **built and tested locally** (#95); runs in Azure once the subscription is chosen | — |
 | 3 | The ladder in `LinkNode`: local, router, the tracker's addresses; the badge per rung | 1, 2 |
 | 4 | Pieces with checksums and resume; pause, resume, cancel in the operations panel | — |
 | 5 | Rung 3: ICE + KCP through the tracker's signalling, TLS inside | 2, 3 |

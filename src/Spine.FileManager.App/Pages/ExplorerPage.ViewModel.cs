@@ -387,7 +387,9 @@ public partial class ExplorerPageViewModel : ViewModelBase
     {
         var status = _devices.StatusOf(row.Node.NodeId);
         row.State = status.State;
-        row.StatusText = _strings[$"Devices.Status.{status.State}"];
+        row.StatusText = status is { State: Services.LinkState.Offline, LastSeen: { } seen }
+            ? _strings.Get("Devices.Status.OfflineSeen", Lower(When(seen)))
+            : _strings[$"Devices.Status.{status.State}"];
     }
 
     private void LoadDevices()
@@ -2241,6 +2243,9 @@ public partial class ExplorerPageViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasNoDevices));
         await RefreshTrash();
     }
+
+    // "Just now" in the middle of a sentence: "seen just now", "sågs för 3 minuter sedan".
+    private static string Lower(string text) => text.Length > 0 ? char.ToLower(text[0], System.Globalization.CultureInfo.CurrentCulture) + text[1..] : text;
 
     private string When(DateTimeOffset at)
     {

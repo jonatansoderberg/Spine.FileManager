@@ -1,7 +1,7 @@
 # Issue #91 — Peer link: reach linked devices beyond the local network
 
 **GitHub:** https://github.com/jonatansoderberg/Spine.FileManager/issues/91
-**Branch:** issue/91-router-port (step 1)
+**Branch:** issue/91-router-port (step 1), issue/91-ask-before-receiving, issue/91-tracker (step 2)
 **Status:** In Progress
 
 ## Plan
@@ -24,6 +24,14 @@ The plan is [docs/plans/peer-link.md](../docs/plans/peer-link.md); the owner app
 - **Within ten seconds (owner):** devices are checked every 10 seconds and at once when the network changes (Wi-Fi on or off), endpoints are swapped the moment two devices meet and then every two minutes, and a network change maps the router's port again.
 
 - **Ask before receiving (owner):** a transfer opens with a `TransferRequest` (top-level names, files, bytes) and waits for a `TransferAnswer`. Each linked device has "Ask Before Receiving" in its menu, on by default (`TrustedNode.AskBeforeReceiving`); with it on the receiver asks "“iPhone” wants to send 3 items" with Accept and Decline, and no answer within two minutes is a no. The sender says "iPhone declined the files" or "iPhone didn't answer". The whole suite failed once on the first run after this change and passed eleven runs after it; the failing test was not caught.
+
+**Step 2 — the tracker:**
+- `Spine.FileManager.Tracker`: an ASP.NET Core WebSocket endpoint at `/link`. A device signs in by signing the tracker's nonce with its node key (the node id is the key's fingerprint), then reports its endpoints and the hashed ids of the nodes it trusts. It can look a node up (answered only when that node trusts it; to anyone else every node looks unknown) and call a node (passed on only when that node trusts the caller). Kept in memory: node id, endpoints, last seen, hashed trust list.
+- `TrackerClient` in Core: signs in, keeps the line open and opens it again after a cut (1 s doubling to 30 s), publishes, looks up, calls.
+- `DeviceService`: publishes on start, on a changed router port, a changed trust list and a network change. When a device does not answer at its stored endpoints it asks the tracker: new endpoints are stored and tried at once; a device connected to the tracker but unreachable from here is called, and reaches out to this one ("Reaches this device"). An offline device shows when the tracker last saw it: "Offline · seen 5 minutes ago".
+- The tracker is off until `DefaultTracker` holds its URL (Preferences' `link.tracker` overrides it); it goes in once the tracker runs in Azure.
+- Three tests against a real tracker on localhost: lookup with trust and a stranger who finds nothing, a call that reaches only a device that trusts the caller, endpoints published later.
+- A flaky test was seen again once, on the first run after a build; five runs with fresh builds passed. Test output is now kept to catch it.
 
 **Verified 2026-10-15:** the phone on 5G showed the Mac as "Via routern", the Mac showed the phone as "Reaches this device", and a file sent from the phone over 5G arrived in the Mac's Downloads.
 

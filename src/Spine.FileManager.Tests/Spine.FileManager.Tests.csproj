@@ -18,6 +18,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\Spine.FileManager.Core\Spine.FileManager.Core.csproj" />
+		<ProjectReference Include="..\Spine.FileManager.Tracker\Spine.FileManager.Tracker.csproj" />
 	</ItemGroup>
 
 </Project>
