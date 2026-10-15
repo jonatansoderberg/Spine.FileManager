@@ -1855,6 +1855,14 @@ public partial class ExplorerPageViewModel : ViewModelBase
         var index = IndexOf(row);
         if (index < 0)
             return;
+        // On a touch screen a tap opens, as in the Files app; a long press gives the menu.
+        if (DeviceInfo.Idiom is { } idiom && (idiom == DeviceIdiom.Phone || idiom == DeviceIdiom.Tablet))
+        {
+            _selection.Click(index);
+            ApplySelection();
+            _ = Activate(row);
+            return;
+        }
         _selection.Click(index, toggle: ModifierKeys.Command, extend: ModifierKeys.Shift);
         ApplySelection();
     }

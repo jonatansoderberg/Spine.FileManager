@@ -865,8 +865,19 @@
                     </FlexLayout>
 
                     <!-- Without a sidebar (a phone) This Device's places are here: Documents holds what other devices send. -->
-                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Places}" BindableLayout.ItemTemplate="{StaticResource PlaceTemplate}"
-                                         IsVisible="{Binding ShowsSidebar, Converter={StaticResource Not}}" Margin="-8,0,0,12" />
+                    <VerticalStackLayout IsVisible="{Binding ShowsSidebar, Converter={StaticResource Not}}" Margin="-8,0,0,12">
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding Places}" BindableLayout.ItemTemplate="{StaticResource PlaceTemplate}" />
+                        <!-- Settings live at the foot of the sidebar; without one they come after the places. -->
+                        <Border Padding="8,0" Margin="8,1" HeightRequest="{DynamicResource SidebarItemHeight}" StrokeThickness="0" BackgroundColor="Transparent">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding ShowSettingsCommand}" />
+                            </Border.GestureRecognizers>
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="Settings.svg" />
+                                <Label Grid.Column="1" Text="{String Settings.Title}" FontSize="{DynamicResource SidebarFontSize}" VerticalTextAlignment="Center" />
+                            </Grid>
+                        </Border>
+                    </VerticalStackLayout>
 
                     <Border Style="{StaticResource HomeCard}" WidthRequest="270" HorizontalOptions="Start">
                         <Border.GestureRecognizers>

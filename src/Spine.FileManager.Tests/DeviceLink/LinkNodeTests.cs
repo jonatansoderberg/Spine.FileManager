@@ -187,6 +187,26 @@ public sealed class LinkNodeTests : IDisposable
     }
 
     [Fact]
+    public async Task A_device_that_cannot_be_reached_receives_over_the_connection_it_opens_back()
+    {
+        var computer = Node("computer");
+        var phone = Node("phone");
+        await Link(computer, phone);
+        // The phone is on mobile data: nothing reaches it at the addresses the computer has.
+        computer.Trust.SetEndpoints(phone.Identity.NodeId, ["203.0.113.9:47821"]);
+        var file = _temp.File("send/movie.mov", "frames");
+        await Assert.ThrowsAsync<LinkNode.UnreachableException>(() => computer.SendAsync(phone.Identity.NodeId, [file]));
+
+        var callback = computer.WaitForCallbackAsync(phone.Identity.NodeId, TimeSpan.FromSeconds(5));
+        var receiving = phone.ConnectBackAsync(computer.Identity.NodeId, computer.Endpoints);
+        await computer.SendAsync(phone.Identity.NodeId, [file], over: await callback);
+        await receiving.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal("frames", File.ReadAllText(Path.Combine(_temp.Path, "phone", "inbox", "movie.mov")));
+        Assert.Null(await computer.WaitForCallbackAsync(phone.Identity.NodeId, TimeSpan.FromMilliseconds(200)));
+    }
+
+    [Fact]
     public async Task A_device_trusted_for_one_transfer_is_forgotten_after_it()
     {
         var computer = Node("computer");

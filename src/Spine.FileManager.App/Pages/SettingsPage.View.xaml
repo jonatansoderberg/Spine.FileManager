@@ -52,6 +52,17 @@
                 </BindableLayout.ItemTemplate>
             </VerticalStackLayout>
 
+            <Label Text="{String Settings.Link}" FontSize="13" FontAttributes="Bold" Margin="0,12,0,0" />
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="4">
+                <Label Text="{String Settings.Link.Tracker}" FontSize="13" Opacity="0.6" />
+                <Label Grid.Column="1" Text="{Binding TrackerStatus}" FontSize="13" LineBreakMode="WordWrap" />
+                <Label Grid.Row="1" Grid.Column="1" Text="{Binding TrackerAddress}" FontSize="12" Opacity="0.6" LineBreakMode="MiddleTruncation" />
+                <Label Grid.Row="2" Text="{String Settings.Link.Local}" FontSize="13" Opacity="0.6" />
+                <Label Grid.Row="2" Grid.Column="1" Text="{Binding LocalAddresses}" FontSize="13" LineBreakMode="WordWrap" />
+                <Label Grid.Row="3" Text="{String Settings.Link.Router}" FontSize="13" Opacity="0.6" />
+                <Label Grid.Row="3" Grid.Column="1" Text="{Binding RouterPort}" FontSize="13" LineBreakMode="WordWrap" />
+            </Grid>
+
             <Label Text="{String Settings.Received}" FontSize="13" FontAttributes="Bold" Margin="0,12,0,0" />
             <Label Text="{Binding ReceivedFolder}" FontSize="13" Opacity="0.7" LineBreakMode="MiddleTruncation" />
             <Button Text="{String Settings.ShowReceived}" Command="{Binding ShowReceivedCommand}" HorizontalOptions="Start" />

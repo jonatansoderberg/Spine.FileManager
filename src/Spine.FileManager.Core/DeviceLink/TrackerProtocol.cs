@@ -43,14 +43,21 @@ public sealed record TrackerLookup(int Id, string Node) : TrackerMessage;
 /// </summary>
 public sealed record TrackerFound(int Id, string Node, IReadOnlyList<string> Endpoints, bool Online, DateTimeOffset? LastSeen) : TrackerMessage;
 
-/// <summary>Device → tracker: ask <paramref name="Node"/> to connect to me at <paramref name="Endpoints"/>, for a device that cannot reach it.</summary>
-public sealed record TrackerCall(string Node, IReadOnlyList<string> Endpoints) : TrackerMessage;
+/// <summary>
+/// Device → tracker: ask <paramref name="Node"/> to connect to me at <paramref name="Endpoints"/>, for a device that
+/// cannot reach it. <paramref name="Purpose"/>: <see cref="TrackerProtocol.Hello"/> to swap addresses, or
+/// <see cref="TrackerProtocol.Send"/> when the caller has files for it (the return path).
+/// </summary>
+public sealed record TrackerCall(string Node, IReadOnlyList<string> Endpoints, string Purpose = TrackerProtocol.Hello) : TrackerMessage;
 
-/// <summary>Tracker → device: <paramref name="From"/> asks to be connected to at <paramref name="Endpoints"/>.</summary>
-public sealed record TrackerCalled(string From, IReadOnlyList<string> Endpoints) : TrackerMessage;
+/// <summary>Tracker → device: <paramref name="From"/> asks to be connected to at <paramref name="Endpoints"/>, for <paramref name="Purpose"/>.</summary>
+public sealed record TrackerCalled(string From, IReadOnlyList<string> Endpoints, string Purpose = TrackerProtocol.Hello) : TrackerMessage;
 
 public static class TrackerProtocol
 {
+    public const string Hello = "hello";
+    public const string Send = "send";
+
     /// <summary>What a device signs: a fixed prefix and the tracker's nonce, so the signature is good for nothing else.</summary>
     public static byte[] Signed(byte[] nonce) => [.. Encoding.ASCII.GetBytes("spinefm-tracker:"), .. nonce];
 

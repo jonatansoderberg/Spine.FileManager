@@ -32,6 +32,12 @@ public sealed class DeviceService
 
     private TrackerClient? _tracker;
 
+    /// <summary>The tracker's line, for Settings: null when no tracker is set or the node has not started.</summary>
+    public TrackerClient? Tracker => _tracker;
+
+    /// <summary>Where this device listens now, the router's port included; empty before the node starts.</summary>
+    public IReadOnlyList<string> Endpoints => _node?.Endpoints ?? [];
+
     private const string KeyName = "node-key";
     private readonly SemaphoreSlim _starting = new(1, 1);
     private LinkNode? _node;
@@ -206,7 +212,10 @@ public sealed class DeviceService
             if (Trust.Find(called.From) is not { } caller)
                 return;
             Trust.SetEndpoints(called.From, [.. called.Endpoints.Concat(caller.Endpoints).Distinct()]);
-            _ = node.ExchangeEndpointsAsync(called.From);
+            // A device with files for this one, which cannot reach it: this one connects and receives.
+            _ = called.Purpose == TrackerProtocol.Send
+                ? ConnectBackAsync(node, called)
+                : node.ExchangeEndpointsAsync(called.From);
         };
         Trust.Changed += () => _ = tracker.PublishAsync();
         tracker.Start();
@@ -300,11 +309,38 @@ public sealed class DeviceService
         WatchStatus(TimeSpan.FromSeconds(10));
     }
 
-    public async Task SendAsync(string nodeId, IReadOnlyList<string> paths, Action<long, long> progress)
+    private async Task ConnectBackAsync(LinkNode node, TrackerCalled called)
     {
         try
         {
-            await (await GetNodeAsync()).SendAsync(nodeId, paths, progress);
+            await node.ConnectBackAsync(called.From, called.Endpoints);
+            Seen(called.From);
+        }
+        catch (Exception e) when (e is IOException or SocketException or Transfer.ChannelException or System.Text.Json.JsonException)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Link] connecting back to {called.From} failed: {e.Message}");
+        }
+    }
+
+    public async Task SendAsync(string nodeId, IReadOnlyList<string> paths, Action<long, long> progress)
+    {
+        var node = await GetNodeAsync();
+        try
+        {
+            try
+            {
+                await node.SendAsync(nodeId, paths, progress);
+            }
+            catch (LinkNode.UnreachableException) when (_tracker is { IsConnected: true } tracker)
+            {
+                // The return path: the device cannot be reached from here, so it is asked through the tracker to
+                // connect here, and the files go over its connection.
+                var callback = node.WaitForCallbackAsync(nodeId, TimeSpan.FromSeconds(15));
+                await tracker.CallAsync(nodeId, node.Endpoints, TrackerProtocol.Send);
+                if (await callback is not { } over)
+                    throw;
+                await node.SendAsync(nodeId, paths, progress, over: over);
+            }
             Seen(nodeId);
         }
         catch (Exception e) when (e is IOException or SocketException)
