@@ -37,6 +37,8 @@ Decided with Jonatan:
   - Share, Copy Path, Send to Device (the linked devices), and More (Show in Finder, Add to Favorites, Rename, Delete)
   - × to close
 
+- **Sizes in the list:** each photo's size is read from its original resource (`fileSize`) while listing and kept in the saved listing with its name, so it is looked up once per photo (6450 photos: 14 s once in Debug, then 0.7 s).
+
 ## Decisions
 - No Show Photos item in the context menu: the menu is the same for every row, so it would show (dimmed) on every file. The sidebar row is one click away.
 - The asset's `filename` property is the library's own UUID name for its copy. `originalFilename` is the name it came with, and Photos exports under it.
