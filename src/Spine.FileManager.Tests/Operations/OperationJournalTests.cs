@@ -100,7 +100,8 @@ public sealed class OperationJournalTests : IDisposable
         {
             if (op.State == OperationState.Completed && op != blocker)
                 lock (finished)
-                    finished.Add(Path.GetFileName(op.Sources[0].ItemId));
+                    if (!finished.Contains(Path.GetFileName(op.Sources[0].ItemId)))
+                        finished.Add(Path.GetFileName(op.Sources[0].ItemId));
         };
         var b = queue.Enqueue(OperationKind.Copy, [L(_temp.File("src/b.txt"))], target);
         var c = queue.Enqueue(OperationKind.Copy, [L(_temp.File("src/c.txt"))], target);
@@ -108,8 +109,11 @@ public sealed class OperationJournalTests : IDisposable
         queue.Continue(blocker);
         await queue.WaitAsync(b).WaitAsync(TimeSpan.FromSeconds(30));
         await queue.WaitAsync(c).WaitAsync(TimeSpan.FromSeconds(30));
+        // An operation counts as finished before the queue reports it, from its own thread: wait for both reports.
+        await Until(() => { lock (finished) return finished.Count == 2; });
 
-        Assert.Equal(["c.txt", "b.txt"], finished);
+        lock (finished)
+            Assert.Equal(["c.txt", "b.txt"], finished);
     }
 
     [Fact]

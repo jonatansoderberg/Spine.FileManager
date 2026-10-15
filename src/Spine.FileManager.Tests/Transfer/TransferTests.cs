@@ -37,8 +37,9 @@ public sealed class TransferTests : IDisposable
 
     private string Inbox => Directory.CreateDirectory(Path.Combine(_temp.Path, "inbox")).FullName;
 
-    private async Task<FileOffer> Offer(string path, string id = "t1") =>
-        new(id, Path.GetFileName(path), new FileInfo(path).Length, await FileTransfer.HashAsync(path));
+    private static Task<FileOffer> Offer(string path, string id = "t1") => FileTransfer.OfferAsync(path, id, Path.GetFileName(path));
+
+    private string Staged(string id) => Path.Combine(Inbox, FileTransfer.StagingFolder, $"{id}.part");
 
     [Fact]
     public async Task Both_ends_authenticate_by_their_node_keys()
@@ -87,7 +88,7 @@ public sealed class TransferTests : IDisposable
         var received = await receiver;
         Assert.Equal(Path.Combine(Inbox, "video.mp4"), received);
         Assert.Equal(await FileTransfer.HashAsync(path), await FileTransfer.HashAsync(received!));
-        Assert.Empty(Directory.GetFiles(Inbox, "*.spine-part", new EnumerationOptions { AttributesToSkip = 0 }));
+        Assert.Empty(Directory.GetFiles(Path.Combine(Inbox, FileTransfer.StagingFolder)));
     }
 
     [Fact]
@@ -110,9 +111,7 @@ public sealed class TransferTests : IDisposable
                 channel.Dispose();
         }));
         await first;
-        var part = Assert.Single(Directory.GetFiles(Inbox, "*.spine-part", new EnumerationOptions { AttributesToSkip = 0 }));
-        var kept = new FileInfo(part).Length;
-        Assert.InRange(kept, 1, offer.Size - 1);
+        Assert.True(File.Exists(Staged(offer.Id)));
 
         // Second attempt with the same offer: only the rest goes over.
         var second = Task.Run(async () =>
@@ -126,8 +125,34 @@ public sealed class TransferTests : IDisposable
             resent = await FileTransfer.SendAsync(again, path, offer);
 
         var received = await second;
-        Assert.Equal(offer.Size - kept, resent);
+        // Only the pieces that had not arrived whole went over again.
+        Assert.InRange(resent, offer.PieceSize, offer.Size - 4 * offer.PieceSize);
         Assert.Equal(offer.Sha256, await FileTransfer.HashAsync(received!));
+    }
+
+    [Fact]
+    public async Task A_damaged_piece_is_fetched_again_and_not_the_whole_file()
+    {
+        var path = Source("photo.raw", 6 * 1024 * 1024);
+        var offer = await Offer(path, "damaged");
+        // What an earlier attempt left: every piece, with one byte wrong in the third.
+        Directory.CreateDirectory(Path.GetDirectoryName(Staged(offer.Id))!);
+        var bytes = await File.ReadAllBytesAsync(path);
+        bytes[2 * offer.PieceSize + 100] ^= 0xFF;
+        await File.WriteAllBytesAsync(Staged(offer.Id), bytes);
+
+        var receiver = Task.Run(async () =>
+        {
+            var (stream, _) = await SecureChannel.AcceptAsync(await _listener.AcceptTcpClientAsync(), _mac, _ => true);
+            await using (stream)
+                return await FileTransfer.ReceiveAsync(stream, Inbox);
+        });
+        long resent;
+        await using (var channel = await SecureChannel.ConnectAsync(Endpoint, _phone, _mac.NodeId))
+            resent = await FileTransfer.SendAsync(channel, path, offer);
+
+        Assert.Equal(offer.PieceSize, resent);
+        Assert.Equal(offer.Sha256, await FileTransfer.HashAsync((await receiver)!));
     }
 
     [Fact]

@@ -28,7 +28,12 @@ public sealed partial class OperationRow(FileOperation operation) : ObservableOb
         var progress = operation.Progress;
         var count = operation.Sources.Count == 1 ? $"“{Path.GetFileName(operation.Sources[0].DisplayPath)}”" : strings.Get("Explorer.Items", operation.Sources.Count);
         var target = Path.GetFileName(operation.Target.DisplayPath.TrimEnd(Path.DirectorySeparatorChar));
-        Title = string.Format(strings[operation.Kind == OperationKind.Move ? "Operations.MoveTitle" : "Operations.CopyTitle"], count, target);
+        Title = string.Format(strings[operation.Kind switch
+        {
+            OperationKind.Move => "Operations.MoveTitle",
+            OperationKind.Send => "Operations.SendTitle",
+            _ => "Operations.CopyTitle",
+        }], count, operation.Kind == OperationKind.Send ? operation.Target.DisplayPath : target);
         var amount = progress.BytesTotal > 0 ? $"{ByteSize.Format(progress.BytesDone)} / {ByteSize.Format(progress.BytesTotal)}" : "";
         var speed = operation.State == OperationState.Running && progress.BytesPerSecond > 1_000_000 ? $" · {ByteSize.Format((long)progress.BytesPerSecond)}/s" : "";
         var errors = operation.Errors.Count > 0 ? $" · {strings.Get("Operations.ErrorCount", operation.Errors.Count)}" : "";

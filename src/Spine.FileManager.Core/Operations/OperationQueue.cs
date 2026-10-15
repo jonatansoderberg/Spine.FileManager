@@ -37,6 +37,13 @@ public sealed class OperationQueue
     /// <summary>Asked for every taken name, unless an earlier answer was "for all". Without it a conflict keeps both.</summary>
     public Func<FileOperation, Conflict, Task<ConflictAnswer>>? ResolveConflict { get; set; }
 
+    /// <summary>
+    /// Runs a <see cref="OperationKind.Send"/>: the operation, a progress callback (bytes done, bytes in all), a
+    /// checkpoint to await between pieces (a paused operation waits there) and the cancellation. Set by the app, which
+    /// knows the linked devices; a send without it fails.
+    /// </summary>
+    public Func<FileOperation, Action<long, long>, Func<CancellationToken, Task>, CancellationToken, Task>? Sender { get; set; }
+
     /// <summary>Raised on a background thread for state changes and, throttled, for progress.</summary>
     public event Action<FileOperation>? Changed;
 
@@ -155,10 +162,18 @@ public sealed class OperationQueue
     private async Task Execute(FileOperation operation)
     {
         operation.Attempts++;
-        var execution = new Execution(this, operation);
         try
         {
-            await execution.Run();
+            if (operation.Kind == OperationKind.Send)
+                await SendAsync(operation);
+            else
+                await new Execution(this, operation).Run();
+        }
+        catch (DeviceLink.TransferDeclinedException e)
+        {
+            // The receiver said no: kept as cancelled with its reason, and not tried again by itself.
+            operation.Errors.Add(new(operation.Target, e.Message));
+            operation.State = OperationState.Cancelled;
         }
         catch (OperationCanceledException)
         {
@@ -177,10 +192,48 @@ public sealed class OperationQueue
         }
     }
 
+    // A send is one piece of work for the device link: the queue keeps its state, journal, pause and progress.
+    private async Task SendAsync(FileOperation operation)
+    {
+        if (Sender is not { } send)
+            throw new InvalidOperationException("Sending to a device is not set up.");
+        var cancel = operation.Cancellation.Token;
+        operation.State = OperationState.Running;
+        Notify(operation, save: true);
+        var clock = Stopwatch.StartNew();
+        long lastReport = 0, lastSave = 0, startBytes = -1;
+        await send(operation, (done, total) =>
+        {
+            if (startBytes < 0)
+                startBytes = done;
+            var seconds = clock.Elapsed.TotalSeconds;
+            operation.Progress = new OperationProgress(done, total, done >= total ? operation.Sources.Count : 0, operation.Sources.Count,
+                operation.Target.DisplayPath, seconds > 0.5 ? (done - startBytes) / seconds : 0);
+            var now = clock.ElapsedMilliseconds;
+            if (now - lastReport >= 1000 / ReportsPerSecond)
+            {
+                lastReport = now;
+                var save = now - lastSave >= 1000;
+                if (save)
+                    lastSave = now;
+                Notify(operation, save);
+            }
+        }, async checkpointCancel =>
+        {
+            while (!operation.Running.IsSet)
+                await Task.Delay(100, checkpointCancel);
+        }, cancel);
+        operation.State = OperationState.Completed;
+    }
+
     private void Notify(FileOperation operation, bool save)
     {
         operation.Updated = DateTimeOffset.Now;
-        if (save)
+        // An operation counts as finished a moment before its last report; one removed in between stays removed.
+        bool known;
+        lock (_operations)
+            known = _operations.Contains(operation);
+        if (save && known)
             _journal?.Save(operation);
         Changed?.Invoke(operation);
     }
