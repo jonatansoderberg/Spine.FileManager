@@ -105,6 +105,18 @@
                             </Grid>
                         </Border>
                     </DataTemplate>
+        <Style x:Key="PreviewAction" TargetType="Border">
+            <Setter Property="StrokeShape" Value="RoundRectangle 8" />
+            <Setter Property="StrokeThickness" Value="1" />
+            <Setter Property="Stroke" Value="{AppThemeBinding Light=#E3E5E8, Dark=#34363A}" />
+            <Setter Property="BackgroundColor" Value="Transparent" />
+            <Setter Property="Padding" Value="4,8" />
+        </Style>
+        <Style x:Key="PreviewActionLabel" TargetType="Label">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="HorizontalTextAlignment" Value="Center" />
+            <Setter Property="LineBreakMode" Value="TailTruncation" />
+        </Style>
         <Style x:Key="SidebarSection" TargetType="Label">
             <Setter Property="FontSize" Value="11" />
             <Setter Property="FontAttributes" Value="Bold" />
@@ -627,18 +639,84 @@
                 <ActivityIndicator Grid.Column="1" IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}" HeightRequest="14" WidthRequest="14" />
             </Grid>
 
-            <!-- Preview: the selected item's picture (the system's thumbnail), its text and its facts. -->
+            <!-- Preview, as in the concept image: picture, name, kind and size, Open and Open With, the facts with the
+                 location as a link, and quick actions; × closes it. -->
             <ScrollView Grid.Row="2" Grid.RowSpan="2" Grid.Column="1" WidthRequest="{Binding PreviewWidth}" IsVisible="{Binding ShowsPreview}"
-                        BackgroundColor="{AppThemeBinding Light=#F7F7F8, Dark=#1B1C1F}">
-                <VerticalStackLayout Padding="16" Spacing="10">
-                    <Image Source="{Binding PreviewImage}" HeightRequest="220" Aspect="AspectFit" />
-                    <Label Text="{Binding PreviewTitle}" FontSize="14" FontAttributes="Bold" HorizontalTextAlignment="Center" LineBreakMode="MiddleTruncation" />
-                    <Label Text="{Binding PreviewDetails}" FontSize="12" Opacity="0.7" HorizontalTextAlignment="Center" />
-                    <Border IsVisible="{Binding HasPreviewText}" Padding="10" StrokeThickness="0" BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#232427}">
-                        <Label Text="{Binding PreviewText}" FontFamily="{OnPlatform MacCatalyst=Menlo, iOS=Menlo, WinUI=Consolas, Android=monospace}" FontSize="11" LineBreakMode="CharacterWrap" />
-                    </Border>
-                    <Label Text="{String Preview.None}" IsVisible="{Binding PreviewTitle, Converter={StaticResource IsNull}}" FontSize="12" Opacity="0.5" HorizontalTextAlignment="Center" />
-                </VerticalStackLayout>
+                        BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}">
+                <Grid RowDefinitions="Auto,*">
+                    <BoxView WidthRequest="1" HorizontalOptions="Start" Grid.RowSpan="2" Color="{AppThemeBinding Light=#E3E5E8, Dark=#34363A}" />
+                    <ImageButton Style="{StaticResource ToolButton}" SvgImageSource.Svg="Close.svg" Command="{Binding TogglePreviewCommand}" HorizontalOptions="End" Margin="0,6,8,0"
+                                 SemanticProperties.Description="{String Preview.Close}" ToolTipProperties.Text="{String Preview.Close}" />
+                    <VerticalStackLayout Grid.Row="1" Padding="20,0,20,20" Spacing="12">
+                        <Label Text="{String Preview.None}" IsVisible="{Binding PreviewTitle, Converter={StaticResource IsNull}}" FontSize="12" Opacity="0.5" HorizontalTextAlignment="Center" Margin="0,40,0,0" />
+                        <VerticalStackLayout Spacing="12" IsVisible="{Binding PreviewTitle, Converter={StaticResource HasValue}}">
+                            <Border StrokeThickness="0" StrokeShape="RoundRectangle 10" BackgroundColor="{AppThemeBinding Light=#F4F5F7, Dark=#26272A}" HeightRequest="200">
+                                <Image Source="{Binding PreviewImage}" Aspect="AspectFit" Margin="8" />
+                            </Border>
+                            <VerticalStackLayout Spacing="2">
+                                <Label Text="{Binding PreviewTitle}" FontSize="17" FontAttributes="Bold" LineBreakMode="MiddleTruncation" />
+                                <Label Text="{Binding PreviewSummary}" FontSize="13" TextColor="{AppThemeBinding Light=#2F6FEB, Dark=#7FA6F5}" />
+                            </VerticalStackLayout>
+                            <HorizontalStackLayout Spacing="6">
+                                <Button Text="{String Preview.Open}" Command="{Binding ActivateCommand}" FontSize="13" Padding="28,0" HeightRequest="30" CornerRadius="6"
+                                        BackgroundColor="{AppThemeBinding Light=#2F6FEB, Dark=#3D7BF0}" TextColor="White" />
+                                <Button Text="⌄" FontSize="15" Padding="10,0" HeightRequest="30" CornerRadius="6" IsVisible="{Binding HasOpenWith}"
+                                        MenuButton.Items="{Binding PreviewOpenWith}" BackgroundColor="{AppThemeBinding Light=#E4ECFD, Dark=#25324D}" TextColor="{AppThemeBinding Light=#2F6FEB, Dark=#9BB9F7}"
+                                        SemanticProperties.Description="{String Preview.OpenWith}" ToolTipProperties.Text="{String Preview.OpenWith}" />
+                            </HorizontalStackLayout>
+                            <!-- Facts: label and value side by side; the location opens the folder with the item selected. -->
+                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding PreviewFacts}" Spacing="6">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="PreviewFact">
+                                        <Grid ColumnDefinitions="96,*" ColumnSpacing="8">
+                                            <Label Text="{Binding Label}" FontSize="12" Opacity="0.6" />
+                                            <Label Grid.Column="1" Text="{Binding Value}" FontSize="12" LineBreakMode="WordWrap" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+                            <Grid ColumnDefinitions="96,*" ColumnSpacing="8" IsVisible="{Binding HasPreviewLocation}" Margin="0,-6,0,0">
+                                <Label Text="{String Preview.Label.Location}" FontSize="12" Opacity="0.6" />
+                                <Label Grid.Column="1" Text="{Binding PreviewLocation}" FontSize="12" LineBreakMode="HeadTruncation" TextColor="{AppThemeBinding Light=#2F6FEB, Dark=#7FA6F5}">
+                                    <Label.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding ShowPreviewLocationCommand}" />
+                                    </Label.GestureRecognizers>
+                                </Label>
+                            </Grid>
+                            <!-- Quick actions. -->
+                            <Grid ColumnDefinitions="*,*,*,Auto" ColumnSpacing="6" Margin="0,4,0,0">
+                                <Border Style="{StaticResource PreviewAction}">
+                                    <Border.GestureRecognizers><TapGestureRecognizer Command="{Binding PreviewShareCommand}" /></Border.GestureRecognizers>
+                                    <VerticalStackLayout Spacing="2">
+                                        <ImageButton Style="{StaticResource CommandIcon}" SvgImageSource.Svg="Share.svg" InputTransparent="True" HorizontalOptions="Center" />
+                                        <Label Text="{String Preview.Share}" Style="{StaticResource PreviewActionLabel}" />
+                                    </VerticalStackLayout>
+                                </Border>
+                                <Border Grid.Column="1" Style="{StaticResource PreviewAction}">
+                                    <Border.GestureRecognizers><TapGestureRecognizer Command="{Binding PreviewCopyPathCommand}" /></Border.GestureRecognizers>
+                                    <VerticalStackLayout Spacing="2">
+                                        <ImageButton Style="{StaticResource CommandIcon}" SvgImageSource.Svg="Copy.svg" InputTransparent="True" HorizontalOptions="Center" />
+                                        <Label Text="{String Preview.CopyPath}" Style="{StaticResource PreviewActionLabel}" />
+                                    </VerticalStackLayout>
+                                </Border>
+                                <Border Grid.Column="2" Style="{StaticResource PreviewAction}">
+                                    <VerticalStackLayout Spacing="2">
+                                        <ImageButton Style="{StaticResource CommandIcon}" SvgImageSource.Svg="Phone.svg" HorizontalOptions="Center" MenuButton.Items="{Binding PreviewSendTo}"
+                                                     SemanticProperties.Description="{String Preview.SendTo}" />
+                                        <Label Text="{String Preview.SendTo}" Style="{StaticResource PreviewActionLabel}" />
+                                    </VerticalStackLayout>
+                                </Border>
+                                <Border Grid.Column="3" Style="{StaticResource PreviewAction}" Padding="6,8">
+                                    <ImageButton Style="{StaticResource CommandIcon}" SvgImageSource.Svg="More.svg" VerticalOptions="Center" MenuButton.Items="{Binding PreviewMore}"
+                                                 SemanticProperties.Description="{String Preview.More}" ToolTipProperties.Text="{String Preview.More}" />
+                                </Border>
+                            </Grid>
+                            <Border IsVisible="{Binding HasPreviewText}" Padding="10" StrokeThickness="0" StrokeShape="RoundRectangle 8" BackgroundColor="{AppThemeBinding Light=#F4F5F7, Dark=#26272A}">
+                                <Label Text="{Binding PreviewText}" FontFamily="{OnPlatform MacCatalyst=Menlo, iOS=Menlo, WinUI=Consolas, Android=monospace}" FontSize="11" LineBreakMode="CharacterWrap" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Grid>
             </ScrollView>
             <!-- Home: the disks with how full they are, the linked devices and the folders opened lately. -->
             <ScrollView Grid.Row="2" Grid.RowSpan="2" IsVisible="{Binding IsHome}">

@@ -254,4 +254,21 @@
   <s key="Explorer.Trash.Confirm">Move to Trash</s>
   <s key="Settings.ConfirmTrash">Ask before moving to the Trash</s>
   <s key="Photos.Library">Photo Library</s>
+  <s key="Preview.Open">Open</s>
+  <s key="Preview.OpenWith">Open With</s>
+  <s key="Preview.DefaultApp">{0} (default)</s>
+  <s key="Preview.Share">Share</s>
+  <s key="Preview.CopyPath">Copy Path</s>
+  <s key="Preview.SendTo">Send to Device</s>
+  <s key="Preview.More">More</s>
+  <s key="Preview.ShowInFinder">Show in Finder</s>
+  <s key="Preview.ShowInExplorer">Show in Explorer</s>
+  <s key="Preview.Close">Close Preview</s>
+  <s key="Preview.Bytes">{0} ({1} bytes)</s>
+  <s key="Preview.Label.Created">Created</s>
+  <s key="Preview.Label.Modified">Modified</s>
+  <s key="Preview.Label.Size">Size</s>
+  <s key="Preview.Label.Kind">Kind</s>
+  <s key="Preview.Label.Dimensions">Dimensions</s>
+  <s key="Preview.Label.Location">Location</s>
 </strings>

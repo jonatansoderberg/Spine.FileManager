@@ -254,4 +254,21 @@
   <s key="Explorer.Trash.Confirm">Flytta till papperskorgen</s>
   <s key="Settings.ConfirmTrash">Fråga innan flytt till papperskorgen</s>
   <s key="Photos.Library">Bildbibliotek</s>
+  <s key="Preview.Open">Öppna</s>
+  <s key="Preview.OpenWith">Öppna med</s>
+  <s key="Preview.DefaultApp">{0} (förval)</s>
+  <s key="Preview.Share">Dela</s>
+  <s key="Preview.CopyPath">Kopiera sökväg</s>
+  <s key="Preview.SendTo">Skicka till enhet</s>
+  <s key="Preview.More">Mer</s>
+  <s key="Preview.ShowInFinder">Visa i Finder</s>
+  <s key="Preview.ShowInExplorer">Visa i Utforskaren</s>
+  <s key="Preview.Close">Stäng förhandsvisning</s>
+  <s key="Preview.Bytes">{0} ({1} byte)</s>
+  <s key="Preview.Label.Created">Skapad</s>
+  <s key="Preview.Label.Modified">Ändrad</s>
+  <s key="Preview.Label.Size">Storlek</s>
+  <s key="Preview.Label.Kind">Typ</s>
+  <s key="Preview.Label.Dimensions">Mått</s>
+  <s key="Preview.Label.Location">Plats</s>
 </strings>

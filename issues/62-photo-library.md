@@ -27,6 +27,16 @@ Decided with Jonatan:
   - The preview shows a 512-point picture.
 - `NSPhotoLibraryUsageDescription` and `NSPhotoLibraryAddUsageDescription` added for Mac and iOS.
 
+- **Newest first:** the photo library opens newest first, as Photos does, and the tab gets its own sort back when it leaves. The date column is when the photo was taken.
+- **Thumbnails that never showed:** MAUI cancels a source's load when the same `StreamImageSource` starts loading again, so one source shared by the cells that ask at the same moment showed in none of them. The photo cache keeps bytes, and the icon cache hands each view a stream source of its own (the system's icon of a kind is shared by every row of that kind, so it had the same trap).
+- **Preview pane (concept step 6):**
+  - the picture
+  - name, and kind · size in the accent colour
+  - Open, and Open With (the apps from `NSWorkspace`, the default first)
+  - facts: created, modified, size in bytes, kind, dimensions (ImageIO for files, the asset for photos), and the location as a link that opens the folder with the item selected
+  - Share, Copy Path, Send to Device (the linked devices), and More (Show in Finder, Add to Favorites, Rename, Delete)
+  - × to close
+
 ## Decisions
 - No Show Photos item in the context menu: the menu is the same for every row, so it would show (dimmed) on every file. The sidebar row is one click away.
 - The asset's `filename` property is the library's own UUID name for its copy. `originalFilename` is the name it came with, and Photos exports under it.

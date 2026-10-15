@@ -154,7 +154,11 @@ public sealed class PhotoLibraryProvider(ISpineStrings strings) : IStorageProvid
     /// A picture of the photo or video at most <paramref name="points"/> on its longer side, made by Photos (and fetched
     /// from iCloud when needed), or null for a staged file or one Photos cannot draw.
     /// </summary>
-    public static async Task<ImageSource?> ThumbnailAsync(StorageLocation location, double points)
+    public static async Task<ImageSource?> ThumbnailAsync(StorageLocation location, double points) =>
+        await ThumbnailBytesAsync(location, points) is { } bytes ? ImageSource.FromStream(() => new MemoryStream(bytes)) : null;
+
+    /// <summary>The thumbnail as JPEG bytes, for a cache that makes a source per view.</summary>
+    public static async Task<byte[]?> ThumbnailBytesAsync(StorageLocation location, double points)
     {
         if (Staged(location) is not null || PHAsset.FetchAssetsUsingLocalIdentifiers([location.ItemId], null).FirstObject is not PHAsset asset)
             return null;
@@ -168,10 +172,14 @@ public sealed class PhotoLibraryProvider(ISpineStrings strings) : IStorageProvid
                 NetworkAccessAllowed = true,
             },
             (image, _) => done.TrySetResult(image));
-        if (await done.Task is not { } picture || picture.AsJPEG((System.Runtime.InteropServices.NFloat)0.85)?.ToArray() is not { } bytes)
-            return null;
-        return ImageSource.FromStream(() => new MemoryStream(bytes));
+        return await done.Task is { } picture ? picture.AsJPEG((System.Runtime.InteropServices.NFloat)0.85)?.ToArray() : null;
     }
+
+    /// <summary>The photo's or video's pixel size, or null for a staged file.</summary>
+    public static (int Width, int Height)? Dimensions(StorageLocation location) =>
+        Staged(location) is null && PHAsset.FetchAssetsUsingLocalIdentifiers([location.ItemId], null).FirstObject is PHAsset asset
+            ? ((int)asset.PixelWidth, (int)asset.PixelHeight)
+            : null;
 
     private StorageLocation Location(string id, string name) => new(ProviderId, id, $"{strings["Photos.Library"]}/{name}");
 
@@ -181,7 +189,8 @@ public sealed class PhotoLibraryProvider(ISpineStrings strings) : IStorageProvid
         return new StorageItem(Location(asset.LocalIdentifier, name), name, StorageItemKind.File)
         {
             Created = created,
-            Modified = asset.ModificationDate is { } m ? new DateTimeOffset((DateTime)m) : created,
+            // When it was taken, as Photos sorts and dates it; an edit changes ModificationDate, not the photo's date.
+            Modified = created ?? (asset.ModificationDate is { } m ? new DateTimeOffset((DateTime)m) : null),
             IsHidden = asset.Hidden,
         };
     }
