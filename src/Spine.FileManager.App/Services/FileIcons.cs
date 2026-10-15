@@ -62,38 +62,46 @@ public static class FileIcons
     /// The item's icon now; for a photo in the photo library, the kind's icon until its thumbnail arrives, when
     /// <paramref name="ready"/> is called (on the main thread) to ask again.
     /// </summary>
+    private static readonly HashSet<string> PicturedKinds = [FileKinds.Image, FileKinds.Video, FileKinds.Pdf];
+
+    /// <summary>
+    /// The item's icon now; for a picture, a video or a PDF (and every photo in the photo library) the kind's icon until
+    /// its thumbnail arrives, when <paramref name="ready"/> is called (on the main thread) to ask again.
+    /// </summary>
     public static ImageSource For(StorageItem item, Action? ready)
     {
 #if IOS || MACCATALYST
         if (item.Location.Provider == PhotoLibraryProvider.ProviderId && item.Location.ItemId.Length > 0)
-            return Thumbnail(item, ready) ?? Spine(false, item.Extension.ToLowerInvariant());
+            return Thumbnail($"photo:{item.Location.ItemId}", () => PhotoLibraryProvider.ThumbnailBytesAsync(item.Location, 64), item, ready)
+                ?? Spine(false, item.Extension.ToLowerInvariant());
 #endif
+        // As Finder's icon previews: the file's own picture, made again when the file changes.
+        if (!item.IsFolder && item.Location.NativePath is { } path && PicturedKinds.Contains(FileKinds.Of(item.Extension.ToLowerInvariant())))
+            return Thumbnail($"file:{path}:{item.Modified?.UtcTicks}", () => Thumbnails.GetBytesAsync(path, 64), item, ready) ?? For(item);
         return For(item);
     }
 
-#if IOS || MACCATALYST
-    // Asked for by the rows a list shows, so only the visible photos load; the oldest go when there are too many.
-    private static ImageSource? Thumbnail(StorageItem item, Action? ready)
+    // Asked for by the rows a list shows, so only the visible items load; the oldest go when there are too many.
+    private static ImageSource? Thumbnail(string key, Func<Task<byte[]?>> load, StorageItem item, Action? ready)
     {
-        var id = item.Location.ItemId;
         lock (Photos)
         {
-            if (Photos.TryGetValue(id, out var cached))
+            if (Photos.TryGetValue(key, out var cached))
                 return Picture(cached);
-            if (Waiting.TryGetValue(id, out var waiting))
+            if (Waiting.TryGetValue(key, out var waiting))
             {
                 if (ready is not null)
                     waiting.Add(ready);
                 return null;
             }
-            Waiting[id] = ready is null ? [] : [ready];
+            Waiting[key] = ready is null ? [] : [ready];
         }
         _ = Task.Run(async () =>
         {
             byte[]? picture = null;
             try
             {
-                picture = await PhotoLibraryProvider.ThumbnailBytesAsync(item.Location, 64);
+                picture = await load();
             }
             catch (Exception e)
             {
@@ -102,18 +110,17 @@ public static class FileIcons
             List<Action> callbacks;
             lock (Photos)
             {
-                callbacks = Waiting.Remove(id, out var w) ? w : [];
+                callbacks = Waiting.Remove(key, out var w) ? w : [];
                 if (picture is null)
                     return;
                 if (Photos.Count > 3000)
                     Photos.Clear();
-                Photos[id] = picture;
+                Photos[key] = picture;
             }
             MainThread.BeginInvokeOnMainThread(() => callbacks.ForEach(c => c()));
         });
         return null;
     }
-#endif
 
     public static ImageSource For(StorageItem item)
     {
