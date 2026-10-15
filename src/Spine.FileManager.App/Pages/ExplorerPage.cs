@@ -138,8 +138,11 @@ public partial class ExplorerPage
         vm.Collapse(count);
     }
 
+    private void OnFilterFocused(object? sender, FocusEventArgs e) => SearchCapsule.StrokeThickness = 2;
+
     private void OnFilterUnfocused(object? sender, FocusEventArgs e)
     {
+        SearchCapsule.StrokeThickness = 0;
         if (BindingContext is ExplorerPageViewModel { IsSearching: false } vm && string.IsNullOrEmpty(vm.Filter))
             vm.IsSearchOpen = false;
     }
@@ -406,6 +409,39 @@ public partial class ExplorerPage
                 break;
         }
     }
+
+    private static readonly Color GripAccent = Color.FromArgb("#2F6FEB");
+
+    // Over a grip the pointer turns into the resize arrows and the grip's line into the accent, so the edge reads as
+    // something to drag.
+    private void OnGripEntered(object? sender, PointerEventArgs e)
+    {
+        ResizeCursor.Show();
+        if (GripLine(sender) is { } line)
+        {
+            line.Color = GripAccent;
+            line.Opacity = 1;
+        }
+    }
+
+    private void OnGripExited(object? sender, PointerEventArgs e)
+    {
+        ResizeCursor.Hide();
+        if (GripLine(sender) is not { } line)
+            return;
+        if (line == Splitter)
+            line.SetAppThemeColor(BoxView.ColorProperty, Color.FromArgb("#E2E4E8"), Color.FromArgb("#2A2C30"));
+        else
+            line.SetAppThemeColor(BoxView.ColorProperty, Color.FromArgb("#D5D7DB"), Color.FromArgb("#3A3C40"));
+        line.Opacity = line.StyleId == "HoverOnly" ? 0 : 1;
+    }
+
+    private static BoxView? GripLine(object? sender) => sender switch
+    {
+        BoxView box => box,
+        Grid grid => grid.Children.OfType<BoxView>().FirstOrDefault(),
+        _ => null,
+    };
 
     private void OnSplitterPanned(object? sender, PanUpdatedEventArgs e)
     {

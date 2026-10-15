@@ -54,6 +54,20 @@ public static class MauiProgram
 #if MACCATALYST
         builder.ConfigureMauiHandlers(h => h.AddHandler<Controls.KeySink, KeySinkHandler>());
 #endif
+        // A field in a capsule of its own (search) draws neither its border nor the system's focus ring, whose shape
+        // differs from the capsule; the capsule shows the focus instead.
+        Microsoft.Maui.Handlers.EntryHandler.Mapper.AppendToMapping("Bare", (handler, entry) =>
+        {
+            if (entry is not Entry { ClassId: "Bare" })
+                return;
+#if IOS || MACCATALYST
+            handler.PlatformView.BorderStyle = UIKit.UITextBorderStyle.None;
+            handler.PlatformView.FocusEffect = null;
+#elif WINDOWS
+            handler.PlatformView.BorderThickness = new Microsoft.UI.Xaml.Thickness(0);
+            handler.PlatformView.Background = null;
+#endif
+        });
         builder.Services.AddSingleton<IFileSystemPlatform>(
 #if MACCATALYST
             new MacFileSystemPlatform()
