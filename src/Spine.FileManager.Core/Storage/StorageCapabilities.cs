@@ -23,5 +23,8 @@ public enum StorageCapabilities
     PersistentGrant = 1 << 11,
     Trash = 1 << 12,
 
+    /// <summary>The system asks before it deletes (the photo library), so the app does not ask as well.</summary>
+    SystemConfirmsDelete = 1 << 13,
+
     Modify = Write | CreateFolder | Rename | Delete | NativeCopy | NativeMove | Trash,
 }

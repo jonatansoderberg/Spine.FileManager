@@ -253,4 +253,5 @@
   <s key="Explorer.Trash.Message">{0} flyttas till papperskorgen. Du kan ångra eller lägga tillbaka från papperskorgen.</s>
   <s key="Explorer.Trash.Confirm">Flytta till papperskorgen</s>
   <s key="Settings.ConfirmTrash">Fråga innan flytt till papperskorgen</s>
+  <s key="Photos.Library">Bildbibliotek</s>
 </strings>

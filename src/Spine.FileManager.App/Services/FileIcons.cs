@@ -47,6 +47,66 @@ public static class FileIcons
         return style == SystemStyle && !HasSystemIcons || style is not (SpineStyle or SystemStyle) && _theme is null ? SpineStyle : style;
     }
 
+    private static readonly Dictionary<string, ImageSource> Photos = [];
+    private static readonly Dictionary<string, List<Action>> Waiting = [];
+
+    /// <summary>
+    /// The item's icon now; for a photo in the photo library, the kind's icon until its thumbnail arrives, when
+    /// <paramref name="ready"/> is called (on the main thread) to ask again.
+    /// </summary>
+    public static ImageSource For(StorageItem item, Action? ready)
+    {
+#if IOS || MACCATALYST
+        if (item.Location.Provider == PhotoLibraryProvider.ProviderId && item.Location.ItemId.Length > 0)
+            return Thumbnail(item, ready) ?? Spine(false, item.Extension.ToLowerInvariant());
+#endif
+        return For(item);
+    }
+
+#if IOS || MACCATALYST
+    // Asked for by the rows a list shows, so only the visible photos load; the oldest go when there are too many.
+    private static ImageSource? Thumbnail(StorageItem item, Action? ready)
+    {
+        var id = item.Location.ItemId;
+        lock (Photos)
+        {
+            if (Photos.TryGetValue(id, out var cached))
+                return cached;
+            if (Waiting.TryGetValue(id, out var waiting))
+            {
+                if (ready is not null)
+                    waiting.Add(ready);
+                return null;
+            }
+            Waiting[id] = ready is null ? [] : [ready];
+        }
+        _ = Task.Run(async () =>
+        {
+            ImageSource? picture = null;
+            try
+            {
+                picture = await PhotoLibraryProvider.ThumbnailAsync(item.Location, 64);
+            }
+            catch (Exception e)
+            {
+                System.Diagnostics.Debug.WriteLine($"[FileIcons] No thumbnail for {item.Location.DisplayPath}: {e}");
+            }
+            List<Action> callbacks;
+            lock (Photos)
+            {
+                callbacks = Waiting.Remove(id, out var w) ? w : [];
+                if (picture is null)
+                    return;
+                if (Photos.Count > 3000)
+                    Photos.Clear();
+                Photos[id] = picture;
+            }
+            MainThread.BeginInvokeOnMainThread(() => callbacks.ForEach(c => c()));
+        });
+        return null;
+    }
+#endif
+
     public static ImageSource For(StorageItem item)
     {
         var extension = item.IsBrowsable ? "" : item.Extension.ToLowerInvariant();

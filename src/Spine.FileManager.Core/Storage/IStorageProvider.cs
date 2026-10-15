@@ -8,6 +8,15 @@ public enum StorageChangeKind { Created, Deleted, Changed, Renamed }
 public sealed record StorageChange(StorageChangeKind Kind, StorageLocation Location, StorageLocation? OldLocation = null);
 
 /// <summary>
+/// A provider that deletes several items in one call, as the photo library must for the system to ask once rather
+/// than once per photo.
+/// </summary>
+public interface IDeletesTogether
+{
+    Task DeleteAsync(IReadOnlyList<StorageLocation> items, StorageDeleteMode mode, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
 /// One kind of storage — the local file system, an Android document tree, the photo library, another device. Every
 /// call is asynchronous and cancellable and fails with <see cref="StorageException"/>.
 /// </summary>

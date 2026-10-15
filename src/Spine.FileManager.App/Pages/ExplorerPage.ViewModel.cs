@@ -27,6 +27,7 @@ public sealed partial class PlaceRow(StorageRoot root) : ObservableObject
         StorageRootKind.Documents => "Text.svg",
         StorageRootKind.Downloads => "Download.svg",
         StorageRootKind.Pictures => "Image.svg",
+        StorageRootKind.PhotoLibrary => "Layers.svg",
         StorageRootKind.Music => "Speaker.svg",
         StorageRootKind.Videos => "Play.svg",
         StorageRootKind.Cloud => "Cloud.svg",
@@ -182,7 +183,7 @@ public sealed partial class ItemRow(StorageItem item, RowFormat format) : Observ
         : format.Document;
     public string Modified => Item.Modified?.ToLocalTime().ToString("g", format.Culture) ?? "";
     public string Size => Item.Size is { } size ? ByteSize.Format(size, format.Culture) : "";
-    public ImageSource Icon => FileIcons.For(Item);
+    public ImageSource Icon => FileIcons.For(Item, () => OnPropertyChanged(nameof(Icon)));
     public double Dimmed => Item.IsHidden ? 0.5 : 1;
 
     /// <summary>In a search of the subfolders, the folder the item is in, from the folder searched.</summary>
@@ -1131,7 +1132,12 @@ public partial class ExplorerPageViewModel : ViewModelBase
         _ = Task.Run(async () =>
         {
             await Task.Delay(120, cancel.Token);
-            if (item.Location.NativePath is { } path && await Thumbnails.GetAsync(path, 512) is { } picture && !cancel.IsCancellationRequested)
+            var picture = item.Location.NativePath is { } path ? await Thumbnails.GetAsync(path, 512)
+#if IOS || MACCATALYST
+                : item.Location.Provider == PhotoLibraryProvider.ProviderId ? await PhotoLibraryProvider.ThumbnailAsync(item.Location, 512)
+#endif
+                : null;
+            if (picture is not null && !cancel.IsCancellationRequested)
                 MainThread.BeginInvokeOnMainThread(() => { if (!cancel.IsCancellationRequested) PreviewImage = picture; });
         }, cancel.Token);
         if (!item.IsFolder && (TextExtensions.Contains(item.Extension) || item.Extension.Length == 0))
@@ -1356,6 +1362,13 @@ public partial class ExplorerPageViewModel : ViewModelBase
         foreach (var provider in _providers.All)
             foreach (var root in await provider.GetRootsAsync())
                 _allPlaces.Add(new(root));
+        // The photo library follows the Pictures folder.
+        if (_allPlaces.FirstOrDefault(p => p.Root.Kind == StorageRootKind.PhotoLibrary) is { } photos
+            && _allPlaces.FindIndex(p => p.Root.Kind == StorageRootKind.Pictures) is >= 0 and var pictures)
+        {
+            _allPlaces.Remove(photos);
+            _allPlaces.Insert(Math.Min(pictures + 1, _allPlaces.Count), photos);
+        }
         // This Device ends with the disks, as in the concept image, unless the provider already lists one.
         foreach (var disk in await Task.Run(ListDisks))
             if (!_allPlaces.Any(p => p.Root.Location.Equals(disk.Location)))
@@ -1679,9 +1692,14 @@ public partial class ExplorerPageViewModel : ViewModelBase
         if (Current is not { } folder || items.Count == 0)
             return;
         var provider = _providers[folder];
-        var trash = !permanently && (await provider.GetCapabilitiesAsync(folder)).HasFlag(StorageCapabilities.Trash);
+        var capabilities = await provider.GetCapabilitiesAsync(folder);
+        var trash = !permanently && capabilities.HasFlag(StorageCapabilities.Trash);
         var what = items.Count == 1 ? $"“{items[0].DisplayName}”" : _strings.Get("Explorer.Items", items.Count);
-        if (!trash)
+        if (capabilities.HasFlag(StorageCapabilities.SystemConfirmsDelete))
+        {
+            // The system asks itself.
+        }
+        else if (!trash)
         {
             var reason = permanently ? "" : _strings["Explorer.Delete.NoTrash"] + " ";
             if (!await Confirm(_strings["Explorer.Delete.Title"], reason + _strings.Get("Explorer.Delete.Message", what), _strings["Explorer.Delete.Confirm"]))
@@ -1694,8 +1712,12 @@ public partial class ExplorerPageViewModel : ViewModelBase
         var first = _selection.Indices.FirstOrDefault();
         await Try(async () =>
         {
-            foreach (var item in items)
-                await provider.DeleteAsync(item.Location, trash ? StorageDeleteMode.Trash : StorageDeleteMode.Permanent);
+            var mode = trash ? StorageDeleteMode.Trash : StorageDeleteMode.Permanent;
+            if (provider is IDeletesTogether together)
+                await together.DeleteAsync([.. items.Select(i => i.Location)], mode);
+            else
+                foreach (var item in items)
+                    await provider.DeleteAsync(item.Location, mode);
         });
         await Load(folder);
         if (Rows.Count > 0)

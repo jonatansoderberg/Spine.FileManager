@@ -78,6 +78,9 @@ public static class MauiProgram
 #endif
         );
         builder.Services.AddSingleton<IStorageProvider, FileSystemStorageProvider>();
+#if IOS || MACCATALYST
+        builder.Services.AddSingleton<IStorageProvider, Services.PhotoLibraryProvider>();
+#endif
         builder.Services.AddSingleton<StorageProviders>();
         builder.Services.AddSingleton(services => new Operations.OperationQueue(
             services.GetRequiredService<StorageProviders>(), new Operations.OperationJournal(Path.Combine(AppPaths.Data, "operations"))));

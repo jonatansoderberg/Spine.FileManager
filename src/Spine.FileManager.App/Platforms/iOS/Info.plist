@@ -43,5 +43,9 @@
 	</array>
 	<key>XSAppIconAssets</key>
 	<string>Assets.xcassets/appicon.appiconset</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Show the photo library as files, and copy photos out of it.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Add the photos you copy into the photo library.</string>
 </dict>
 </plist>
