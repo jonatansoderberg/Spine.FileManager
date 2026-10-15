@@ -203,6 +203,7 @@ public static class AppMenu
             Item("Menu.Back", x => x.BackCommand, mac ? command : KeyboardAcceleratorModifiers.Alt, mac ? "[" : "Left"),
             Item("Menu.Forward", x => x.ForwardCommand, mac ? command : KeyboardAcceleratorModifiers.Alt, mac ? "]" : "Right"),
             Item("Menu.Up", x => x.UpCommand, mac ? command : KeyboardAcceleratorModifiers.Alt, "Up"),
+            Item("Menu.EditPath", x => x.EditPathCommand, command, "L"),
             Item("Menu.OpenSelected", x => x.ActivateCommand, mac ? command : KeyboardAcceleratorModifiers.Alt, "Down"),
             new MenuFlyoutSeparator(),
             Item("Menu.NextTab", x => x.StepTabCommand, mac ? command | KeyboardAcceleratorModifiers.Shift : KeyboardAcceleratorModifiers.Ctrl, mac ? "]" : "Tab", "1"),

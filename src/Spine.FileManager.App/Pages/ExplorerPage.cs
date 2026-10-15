@@ -99,6 +99,13 @@ public partial class ExplorerPage
             Icons.Scrolled += OnListScrolled;
             // Focused once the field has folded out.
             vm.FilterRequested += () => Dispatcher.Dispatch(() => FilterField.Focus());
+            // The path selected whole, so it copies at once or is typed over.
+            vm.PathEditRequested += () => Dispatcher.Dispatch(() =>
+            {
+                PathField.Focus();
+                PathField.CursorPosition = 0;
+                PathField.SelectionLength = PathField.Text?.Length ?? 0;
+            });
             Keys.Pressed += vm.OnListKey;
             vm.RevealRequested += index =>
             {
@@ -170,6 +177,8 @@ public partial class ExplorerPage
     }
 
     private void OnFilterFocused(object? sender, FocusEventArgs e) => SearchCapsule.StrokeThickness = 2;
+
+    private void OnPathFieldUnfocused(object? sender, FocusEventArgs e) => (BindingContext as ExplorerPageViewModel)?.CancelPathEdit();
 
     private void OnFilterUnfocused(object? sender, FocusEventArgs e)
     {
