@@ -49,7 +49,7 @@ Eleven steps toward the concept image, written in `docs/plans/concept-ui.md` bef
   - The search field has no native border or focus ring of another shape.
 - **Tab titles and column headers** use the sidebar's font size, so they follow the Small/Medium/Large setting with the rest of the window.
 - **Icon view names and the status bar** follow the size setting too; the status bar has a line above it and a tinted background, so it reads as its own strip.
-- **Icon names wrap to two lines** as in Finder (UIKit only middle-truncates a single line, so the cut is at the end), in a two-line row that follows the size setting. **Sort chevrons** are drawn larger: the glyph fills only the middle half of its square.
+- **Icon names wrap to two lines** as in Finder (UIKit only middle-truncates a single line, so the cut is at the end), in a two-line row that follows the size setting. **Sort chevron:** only the sorted column shows one, in a 22 pt square (the glyph fills only its middle half).
 - **List keys:** Home and End scroll to the top and bottom, Page Up and Down by a screen less a row (the selection stays, as in Finder); Delete moves the selection to the Trash and Shift+Delete deletes it permanently, each after its confirmation. On the Mac they come from the list's KeySink; on Windows from Go menu shortcuts, with Delete and Shift+Delete as before.
 - **Path field closes on Esc and on any folder change:** an app-level Escape key command, taken only while the field is open, so sheets keep their own Esc.
 

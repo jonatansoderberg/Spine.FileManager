@@ -1541,7 +1541,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
     public string SizeChevron => Chevron(SortColumn.Size);
     public string KindChevron => Chevron(SortColumn.Kind);
 
-    // Every header has its chevron, as in the concept image; the sorted one points the way it sorts and stands out.
+    // Only the sorted column shows its chevron, pointing the way it sorts.
     private string Chevron(SortColumn column) =>
         Sort.Column == column && !Sort.Descending ? "ChevronUp.svg" : "ChevronDown.svg";
 

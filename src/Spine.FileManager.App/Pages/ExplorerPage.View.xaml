@@ -52,14 +52,16 @@
         <!-- The chevron glyph fills only the middle half of its square and its stroke is thin, so the square is large and
              pulled in by its margin to keep the header's height. -->
         <Style x:Key="SortChevron" TargetType="ImageButton">
-            <Setter Property="WidthRequest" Value="28" />
-            <Setter Property="HeightRequest" Value="28" />
-            <Setter Property="Margin" Value="-3,-5,-6,-5" />
+            <Setter Property="WidthRequest" Value="22" />
+            <Setter Property="HeightRequest" Value="22" />
+            <Setter Property="Margin" Value="-2,-2,-5,-2" />
             <Setter Property="Padding" Value="0" />
             <Setter Property="BackgroundColor" Value="Transparent" />
             <Setter Property="InputTransparent" Value="True" />
             <Setter Property="VerticalOptions" Value="Center" />
-            <Setter Property="Opacity" Value="0.45" />
+            <!-- Only the sorted column shows its chevron; its header's trigger turns it on. -->
+            <Setter Property="IsVisible" Value="False" />
+            <Setter Property="Opacity" Value="0.9" />
             <Setter Property="SvgImageSource.EnableSvg" Value="True" />
             <Setter Property="SvgImageSource.Padding" Value="0" />
             <Setter Property="SvgImageSource.LightTintColor" Value="#1B1B1B" />
@@ -520,7 +522,7 @@
                         <ImageButton Style="{StaticResource SortChevron}" SvgImageSource.Svg="{Binding NameChevron}">
                             <ImageButton.Triggers>
                                 <DataTrigger TargetType="ImageButton" Binding="{Binding NameSorted}" Value="True">
-                                    <Setter Property="Opacity" Value="0.9" />
+                                    <Setter Property="IsVisible" Value="True" />
                                 </DataTrigger>
                             </ImageButton.Triggers>
                         </ImageButton>
@@ -540,7 +542,7 @@
                         <ImageButton Style="{StaticResource SortChevron}" SvgImageSource.Svg="{Binding ModifiedChevron}">
                             <ImageButton.Triggers>
                                 <DataTrigger TargetType="ImageButton" Binding="{Binding ModifiedSorted}" Value="True">
-                                    <Setter Property="Opacity" Value="0.9" />
+                                    <Setter Property="IsVisible" Value="True" />
                                 </DataTrigger>
                             </ImageButton.Triggers>
                         </ImageButton>
@@ -564,7 +566,7 @@
                         <ImageButton Style="{StaticResource SortChevron}" SvgImageSource.Svg="{Binding SizeChevron}">
                             <ImageButton.Triggers>
                                 <DataTrigger TargetType="ImageButton" Binding="{Binding SizeSorted}" Value="True">
-                                    <Setter Property="Opacity" Value="0.9" />
+                                    <Setter Property="IsVisible" Value="True" />
                                 </DataTrigger>
                             </ImageButton.Triggers>
                         </ImageButton>
@@ -588,7 +590,7 @@
                         <ImageButton Style="{StaticResource SortChevron}" SvgImageSource.Svg="{Binding KindChevron}">
                             <ImageButton.Triggers>
                                 <DataTrigger TargetType="ImageButton" Binding="{Binding KindSorted}" Value="True">
-                                    <Setter Property="Opacity" Value="0.9" />
+                                    <Setter Property="IsVisible" Value="True" />
                                 </DataTrigger>
                             </ImageButton.Triggers>
                         </ImageButton>
