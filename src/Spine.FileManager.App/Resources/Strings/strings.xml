@@ -283,5 +283,5 @@
   <s key="Link.Introducing">Linking “{0}” and “{1}”…</s>
   <s key="Link.Introduced">“{0}” and “{1}” are linked.</s>
   <s key="Explorer.InAll">{0} in all</s>
-  <s key="Explorer.InAllAtLeast">at least {0} in all</s>
+  <s key="Explorer.Counting">counting… {0}</s>
 </strings>
