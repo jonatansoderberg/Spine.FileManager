@@ -669,7 +669,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
                 new MenuAction(strings["Menu.Cut"], null, RowCutCommand),
                 new MenuAction(strings["Menu.Duplicate"], null, RowDuplicateCommand),
             },
-            new MenuAction(strings["Menu.Delete"], "Trashcan.svg", RowDeleteCommand) { IsDestructive = true },
+            new MenuAction(strings["Menu.Delete"], "Delete.svg", RowDeleteCommand) { IsDestructive = true },
         ];
         BackgroundMenu =
         [
@@ -699,7 +699,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
         DeviceMenu =
         [
             new MenuAction(strings["Devices.Rename"], "Edit.svg", RenameDeviceCommand),
-            new MenuAction(strings["Devices.Forget"], "Trashcan.svg", ForgetDeviceCommand) { IsDestructive = true },
+            new MenuAction(strings["Devices.Forget"], "Delete.svg", ForgetDeviceCommand) { IsDestructive = true },
         ];
         PlaceMenu =
         [

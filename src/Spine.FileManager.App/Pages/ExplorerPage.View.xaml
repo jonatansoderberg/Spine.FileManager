@@ -210,7 +210,7 @@
                     <TapGestureRecognizer Command="{Binding OpenTrashCommand}" />
                 </Border.GestureRecognizers>
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                    <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="Trashcan.svg" />
+                    <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="Delete.svg" />
                     <Label Grid.Column="1" Text="{Binding TrashName}" FontSize="{DynamicResource SidebarFontSize}" VerticalTextAlignment="Center" />
                 </Grid>
             </Border>
@@ -439,7 +439,7 @@
                     </HorizontalStackLayout>
                 </Border>
                 <Border Grid.Column="2" Style="{StaticResource CommandGroup}">
-                    <ImageButton Style="{StaticResource CommandIcon}" SvgImageSource.Svg="Trashcan.svg" Command="{Binding DeleteCommand}" IsEnabled="{Binding HasSelection}"
+                    <ImageButton Style="{StaticResource CommandIcon}" SvgImageSource.Svg="Delete.svg" Command="{Binding DeleteCommand}" IsEnabled="{Binding HasSelection}"
                                  SvgImageSource.LightTintColor="#C5221F" SvgImageSource.DarkTintColor="#F28B82"
                                  SemanticProperties.Description="{String Menu.Delete}" ToolTipProperties.Text="{String Menu.Delete}" />
                 </Border>
@@ -693,7 +693,7 @@
                         </Border.GestureRecognizers>
                         <VerticalStackLayout Spacing="8">
                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="Trashcan.svg" WidthRequest="40" HeightRequest="40" />
+                                <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="Delete.svg" WidthRequest="40" HeightRequest="40" />
                                 <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
                                     <Label Text="{Binding TrashName}" FontSize="14" FontAttributes="Bold" />
                                     <Label Text="{Binding TrashSummary}" FontSize="12" Opacity="0.6" />
