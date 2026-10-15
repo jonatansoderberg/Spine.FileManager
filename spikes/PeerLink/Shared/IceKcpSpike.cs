@@ -34,6 +34,7 @@ public static class IceKcpSpike
         UpdateInterval = 10,
         NoDelay = true,
         FastResend = 2,
+        DisableCongestionControl = Environment.GetEnvironmentVariable("KCP_CC") != "1",
         StreamMode = true,
         SendQueueSize = 4096,
         ReceiveQueueSize = 4096,
@@ -55,7 +56,11 @@ public static class IceKcpSpike
             // SIPSorcery passes packets on; 0x00–0x03 would be taken for STUN and dropped.
             // The setter is internal; RTCPeerConnection sets it from the SDP role.
             typeof(RtpIceChannel).GetProperty(nameof(RtpIceChannel.IsController))!.SetValue(channel, target is not null);
-            channel.OnIceCandidate += c => _ = signal.SendAsync(with, "ice-cand", c.toJSON());
+            channel.OnIceCandidate += c =>
+            {
+                log($"local candidate {c.type} {c.address}:{c.port}");
+                _ = signal.SendAsync(with, "ice-cand", c.toJSON());
+            };
             channel.OnIceConnectionStateChange += state =>
             {
                 log($"ice {state} after {clock.ElapsedMilliseconds} ms");
@@ -69,6 +74,21 @@ public static class IceKcpSpike
             channel.Start();
             channel.StartGathering();
             _ = signal.SendAsync(with, "ice-creds", $"{channel.LocalIceUser} {channel.LocalIcePassword}");
+            // A port the router forwards to this machine: offered as one more candidate, which a device behind any NAT
+            // can reach.
+            _ = Task.Run(async () =>
+            {
+                if (NatPmp.Gateway() is not { } gateway)
+                    return;
+                var mapped = await NatPmp.MapUdpAsync(gateway, channel.RTPPort, TimeSpan.FromHours(1));
+                log(mapped is null ? $"NAT-PMP: no mapping from {gateway}" : $"NAT-PMP: {gateway} forwards {mapped} to port {channel.RTPPort}");
+                if (mapped is null)
+                    return;
+                var candidate = new RTCIceCandidate(RTCIceProtocol.udp, mapped.Address, (ushort)mapped.Port, RTCIceCandidateType.srflx);
+                var init = new RTCIceCandidateInit { candidate = candidate.ToString(), sdpMid = "0", sdpMLineIndex = 0, usernameFragment = channel.LocalIceUser };
+                log($"offering mapped candidate {candidate}");
+                await signal.SendAsync(with, "ice-cand", init.toJSON());
+            });
             return channel;
         }
 
@@ -82,6 +102,8 @@ public static class IceKcpSpike
                 log($"switchboard: {message["error"]}");
                 return;
             }
+            if (type == "result")
+                log($"the caller says: {payload}");
             if (from is null || type is not ("ice-creds" or "ice-cand"))
                 return;
             lock (gate)
@@ -97,12 +119,16 @@ public static class IceKcpSpike
                 ice.SetRemoteCredentials(parts[0], parts[1]);
             }
             else if (RTCIceCandidateInit.TryParse(payload, out var init))
-                ice.AddRemoteCandidate(new RTCIceCandidate(init));
+            {
+                var remote = new RTCIceCandidate(init);
+                log($"remote candidate {remote.type} {remote.address}:{remote.port}");
+                ice.AddRemoteCandidate(remote);
+            }
         };
         if (target is not null)
             lock (gate)
                 ice = Start(target);
-        return done.Task.WaitAsync(TimeSpan.FromSeconds(30), cancel);
+        return target is null ? done.Task.WaitAsync(cancel) : done.Task.WaitAsync(TimeSpan.FromSeconds(30), cancel);
     }
 
     public static async Task<string> SendAsync(Link link, int megabytes, Action<string> log, CancellationToken cancel = default)

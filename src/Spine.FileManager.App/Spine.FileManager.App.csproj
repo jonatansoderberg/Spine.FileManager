@@ -43,6 +43,10 @@
 
 	<ItemGroup>
 		<PackageReference Include="CommunityToolkit.Mvvm" />
+		<!-- Peer link spike (spike branch only). -->
+		<PackageReference Include="SIPSorcery" />
+		<PackageReference Include="KcpSharp" />
+		<Compile Include="../../spikes/PeerLink/Shared/*.cs" Link="Spike/%(Filename)%(Extension)" />
 		<PackageReference Include="Microsoft.Maui.Controls" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" />
 		<PackageReference Include="Plugin.Maui.Spine" />

@@ -95,6 +95,36 @@ public static class MauiProgram
         builder.Logging.AddDebug();
 #endif
 
+        // Peer link spike: PEER_SPIKE="<signal url> <id> <target> <megabytes>" calls the target over ICE + KCP. On the
+        // phone without a cable the test starts by itself (spike build only) and shows its result.
+        if ((Environment.GetEnvironmentVariable("PEER_SPIKE") is { Length: > 0 } env ? env : "wss://x97np3r3-5290.euw.devtunnels.ms phone mac-k 20") is { } spike)
+            _ = Task.Run(async () =>
+            {
+                var a = spike.Split(' ');
+                void Log(string line) => Console.WriteLine($"[spike] {DateTime.Now:HH:mm:ss.fff} {line}");
+                try
+                {
+                    var signal = new PeerLinkSpike.SignalClient(a[0], a[1]);
+                    await signal.ConnectAsync();
+                    Log("signal connected");
+                    var link = await PeerLinkSpike.IceKcpSpike.ConnectAsync(signal, a[2], Log);
+                    var result = await PeerLinkSpike.IceKcpSpike.SendAsync(link, int.Parse(a[3]), Log);
+                    await signal.SendAsync(a[2], "result", result);
+                    Show(result);
+                }
+                catch (Exception e)
+                {
+                    Log($"failed: {e}");
+                    Show($"failed: {e.Message}");
+                }
+
+                static void Show(string text) => MainThread.BeginInvokeOnMainThread(async () =>
+                {
+                    await Task.Delay(500);
+                    if (Application.Current?.Windows.FirstOrDefault()?.Page is { } page)
+                        await page.DisplayAlertAsync("Peer link spike", text, "OK");
+                });
+            });
         return builder.Build();
     }
 }

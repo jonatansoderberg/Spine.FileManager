@@ -18,6 +18,8 @@
 	<!-- The app -->
 	<ItemGroup>
 		<PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+		<PackageVersion Include="SIPSorcery" Version="10.0.17" />
+		<PackageVersion Include="KcpSharp" Version="0.8.8" />
 		<PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.50" />
 		<PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="10.0.5" />
 	</ItemGroup>
