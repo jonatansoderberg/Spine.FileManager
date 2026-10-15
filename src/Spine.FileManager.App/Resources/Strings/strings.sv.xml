@@ -125,6 +125,10 @@
   <s key="Menu.NewTab">Ny flik</s>
   <s key="Menu.OpenInNewTab">Öppna i ny flik</s>
   <s key="Menu.CloseTab">Stäng flik</s>
+  <s key="Menu.ReopenClosedTab">Öppna stängd flik igen</s>
+  <s key="Menu.GoToTab">Gå till flik</s>
+  <s key="Menu.Tab">Flik {0}</s>
+  <s key="Menu.LastTab">Sista fliken</s>
   <s key="Menu.NextTab">Visa nästa flik</s>
   <s key="Menu.PreviousTab">Visa föregående flik</s>
   <s key="Menu.OpenInTerminal">Öppna i Terminal</s>

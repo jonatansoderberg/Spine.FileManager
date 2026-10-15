@@ -125,6 +125,10 @@
   <s key="Menu.NewTab">New Tab</s>
   <s key="Menu.OpenInNewTab">Open in New Tab</s>
   <s key="Menu.CloseTab">Close Tab</s>
+  <s key="Menu.ReopenClosedTab">Reopen Closed Tab</s>
+  <s key="Menu.GoToTab">Go to Tab</s>
+  <s key="Menu.Tab">Tab {0}</s>
+  <s key="Menu.LastTab">Last Tab</s>
   <s key="Menu.NextTab">Show Next Tab</s>
   <s key="Menu.PreviousTab">Show Previous Tab</s>
   <s key="Menu.OpenInTerminal">Open in Terminal</s>

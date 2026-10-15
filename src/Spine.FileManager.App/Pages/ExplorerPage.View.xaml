@@ -227,31 +227,51 @@
                 <Grid.GestureRecognizers>
                     <DropGestureRecognizer DragOver="OnTabDragOver" DragLeave="OnTabDragLeave" Drop="OnTabDrop" />
                 </Grid.GestureRecognizers>
-                <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Tabs}" Padding="{Binding TabBarPadding}" Spacing="2">
-                    <BindableLayout.ItemTemplate>
-                        <DataTemplate x:DataType="ExplorerTab">
-                            <Grid ColumnDefinitions="*,Auto" WidthRequest="{Binding TabWidth, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" HeightRequest="28" Padding="10,0,2,0"
-                                  BackgroundColor="Transparent"
-                                  ContextMenu.Items="{Binding TabMenu, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" ContextMenu.CommandParameter="{Binding .}">
-                                <Grid.Triggers>
-                                    <DataTrigger TargetType="Grid" Binding="{Binding IsActive}" Value="True">
-                                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#FFFFFF, Dark=#232427}" />
-                                    </DataTrigger>
-                                </Grid.Triggers>
-                                <Grid.GestureRecognizers>
-                                    <DragGestureRecognizer DragStarting="OnTabDragStarting" DropCompleted="OnTabDropCompleted" />
-                                    <DropGestureRecognizer DragOver="OnTabDragOver" DragLeave="OnTabDragLeave" Drop="OnTabDrop" />
-                                </Grid.GestureRecognizers>
-                                <Label Text="{Binding Title}" FontSize="12" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" InputTransparent="True" />
-                                <!-- A button takes the click, so a tab answers like the other controls (keyboard, accessibility). -->
-                                <Button BackgroundColor="Transparent" Padding="0" MinimumHeightRequest="0" MinimumWidthRequest="0" SemanticProperties.Description="{Binding Title}"
-                                        Command="{Binding SelectTabCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
-                                <Button Grid.Column="1" Text="×" FontSize="14" Padding="6,0" HeightRequest="24" MinimumWidthRequest="0" BackgroundColor="Transparent"
-                                        TextColor="{AppThemeBinding Light=#555, Dark=#BBB}" SemanticProperties.Description="{String Menu.CloseTab}"
-                                        Command="{Binding CloseTabCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
-                            </Grid>
-                        </DataTemplate>
-                    </BindableLayout.ItemTemplate>
+                <HorizontalStackLayout Padding="{Binding TabBarPadding}" Spacing="2">
+                    <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Tabs}" Spacing="2">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="ExplorerTab">
+                                <!-- Edge-like: the active tab is raised, lighter and joined to the toolbar below it. -->
+                                <Border WidthRequest="{Binding TabWidth, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}"
+                                        HeightRequest="{Binding TabHeight, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}"
+                                        Padding="10,0,2,0" StrokeThickness="0" StrokeShape="RoundRectangle 8,8,0,0" BackgroundColor="Transparent"
+                                        ContextMenu.Items="{Binding TabMenu, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" ContextMenu.CommandParameter="{Binding .}">
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding IsHovered}" Value="True">
+                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#DDDFE4, Dark=#202124}" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="Border" Binding="{Binding IsActive}" Value="True">
+                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                    <Border.GestureRecognizers>
+                                        <DragGestureRecognizer DragStarting="OnTabDragStarting" DropCompleted="OnTabDropCompleted" />
+                                        <DropGestureRecognizer DragOver="OnTabDragOver" DragLeave="OnTabDragLeave" Drop="OnTabDrop" />
+                                        <PointerGestureRecognizer PointerEntered="OnTabPointerEntered" PointerExited="OnTabPointerExited" />
+                                    </Border.GestureRecognizers>
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                        <Image Source="folder.png" WidthRequest="16" HeightRequest="16" VerticalOptions="Center" InputTransparent="True" />
+                                        <Label Grid.Column="1" Text="{Binding Title}" FontSize="12" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" InputTransparent="True" />
+                                        <!-- A button takes the click, so a tab answers like the other controls (keyboard, accessibility). -->
+                                        <Button Grid.ColumnSpan="3" BackgroundColor="Transparent" Padding="0" MinimumHeightRequest="0" MinimumWidthRequest="0" SemanticProperties.Description="{Binding Title}"
+                                                Command="{Binding SelectTabCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
+                                        <Button Grid.Column="2" Text="×" FontSize="14" Padding="6,0" HeightRequest="22" MinimumWidthRequest="0" CornerRadius="4" BackgroundColor="Transparent"
+                                                TextColor="{AppThemeBinding Light=#555, Dark=#BBB}" SemanticProperties.Description="{String Menu.CloseTab}" ToolTipProperties.Text="{String Menu.CloseTab}"
+                                                Opacity="0" Command="{Binding CloseTabCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}">
+                                            <Button.Triggers>
+                                                <DataTrigger TargetType="Button" Binding="{Binding ShowsClose}" Value="True">
+                                                    <Setter Property="Opacity" Value="1" />
+                                                </DataTrigger>
+                                            </Button.Triggers>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </HorizontalStackLayout>
+                    <Button Text="+" FontSize="18" WidthRequest="28" HeightRequest="28" Padding="0" MinimumHeightRequest="0" MinimumWidthRequest="0" CornerRadius="6" VerticalOptions="Center"
+                            BackgroundColor="Transparent" TextColor="{AppThemeBinding Light=#444, Dark=#CCC}" Command="{Binding NewTabCommand}"
+                            SemanticProperties.Description="{String Menu.NewTab}" ToolTipProperties.Text="{String Menu.NewTab}" />
                 </HorizontalStackLayout>
             </Grid>
 

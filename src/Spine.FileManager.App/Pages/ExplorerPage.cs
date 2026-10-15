@@ -103,6 +103,18 @@ public partial class ExplorerPage
         TabDrag.Start(vm, tab);
     }
 
+    private void OnTabPointerEntered(object? sender, PointerEventArgs e)
+    {
+        if (sender is View { BindingContext: ExplorerTab tab })
+            tab.IsHovered = true;
+    }
+
+    private void OnTabPointerExited(object? sender, PointerEventArgs e)
+    {
+        if (sender is View { BindingContext: ExplorerTab tab })
+            tab.IsHovered = false;
+    }
+
     private void OnTabDropCompleted(object? sender, DropCompletedEventArgs e)
     {
         if (TabDrag.End() is { Dropped: false, OverWindow: false } drag)

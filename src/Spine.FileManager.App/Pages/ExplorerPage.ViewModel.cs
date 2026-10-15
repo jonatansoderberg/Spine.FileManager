@@ -57,7 +57,15 @@ public sealed partial class ExplorerTab : ObservableObject
     public partial string Title { get; set; } = "";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsClose))]
     public partial bool IsActive { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsClose))]
+    public partial bool IsHovered { get; set; }
+
+    /// <summary>As in Edge: the active tab and the one under the pointer show their ×.</summary>
+    public bool ShowsClose => IsActive || IsHovered;
 }
 
 /// <summary>A linked device in the sidebar's Other Devices; files dropped on it are sent there.</summary>
@@ -306,7 +314,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
         }
         if (tab == _tabs.Active)
             Remember();
-        await CloseTab(tab);
+        await Close(tab, reopenable: false);
         return true;
     }
 
@@ -411,15 +419,44 @@ public partial class ExplorerPageViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task CloseTab(ExplorerTab? tab)
+    private Task CloseTab(ExplorerTab? tab) => Close(tab ?? _tabs.Active, reopenable: true);
+
+    private async Task Close(ExplorerTab closing, bool reopenable)
     {
-        var closing = tab ?? _tabs.Active;
         var wasActive = closing == _tabs.Active;
+        if (wasActive)
+            Remember();
         if (!_tabs.Close(closing))
             return;
+        if (reopenable)
+            _closed.Push(closing);
         SyncTabs();
         if (wasActive)
             await Show(_tabs.Active);
+    }
+
+    // Closed tabs with their history, for Reopen Closed Tab; a tab moved to another pane or window is not closed.
+    private readonly Stack<ExplorerTab> _closed = [];
+
+    [RelayCommand]
+    private async Task ReopenClosedTab()
+    {
+        if (!_closed.TryPop(out var tab))
+            return;
+        Remember();
+        tab.IsHovered = false;
+        _tabs.Add(tab, activate: true);
+        SyncTabs();
+        await Show(tab);
+    }
+
+    /// <summary>Ctrl+1 to Ctrl+8 choose that tab, Ctrl+9 the last, as in a browser.</summary>
+    [RelayCommand]
+    private Task GoToTab(string number)
+    {
+        var index = int.Parse(number);
+        var tabs = _tabs.Tabs;
+        return index == 9 ? SelectTab(tabs[^1]) : index <= tabs.Count ? SelectTab(tabs[index - 1]) : Task.CompletedTask;
     }
 
     [RelayCommand]
@@ -701,20 +738,26 @@ public partial class ExplorerPageViewModel : ViewModelBase
     /// and the sidebar starts below the traffic lights. Elsewhere 0, and the tab bar keeps its own height.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(TabBarHeight), nameof(TabBarPadding), nameof(SidebarPadding))]
+    [NotifyPropertyChangedFor(nameof(TabBarHeight), nameof(TabBarPadding), nameof(TabHeight), nameof(SidebarPadding))]
     public partial double TitleBarHeight { get; set; }
 
     public double TabBarHeight => Math.Max(32, TitleBarHeight);
 
-    public Thickness TabBarPadding => new(TitleBarHeight > 0 && !ShowsSidebar && !IsSecondary ? 80 : 8, (TabBarHeight - 28) / 2, 8, 0);
+    // The tabs stand on the toolbar below them, the active one joined to it.
+    public Thickness TabBarPadding => new(TitleBarHeight > 0 && !ShowsSidebar && !IsSecondary ? 80 : 8, TabBarHeight - TabHeight, 8, 0);
+
+    public double TabHeight => TabBarHeight - 6;
 
     /// <summary>The tab bar's width, from the page: tabs share it, each at most 180 and at least 70 wide.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(TabWidth))]
     public partial double TabBarWidth { get; set; }
 
-    public double TabWidth => Tabs.Count == 0 || TabBarWidth <= 0 ? 180
-        : Math.Clamp((TabBarWidth - TabBarPadding.Left - TabBarPadding.Right) / Tabs.Count - 2, 70, 180);
+    // Room is left for the + after the tabs.
+    public double TabWidth => Tabs.Count == 0 || TabBarWidth <= 0 ? 200
+        : Math.Clamp((TabBarWidth - TabBarPadding.Left - TabBarPadding.Right - NewTabWidth) / Tabs.Count - 2, 70, 200);
+
+    private const double NewTabWidth = 32;
 
     public Thickness SidebarPadding => new(0, TitleBarHeight, 0, 0);
 
@@ -1234,7 +1277,11 @@ public partial class ExplorerPageViewModel : ViewModelBase
         var item = row?.Item ?? (_selection.Count == 1 ? SelectedItems.First() : null);
         if (item is null)
             return;
-        if (item.IsFolder)
+        // Ctrl-double-click (⌘ on the Mac) opens a folder in a new tab, as in Windows' Explorer. Only a click: the menu's
+        // Open has no row, and its shortcut holds the key.
+        if (item.IsFolder && row is not null && ModifierKeys.Command)
+            await OpenTab(item.Location, activate: true);
+        else if (item.IsFolder)
             await Navigate(item.Location);
         else if (!await FileLauncher.OpenAsync(item))
             Error = _strings.Get("Explorer.Error.CannotOpen", item.Name);
