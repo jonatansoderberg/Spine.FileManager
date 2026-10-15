@@ -925,11 +925,14 @@ public partial class ExplorerPageViewModel : ViewModelBase
     }
 
     // A right-click on a row that is not selected selects it alone first, as Finder and Explorer do.
-    private void Pick(ItemRow row)
+    private void Pick(ItemRow? row)
     {
-        if (!row.IsSelected)
+        // A tap that opened a folder can leave a second recognizer holding a row that is gone.
+        if (row is not null && !row.IsSelected)
             Tap(row);
     }
+
+    private static bool IsTouch => DeviceInfo.Idiom == DeviceIdiom.Phone || DeviceInfo.Idiom == DeviceIdiom.Tablet;
 
     [RelayCommand]
     private Task RowOpen(ItemRow row) { Pick(row); return Activate(row); }
@@ -969,7 +972,12 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     /// <summary>A right-click selects the item under it first, as in Finder and Explorer; one already selected keeps the selection.</summary>
     [RelayCommand]
-    private void RowSecondaryTap(ItemRow row) => Pick(row);
+    private void RowSecondaryTap(ItemRow? row)
+    {
+        // iOS has no secondary button: the recognizer fires on an ordinary tap as well, which already opened the item.
+        if (!IsTouch)
+            Pick(row);
+    }
 
     /// <summary>The full path of each selected item, file names included, one a line, ready for a terminal.</summary>
     [RelayCommand]
@@ -1856,7 +1864,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
         if (index < 0)
             return;
         // On a touch screen a tap opens, as in the Files app; a long press gives the menu.
-        if (DeviceInfo.Idiom is { } idiom && (idiom == DeviceIdiom.Phone || idiom == DeviceIdiom.Tablet))
+        if (IsTouch)
         {
             _selection.Click(index);
             ApplySelection();
