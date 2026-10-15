@@ -2578,7 +2578,12 @@ public partial class ExplorerPageViewModel : ViewModelBase
         _counting?.Cancel();
         FolderTotal = null;
         if (folder.NativePath is not { } path)
+        {
+            // A place of files only, such as the photo library, adds up from its listing.
+            if (_items.Count > 0 && _items.All(i => i.Kind != StorageItemKind.Folder && i.Size is not null))
+                FolderTotal = (_items.Sum(i => i.Size!.Value), true);
             return;
+        }
         var cancel = _counting = new CancellationTokenSource();
         long bytes = 0;
         void Publish(bool complete)

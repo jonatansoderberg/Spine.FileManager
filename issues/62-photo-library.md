@@ -38,6 +38,7 @@ Decided with Jonatan:
   - × to close
 
 - **Sizes in the list:** each photo's size is read from its original resource (`fileSize`) while listing and kept in the saved listing with its name, so it is looked up once per photo (6450 photos: 14 s once in Debug, then 0.7 s).
+- **Total in the status bar:** a place without a folder on disk whose listing is files only (the photo library) adds up its sizes for "… in all".
 
 ## Decisions
 - No Show Photos item in the context menu: the menu is the same for every row, so it would show (dimmed) on every file. The sidebar row is one click away.
