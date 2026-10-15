@@ -1,6 +1,6 @@
 # Plan — Peer link: linked devices that find each other anywhere
 
-**Status:** Draft for the owner's review · **Last updated:** 2026-10-15
+**Status:** In progress — order approved by the owner on 2026-10-15 · **Last updated:** 2026-10-15
 
 Builds on [Spike 7](../spikes/peer-link.md). Today two linked devices reach each other only on the same local network, at the address they swapped when they linked.
 
@@ -57,7 +57,7 @@ A device link is a general building block, not a file-manager feature. The propo
 
 | Step | What | Depends on |
 |---|---|---|
-| 1 | Router port mapping (NAT-PMP, PCP, UPnP) for the node's TCP port; the badge "Via router" | — |
+| 1 | Router port mapping (NAT-PMP, PCP, UPnP) for the node's TCP port; the badge "Via router" — **done** (#93): the phone on 5G sent a file to the Mac at home | — |
 | 2 | Tracker: register with a signed challenge, look up, last seen; free tier in Azure | — |
 | 3 | The ladder in `LinkNode`: local, router, the tracker's addresses; the badge per rung | 1, 2 |
 | 4 | Pieces with checksums and resume; pause, resume, cancel in the operations panel | — |
