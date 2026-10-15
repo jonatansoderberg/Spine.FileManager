@@ -22,6 +22,7 @@ Jonatan asked to link computer to computer, and to confirm on the computer when 
 - **Link Device on a phone or tablet:** Link Two Computers scans both codes and introduces them. Scanning the same computer twice is caught.
 - **Tests:** a declined link leaves no trust; a phone links two computers with each one's lifetime; an introduction without the receiving computer's secret is refused.
 - **Link Device starts with a choice:** show this device's code, join another device's (a phone scans at once; a computer starts with the link entered and offers Scan with Camera when it has one), or, on a phone, link two computers. a back chevron, a header page action in the leading slot, returns to the choice; a code is only offered while it is shown. The choices are buttons, so they answer to the keyboard and accessibility.
+- **Addresses read when used:** a node's endpoints are the machine's addresses at the moment a code is shown or a link is made, not at start. The Mac moved from 192.168.68.x to 192.168.86.x while the app ran, and its codes kept the old address, so the phone could not reach it.
 
 ## Decisions
 - The receiving computer (B) does not ask: its user showed its code to be scanned, the same consent a phone's join has. The computer it joins (A) asks, as for any device.

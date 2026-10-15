@@ -45,8 +45,16 @@ public sealed class LinkNode(NodeIdentity identity, TrustStore trust, string nam
 
     public string Name => name;
 
-    /// <summary>Where this node listens: host:port for each of the machine's addresses.</summary>
-    public IReadOnlyList<string> Endpoints { get; private set; } = [];
+    private IPAddress? _address;
+    private int _port;
+
+    /// <summary>
+    /// Where this node listens: host:port for each of the machine's addresses as they are now. Read each time, since a
+    /// laptop that changes networks gets new addresses while the app keeps running.
+    /// </summary>
+    public IReadOnlyList<string> Endpoints => _listener is null ? []
+        : _address is not null && !_address.Equals(IPAddress.Any) ? [$"{_address}:{_port}"]
+        : [.. LocalAddresses().Select(a => $"{a}:{_port}")];
 
     /// <summary>A device paired through this node's invitation.</summary>
     public event Action<TrustedNode>? Paired;
@@ -59,10 +67,8 @@ public sealed class LinkNode(NodeIdentity identity, TrustStore trust, string nam
     {
         _listener = new TcpListener(address ?? IPAddress.Any, port);
         _listener.Start();
-        var bound = ((IPEndPoint)_listener.LocalEndpoint).Port;
-        Endpoints = address is not null && !address.Equals(IPAddress.Any)
-            ? [$"{address}:{bound}"]
-            : [.. LocalAddresses().Select(a => $"{a}:{bound}")];
+        _address = address;
+        _port = ((IPEndPoint)_listener.LocalEndpoint).Port;
         _ = AcceptLoop(_listener);
     }
 
