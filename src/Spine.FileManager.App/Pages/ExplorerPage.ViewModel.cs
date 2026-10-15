@@ -215,6 +215,9 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     public ObservableCollection<DeviceRow> Devices { get; } = [];
 
+    // A sidebar row is 30 points with a point of margin above and below; a list a point short per row scrolled itself.
+    private const double SidebarRowHeight = 32;
+
     [ObservableProperty]
     public partial double DevicesHeight { get; private set; }
 
@@ -233,7 +236,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
         Devices.Clear();
         foreach (var node in _devices.Trust.All.OrderBy(n => n.DisplayName, StringComparer.CurrentCultureIgnoreCase))
             Devices.Add(new DeviceRow(node, _strings[$"Devices.Lifetime.{node.Lifetime}"]));
-        DevicesHeight = Devices.Count * 30;
+        DevicesHeight = Devices.Count * SidebarRowHeight;
     }
 
     [RelayCommand]
@@ -613,7 +616,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
         Favorites.Clear();
         foreach (var favorite in _favorites.Items)
             Favorites.Add(new FavoriteRow(favorite) { IsCurrent = favorite.Location.Equals(Current) });
-        FavoritesHeight = Favorites.Count * 30;
+        FavoritesHeight = Favorites.Count * SidebarRowHeight;
         foreach (var row in Favorites.ToList())
             row.IsAvailable = await IsReachable(row.Favorite.Location);
     }
@@ -1248,7 +1251,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
         foreach (var provider in _providers.All)
             foreach (var root in await provider.GetRootsAsync())
                 Places.Add(new(root));
-        PlacesHeight = Places.Count * 30;
+        PlacesHeight = Places.Count * SidebarRowHeight;
         LoadDevices();
         if (!IsSecondary)
             _devices.StartIfLinked();

@@ -402,9 +402,11 @@ public partial class ExplorerPage
                 _gripStart = vm.Width(part);
                 break;
             case GestureStatus.Running:
-                vm.Resize(part, _gripStart + direction * e.TotalX, keep: false);
+                var width = _gripStart + direction * e.TotalX;
+                QueueResize(() => vm.Resize(part, width, keep: false));
                 break;
             case GestureStatus.Completed:
+                FlushResize();
                 vm.Resize(part, vm.Width(part), keep: true);
                 break;
         }
@@ -429,10 +431,7 @@ public partial class ExplorerPage
         ResizeCursor.Hide();
         if (GripLine(sender) is not { } line)
             return;
-        if (line == Splitter)
-            line.SetAppThemeColor(BoxView.ColorProperty, Color.FromArgb("#E2E4E8"), Color.FromArgb("#2A2C30"));
-        else
-            line.SetAppThemeColor(BoxView.ColorProperty, Color.FromArgb("#D5D7DB"), Color.FromArgb("#3A3C40"));
+        line.SetAppThemeColor(BoxView.ColorProperty, Color.FromArgb("#D5D7DB"), Color.FromArgb("#3A3C40"));
         line.Opacity = line.StyleId == "HoverOnly" ? 0 : 1;
     }
 
@@ -449,6 +448,35 @@ public partial class ExplorerPage
         if (e.StatusType == GestureStatus.Started)
             _splitStart = column.Width.Value;
         else if (e.StatusType == GestureStatus.Running)
-            column.Width = new GridLength(Math.Clamp(_splitStart - e.TotalX, 240, Math.Max(240, Width - 450)));
+        {
+            var width = Math.Clamp(_splitStart - e.TotalX, 240, Math.Max(240, Width - 450));
+            QueueResize(() =>
+            {
+                column.Width = new GridLength(width);
+                // A changed column width alone did not lay the grid out again.
+                ((IView)Root).InvalidateMeasure();
+            });
+        }
+    }
+
+    private Action? _resize;
+    private bool _resizeQueued;
+
+    // A drag reports far more often than the window can lay out both panes' lists again; each relayout waits for the
+    // next frame and takes only the latest width, so the edge follows the pointer instead of trailing it in steps.
+    private void QueueResize(Action resize)
+    {
+        _resize = resize;
+        if (_resizeQueued)
+            return;
+        _resizeQueued = true;
+        Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(16), FlushResize);
+    }
+
+    private void FlushResize()
+    {
+        _resizeQueued = false;
+        _resize?.Invoke();
+        _resize = null;
     }
 }

@@ -106,7 +106,7 @@
             <ScrollView VerticalScrollBarVisibility="Never">
             <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
             <Label Text="{String Explorer.Favorites}" FontSize="12" Opacity="0.6" Padding="16,12,16,4" />
-            <CollectionView Grid.Row="1" ItemsSource="{Binding Favorites}" SelectionMode="None" HeightRequest="{Binding FavoritesHeight}"
+            <CollectionView Grid.Row="1" ItemsSource="{Binding Favorites}" SelectionMode="None" HeightRequest="{Binding FavoritesHeight}" VerticalScrollBarVisibility="Never"
                             Reorder.Mode="LongPress" Reorder.Command="{Binding SaveFavoriteOrderCommand}">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="FavoriteRow">
@@ -131,7 +131,7 @@
             </CollectionView>
             <Label Grid.Row="2" Text="{String Explorer.FavoritesHint}" IsVisible="{Binding HasNoFavorites}" FontSize="12" Opacity="0.5" Padding="16,0,16,8" />
             <Label Grid.Row="3" Text="{String Explorer.Places}" FontSize="12" Opacity="0.6" Padding="16,12,16,4" />
-            <CollectionView Grid.Row="4" ItemsSource="{Binding Places}" SelectionMode="None" HeightRequest="{Binding PlacesHeight}">
+            <CollectionView Grid.Row="4" ItemsSource="{Binding Places}" SelectionMode="None" HeightRequest="{Binding PlacesHeight}" VerticalScrollBarVisibility="Never">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="PlaceRow">
                         <Border Padding="8,0" Margin="8,1" HeightRequest="30" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent">
@@ -155,7 +155,7 @@
 
             <!-- Other Devices: linked devices; files dropped on one are sent there. -->
             <Label Grid.Row="5" Text="{String Devices.Title}" FontSize="12" Opacity="0.6" Padding="16,12,16,4" />
-            <CollectionView Grid.Row="6" ItemsSource="{Binding Devices}" SelectionMode="None" HeightRequest="{Binding DevicesHeight}">
+            <CollectionView Grid.Row="6" ItemsSource="{Binding Devices}" SelectionMode="None" HeightRequest="{Binding DevicesHeight}" VerticalScrollBarVisibility="Never">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="DeviceRow">
                         <Border Padding="8,0" Margin="8,1" HeightRequest="30" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent"
@@ -550,13 +550,14 @@
         </Grid>
 
         <!-- Dual Pane: a splitter to drag, and the second pane (an explorer of its own, without a sidebar). -->
-        <BoxView x:Name="Splitter" Grid.Column="2" WidthRequest="5" IsVisible="{Binding IsSplit}"
-                 Color="{AppThemeBinding Light=#E2E4E8, Dark=#2A2C30}">
-            <BoxView.GestureRecognizers>
+        <!-- The same grip as the sidebar's edge: a hairline between the panes, an 8-point strip to drag. -->
+        <Grid x:Name="Splitter" Grid.Column="2" Style="{StaticResource Grip}" Margin="-4,0" ZIndex="1" IsVisible="{Binding IsSplit}">
+            <Grid.GestureRecognizers>
                 <PanGestureRecognizer PanUpdated="OnSplitterPanned" />
                 <PointerGestureRecognizer PointerEntered="OnGripEntered" PointerMoved="OnGripEntered" PointerExited="OnGripExited" />
-            </BoxView.GestureRecognizers>
-        </BoxView>
+            </Grid.GestureRecognizers>
+            <BoxView Style="{StaticResource GripLine}" Margin="0" />
+        </Grid>
         <ContentView x:Name="SecondPane" Grid.Column="3" IsVisible="{Binding IsSplit}" />
     </Grid>
 
