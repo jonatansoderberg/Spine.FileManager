@@ -1,3 +1,4 @@
+using Spine.FileManager.Controls;
 using Spine.FileManager.Operations;
 using Spine.FileManager.Storage.FileSystem;
 
@@ -112,6 +113,7 @@ public partial class ExplorerPage
                 var list = vm.IsIcons ? Icons : List;
                 list.ScrollTo(index, position: ScrollToPosition.MakeVisible, animate: false);
             };
+            vm.ScrollRequested += ScrollList;
             if (!vm.IsSecondary)
                 AppMenu.Install(this, vm);
             CrumbArea.SizeChanged += (_, _) => FitCrumbs();
@@ -509,11 +511,14 @@ public partial class ExplorerPage
         }
     }
 
+    private int _firstVisible, _lastVisible;
+
     private void OnListScrolled(object? sender, ItemsViewScrolledEventArgs e)
     {
         if (sender != Shown)
             return;
         _listOffset = e.VerticalOffset;
+        (_firstVisible, _lastVisible) = (e.FirstVisibleItemIndex, e.LastVisibleItemIndex);
         UpdateBox();
     }
 
@@ -571,13 +576,43 @@ public partial class ExplorerPage
         return timer;
     }
 
+    private void ScrollList(ListKey key)
+    {
+#if IOS || MACCATALYST
+        if (FindScrollView(Shown.Handler?.PlatformView as UIKit.UIView) is { } scroll)
+        {
+            // A page is what shows under the header, less a row so the edge row stays in sight.
+            var page = Math.Max(ItemSizes.RowHeight, scroll.Bounds.Height - scroll.AdjustedContentInset.Top - scroll.AdjustedContentInset.Bottom - ItemSizes.RowHeight);
+            ScrollListBy(key switch
+            {
+                ListKey.Home => double.NegativeInfinity,
+                ListKey.End => double.PositiveInfinity,
+                ListKey.PageUp => -page,
+                _ => page,
+            });
+        }
+#else
+        if (BindingContext is not ExplorerPageViewModel { Rows.Count: > 0 } vm)
+            return;
+        var (index, position) = key switch
+        {
+            ListKey.Home => (0, ScrollToPosition.Start),
+            ListKey.End => (vm.Rows.Count - 1, ScrollToPosition.End),
+            ListKey.PageUp => (_firstVisible, ScrollToPosition.End),
+            _ => (_lastVisible, ScrollToPosition.Start),
+        };
+        Shown.ScrollTo(index, position: position, animate: false);
+#endif
+    }
+
     private void ScrollListBy(double dy)
     {
 #if IOS || MACCATALYST
         if (FindScrollView(Shown.Handler?.PlatformView as UIKit.UIView) is { } scroll)
         {
-            var max = Math.Max(0, scroll.ContentSize.Height + scroll.AdjustedContentInset.Bottom - scroll.Bounds.Height);
-            var y = Math.Clamp(scroll.ContentOffset.Y + dy, 0, max);
+            var min = -scroll.AdjustedContentInset.Top;
+            var max = Math.Max(min, scroll.ContentSize.Height + scroll.AdjustedContentInset.Bottom - scroll.Bounds.Height);
+            var y = Math.Clamp(scroll.ContentOffset.Y + dy, min, max);
             scroll.SetContentOffset(new CoreGraphics.CGPoint(scroll.ContentOffset.X, y), false);
         }
 #endif

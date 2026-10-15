@@ -42,6 +42,11 @@ public sealed class KeySinkHandler : ViewHandler<KeySink, KeySinkHandler.SinkVie
                     UIKeyboardHidUsage.KeyboardDownArrow => ListKey.Down,
                     UIKeyboardHidUsage.KeyboardReturnOrEnter or UIKeyboardHidUsage.KeypadEnter => ListKey.Return,
                     UIKeyboardHidUsage.KeyboardSpacebar => ListKey.Space,
+                    UIKeyboardHidUsage.KeyboardHome => ListKey.Home,
+                    UIKeyboardHidUsage.KeyboardEnd => ListKey.End,
+                    UIKeyboardHidUsage.KeyboardPageUp => ListKey.PageUp,
+                    UIKeyboardHidUsage.KeyboardPageDown => ListKey.PageDown,
+                    UIKeyboardHidUsage.KeyboardDeleteOrBackspace or UIKeyboardHidUsage.KeyboardDeleteForward => ListKey.Delete,
                     _ => key.Characters is { Length: 1 } c && !char.IsControl(c[0]) ? ListKey.Text : null,
                 };
                 if (listKey is { } k)

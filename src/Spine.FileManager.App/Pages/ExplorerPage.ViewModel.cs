@@ -1426,6 +1426,12 @@ public partial class ExplorerPageViewModel : ViewModelBase
     /// <summary>Asks the page to scroll the row at this index into view.</summary>
     public event Action<int>? RevealRequested;
 
+    /// <summary>Asks the page to scroll the list: Home, End, Page Up or Page Down. The selection stays, as in Finder.</summary>
+    public event Action<ListKey>? ScrollRequested;
+
+    [RelayCommand]
+    private void ScrollList(ListKey key) => ScrollRequested?.Invoke(key);
+
     private string _typed = "";
     private DateTime _typedAt;
 
@@ -1444,6 +1450,12 @@ public partial class ExplorerPageViewModel : ViewModelBase
                 break;
             case ListKey.Space:
                 QuickLookSelection();
+                break;
+            case ListKey.Home or ListKey.End or ListKey.PageUp or ListKey.PageDown:
+                ScrollRequested?.Invoke(key);
+                break;
+            case ListKey.Delete:
+                _ = shift ? DeletePermanently() : Delete();
                 break;
             case ListKey.Text when text is not null:
                 // Typing a name's beginning jumps to it; a pause of a second starts a new name.
