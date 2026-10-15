@@ -38,6 +38,8 @@ The plan is [docs/plans/peer-link.md](../docs/plans/peer-link.md); the owner app
 - **Settings:** "Linked devices" shows the tracker's state (connected, or why not, with its address), this device's local addresses and the router's port with its method.
 - **The phone:** a tap opens a folder or file (a long press gives the menu); Settings sit on Home after the places, as there is no sidebar.
 
+**Verified 2026-10-16:** with the phone on 5G, the Mac sent a file to it over the return path; the phone asked first and both sides showed progress. A tap on Received crashed the phone at first: iOS fires the secondary-button tap recognizer on an ordinary tap, after the first tap had already opened the folder; the secondary tap is now ignored on touch screens.
+
 **Verified 2026-10-15:** the phone on 5G showed the Mac as "Via routern", the Mac showed the phone as "Reaches this device", and a file sent from the phone over 5G arrived in the Mac's Downloads.
 
 ## Decisions
