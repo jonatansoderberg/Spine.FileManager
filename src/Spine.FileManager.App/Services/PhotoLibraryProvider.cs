@@ -38,7 +38,7 @@ public sealed class PhotoLibraryProvider(ISpineStrings strings) : IStorageProvid
     // Photos' first answer in a process takes seconds (its daemon connects); the listing as it was last time shows at
     // once, the names it holds spare asking for them again, and the live listing replaces it when read.
 
-    private sealed record SnapshotEntry(string Id, string Name, DateTimeOffset? Created, bool Hidden);
+    private sealed record SnapshotEntry(string Id, string Name, DateTimeOffset? Created, bool Hidden, long? Size = null);
 
     private static readonly string SnapshotPath = Path.Combine(Staging, "..", "photo-library-listing.json");
     private static readonly Lock SnapshotLock = new();
@@ -46,7 +46,7 @@ public sealed class PhotoLibraryProvider(ISpineStrings strings) : IStorageProvid
 
     public IReadOnlyList<StorageItem>? CachedListing(StorageLocation folder) =>
         folder.ItemId.Length == 0 && Snapshot() is { } entries
-            ? [.. entries.Select(e => new StorageItem(Location(e.Id, e.Name), e.Name, StorageItemKind.File) { Created = e.Created, Modified = e.Created, IsHidden = e.Hidden })]
+            ? [.. entries.Select(e => new StorageItem(Location(e.Id, e.Name), e.Name, StorageItemKind.File) { Created = e.Created, Modified = e.Created, IsHidden = e.Hidden, Size = e.Size })]
             : null;
 
     private static List<SnapshotEntry>? Snapshot()
@@ -115,7 +115,7 @@ public sealed class PhotoLibraryProvider(ISpineStrings strings) : IStorageProvid
         await Authorize(location);
         var asset = Asset(location);
         var resource = Original(asset);
-        return Item(asset, resource.OriginalFilename) with { Size = (resource.ValueForKey(new NSString("fileSize")) as NSNumber)?.Int64Value };
+        return Item(asset, resource.OriginalFilename) with { Size = SizeOf(resource) };
     }
 
     public async IAsyncEnumerable<StorageItem> EnumerateAsync(StorageLocation folder, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -132,7 +132,7 @@ public sealed class PhotoLibraryProvider(ISpineStrings strings) : IStorageProvid
                 };
         var options = new PHFetchOptions { SortDescriptors = [new NSSortDescriptor("creationDate", false)] };
         var assets = PHAsset.FetchAssets(options);
-        var known = Snapshot()?.ToDictionary(e => e.Id, e => e.Name) ?? [];
+        var known = Snapshot()?.ToDictionary(e => e.Id) ?? [];
         var listed = new List<SnapshotEntry>((int)assets.Count);
         for (nint i = 0; i < assets.Count; i++)
         {
@@ -140,10 +140,19 @@ public sealed class PhotoLibraryProvider(ISpineStrings strings) : IStorageProvid
                 cancellationToken.ThrowIfCancellationRequested();
             if (assets[i] is not PHAsset asset)
                 continue;
-            // A photo's original name costs half a millisecond to ask for; the ones listed before are remembered.
-            var name = known.TryGetValue(asset.LocalIdentifier, out var remembered) ? remembered : Name(asset);
-            var item = Item(asset, name);
-            listed.Add(new SnapshotEntry(asset.LocalIdentifier, name, item.Created, item.IsHidden));
+            // A photo's original name and size cost a lookup of its resources; the ones listed before are remembered.
+            string name;
+            long? size;
+            if (known.TryGetValue(asset.LocalIdentifier, out var remembered) && remembered.Size is not null)
+                (name, size) = (remembered.Name, remembered.Size);
+            else
+            {
+                var resource = Original(asset);
+                name = remembered?.Name ?? Name(asset, resource);
+                size = SizeOf(resource);
+            }
+            var item = Item(asset, name) with { Size = size };
+            listed.Add(new SnapshotEntry(asset.LocalIdentifier, name, item.Created, item.IsHidden, size));
             yield return item;
         }
         Remember(listed);
@@ -274,10 +283,13 @@ public sealed class PhotoLibraryProvider(ISpineStrings strings) : IStorageProvid
 
     // The name the photo came with (IMG_1234.HEIC), read from the asset itself where it answers to it: asking for its
     // resources costs a lookup per photo, and "filename" is the library's own name for its copy (a UUID).
-    private static string Name(PHAsset asset) =>
+    private static string Name(PHAsset asset, PHAssetResource resource) =>
         (asset.RespondsToSelector(OriginalFilename) ? asset.ValueForKey(new NSString("originalFilename"))?.ToString() : null) is { Length: > 0 } name
             ? name
-            : Original(asset).OriginalFilename;
+            : resource.OriginalFilename;
+
+    // Photos keeps the original's size on its resource without a public property for it.
+    private static long? SizeOf(PHAssetResource resource) => (resource.ValueForKey(new NSString("fileSize")) as NSNumber)?.Int64Value;
 
     private static string? Staged(StorageLocation location) =>
         location.ItemId.StartsWith(StagedPrefix, StringComparison.Ordinal) ? Path.Combine(Staging, location.ItemId[StagedPrefix.Length..]) : null;
