@@ -40,7 +40,8 @@ public static class ItemSizes
         resources["ItemIconSize"] = IconSize;
         resources["ItemFontSize"] = FontSize;
         resources["GridIconSize"] = GridIconSize;
-        resources["GridCellWidth"] = GridCellWidth - 8;
+        // The whole column less the grid's spacing: the gap between highlights is the same across as down.
+        resources["GridCellWidth"] = GridCellWidth - 4;
         resources["SidebarItemHeight"] = SidebarRowHeight - 2;
         resources["SidebarFontSize"] = SidebarFontSize;
     }

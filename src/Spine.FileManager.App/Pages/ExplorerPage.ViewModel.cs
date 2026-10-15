@@ -2151,6 +2151,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
         IsLoading = true;
         if (changedFolder)
         {
+            _counting?.Cancel();
+            FolderTotal = null;
             _selection.Clear();
             _items = cached ?? [];
             Rows = [];
@@ -2192,6 +2194,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
             _items = items;
             tab.Items = items;
             // What was selected in the early or cached rows stays selected in the live ones.
+            if (changedFolder || keepSelection)
+                CountFolder(location);
             if (_found is null)
                 Show(rows, keep ?? (shownEarly && _selection.Count > 0 ? SelectedItems.Select(i => i.Location).ToHashSet() : null));
         }
@@ -2372,7 +2376,79 @@ public partial class ExplorerPageViewModel : ViewModelBase
             : string.IsNullOrWhiteSpace(Filter)
             ? _strings.Get("Explorer.Items", Rows.Count)
             : _strings.Get("Explorer.Matches", Rows.Count) + " " + _strings.Get("Explorer.OfItems", _items.Count(i => ShowHidden || !i.IsHidden));
-        Status = _selection.Count == 0 ? count : $"{count} · {_strings.Get("Explorer.Selected", _selection.Count)}";
+        var culture = System.Globalization.CultureInfo.CurrentCulture;
+        if (_found is null && FolderTotal is { } total)
+            count += " · " + _strings.Get(total.Complete ? "Explorer.InAll" : "Explorer.InAllAtLeast", ByteSize.Format(total.Bytes, culture));
+        if (_selection.Count == 0)
+        {
+            Status = count;
+            return;
+        }
+        // The files' sizes: a folder has none until it is counted through.
+        var selected = SelectedItems.Sum(i => i.Size ?? 0);
+        Status = $"{count} · {_strings.Get("Explorer.Selected", _selection.Count)}" + (selected > 0 ? $" ({ByteSize.Format(selected, culture)})" : "");
+    }
+
+    /// <summary>The folder shown with everything in its subfolders, counted in the background; null until counted.</summary>
+    private (long Bytes, bool Complete)? FolderTotal { get; set; }
+
+    private CancellationTokenSource? _counting;
+
+    // Counted off the UI thread once the folder shows, for a folder on disk; a large tree (a home folder) stops after a
+    // while and says "at least". Links are not followed, so nothing is counted twice through them.
+    private void CountFolder(StorageLocation folder)
+    {
+        _counting?.Cancel();
+        FolderTotal = null;
+        if (folder.NativePath is not { } path)
+            return;
+        var cancel = _counting = new CancellationTokenSource();
+        long bytes = 0;
+        var published = 0;
+        void Publish(bool complete)
+        {
+            // The count or the time limit, whichever comes first; one listing that blocks (a cloud folder) cannot hold
+            // the limit back.
+            if (Interlocked.Exchange(ref published, 1) == 1)
+                return;
+            var total = Interlocked.Read(ref bytes);
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                if (cancel.IsCancellationRequested || !folder.Equals(Current))
+                    return;
+                FolderTotal = (total, complete);
+                UpdateStatus();
+            });
+        }
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(400, cancel.Token);
+            _ = Task.Delay(TimeSpan.FromSeconds(10), cancel.Token).ContinueWith(t =>
+            {
+                if (!t.IsCanceled)
+                    Publish(complete: false);
+            }, TaskScheduler.Default);
+            var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint };
+            foreach (var length in new System.IO.Enumeration.FileSystemEnumerable<long>(path, (ref System.IO.Enumeration.FileSystemEntry e) => e.Length, options)
+                     {
+                         ShouldIncludePredicate = (ref System.IO.Enumeration.FileSystemEntry e) => !e.IsDirectory,
+                     })
+            {
+                Interlocked.Add(ref bytes, length);
+                if (cancel.IsCancellationRequested || Volatile.Read(ref published) == 1)
+                    return;
+            }
+            Publish(complete: true);
+        }, cancel.Token);
+    }
+
+    /// <summary>A click on the list's empty space: nothing is selected any more.</summary>
+    public void ClearSelection()
+    {
+        if (_selection.Count == 0)
+            return;
+        _selection.Clear();
+        ApplySelection();
     }
 
     private int IndexOf(ItemRow row)

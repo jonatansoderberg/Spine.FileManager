@@ -282,4 +282,6 @@
   <s key="Link.SameComputer">Det var samma dator två gånger. Skanna den andra datorns kod.</s>
   <s key="Link.Introducing">Länkar ”{0}” och ”{1}” …</s>
   <s key="Link.Introduced">”{0}” och ”{1}” är länkade.</s>
+  <s key="Explorer.InAll">{0} totalt</s>
+  <s key="Explorer.InAllAtLeast">minst {0} totalt</s>
 </strings>
