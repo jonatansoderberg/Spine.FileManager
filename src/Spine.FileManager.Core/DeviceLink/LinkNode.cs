@@ -9,6 +9,11 @@ namespace Spine.FileManager.DeviceLink;
 /// <summary>Where a node listens, sent by each side once a pairing is complete.</summary>
 public sealed record LinkEndpoints(IReadOnlyList<string> Endpoints);
 
+/// <summary>A third device's hand-over: another computer's invitation, with proof it scanned this one's code.</summary>
+public sealed record Introduction(string SessionId, string Invitation, byte[] Mac);
+
+public sealed record IntroductionResult(bool Linked, string? Error);
+
 /// <summary>
 /// This installation on the network (plan §19–23): it listens for devices that pair with it through its invitation and
 /// for files from devices it trusts, joins another device's invitation, and sends files to a trusted device. A
@@ -19,6 +24,16 @@ public sealed class LinkNode(NodeIdentity identity, TrustStore trust, string nam
 {
     private const byte Pair = (byte)'P';
     private const byte Transfer = (byte)'T';
+    private const byte Introduce = (byte)'I';
+
+    /// <summary>How long the user has to answer a request to link before it counts as turned down.</summary>
+    public static readonly TimeSpan ConfirmTimeout = TimeSpan.FromMinutes(2);
+
+    /// <summary>
+    /// Asked once a device has proved it knows this node's pairing code, before it is trusted: true links it. Unset,
+    /// every proven device is linked.
+    /// </summary>
+    public Func<PairedNode, Task<bool>>? Confirm { get; set; }
 
     private readonly TimeProvider _time = time ?? TimeProvider.System;
     private TcpListener? _listener;
@@ -73,7 +88,9 @@ public sealed class LinkNode(NodeIdentity identity, TrustStore trust, string nam
         var (confirm, host) = joiner.Accept(welcome);
         await FileTransfer.WriteAsync(stream, confirm, cancel);
         await FileTransfer.WriteAsync(stream, new LinkEndpoints(Endpoints), cancel);
-        var endpoints = await FileTransfer.ReadAsync<LinkEndpoints>(stream, cancel);
+        // The computer's user answers before it sends where it listens; no answer is a no.
+        var endpoints = await FileTransfer.ReadAsync<LinkEndpoints?>(stream, cancel)
+            ?? throw new PairingException("The other device turned the link down.");
         trust.Trust(host, lifetime, _time.GetUtcNow());
         trust.SetEndpoints(host.NodeId, endpoints.Endpoints);
         return trust.Find(host.NodeId)!;
@@ -145,6 +162,9 @@ public sealed class LinkNode(NodeIdentity identity, TrustStore trust, string nam
                             case Transfer:
                                 await ReceiveFiles(stream);
                                 break;
+                            case Introduce:
+                                await HostIntroduction(stream);
+                                break;
                         }
                     }
                     catch (Exception e) when (e is IOException or PairingException or ChannelException or System.Text.Json.JsonException)
@@ -168,10 +188,69 @@ public sealed class LinkNode(NodeIdentity identity, TrustStore trust, string nam
         var joined = offer.Host.Complete(await FileTransfer.ReadAsync<PairingConfirm>(stream));
         _offer = null;
         var endpoints = await FileTransfer.ReadAsync<LinkEndpoints>(stream);
+        if (!await Confirmed(joined))
+        {
+            await FileTransfer.WriteAsync<LinkEndpoints?>(stream, null);
+            return;
+        }
         await FileTransfer.WriteAsync(stream, new LinkEndpoints(Endpoints));
         trust.Trust(joined, offer.Lifetime, _time.GetUtcNow());
         trust.SetEndpoints(joined.NodeId, endpoints.Endpoints);
         Paired?.Invoke(trust.Find(joined.NodeId)!);
+    }
+
+    private async Task<bool> Confirmed(PairedNode joined)
+    {
+        if (Confirm is not { } ask)
+            return true;
+        try
+        {
+            return await ask(joined).WaitAsync(ConfirmTimeout);
+        }
+        catch (TimeoutException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// For a device between two others (a phone that scanned both computers' codes): hands <paramref name="introduced"/>
+    /// to the device that showed <paramref name="to"/>, which then joins it as if it had scanned it. The proof that the
+    /// introducer scanned <paramref name="to"/> is an HMAC with its secret; the introducer is linked to neither.
+    /// </summary>
+    public static async Task IntroduceAsync(PairingInvitation to, PairingInvitation introduced, CancellationToken cancel = default)
+    {
+        var link = introduced.ToUri();
+        using var client = await ConnectAsync(to.Endpoints, cancel);
+        var stream = client.GetStream();
+        stream.WriteByte(Introduce);
+        await FileTransfer.WriteAsync(stream, new Introduction(to.SessionId, link, Pairing.IntroductionMac(to.Secret, link)), cancel);
+        var result = await FileTransfer.ReadAsync<IntroductionResult>(stream, cancel);
+        if (!result.Linked)
+            throw new PairingException(result.Error ?? "The computers did not link.");
+    }
+
+    // The introduced code stands for this node's own: it is used up, and its lifetime is what the other computer gets.
+    private async Task HostIntroduction(NetworkStream stream)
+    {
+        var introduction = await FileTransfer.ReadAsync<Introduction>(stream);
+        if (_offer is not { } offer || offer.Invitation.SessionId != introduction.SessionId || offer.Invitation.IsExpired(_time.GetUtcNow())
+            || !System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(introduction.Mac, Pairing.IntroductionMac(offer.Invitation.Secret, introduction.Invitation)))
+        {
+            await FileTransfer.WriteAsync(stream, new IntroductionResult(false, "This computer's code was not the one scanned, or it has expired."));
+            return;
+        }
+        _offer = null;
+        try
+        {
+            var host = await JoinAsync(PairingInvitation.Parse(introduction.Invitation), offer.Lifetime);
+            await FileTransfer.WriteAsync(stream, new IntroductionResult(true, null));
+            Paired?.Invoke(host);
+        }
+        catch (Exception e) when (e is PairingException or IOException or SocketException or FormatException)
+        {
+            await FileTransfer.WriteAsync(stream, new IntroductionResult(false, e.Message));
+        }
     }
 
     private async Task ReceiveFiles(NetworkStream stream)
