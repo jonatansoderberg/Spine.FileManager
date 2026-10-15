@@ -90,6 +90,8 @@ public sealed partial class DeviceRow(DeviceLink.TrustedNode node, string lifeti
     [ObservableProperty]
     public partial bool IsDropTarget { get; set; }
 
+    public MenuItems Menu { get; set; } = [];
+
     /// <summary>How the device can be reached now, for the dot by its glyph and the line under its name.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsOnline), nameof(IsOffline), nameof(StatusLine))]
@@ -364,8 +366,22 @@ public partial class ExplorerPageViewModel : ViewModelBase
     [ObservableProperty]
     public partial string DeviceActivity { get; private set; } = "";
 
-    [ObservableProperty]
-    public partial MenuItems DeviceMenu { get; private set; } = [];
+    // Each device has its own menu: its Ask Before Receiving check is its own.
+    private MenuItems DeviceMenu(DeviceRow row) =>
+    [
+        new MenuSection
+        {
+            new MenuAction(_strings["Devices.AskBeforeReceiving"], null, ToggleAskBeforeReceivingCommand) { IsChecked = row.Node.AskBeforeReceiving },
+        },
+        new MenuSection
+        {
+            new MenuAction(_strings["Devices.Rename"], "Edit.svg", RenameDeviceCommand),
+            new MenuAction(_strings["Devices.Forget"], "Delete.svg", ForgetDeviceCommand) { IsDestructive = true },
+        },
+    ];
+
+    [RelayCommand]
+    private void ToggleAskBeforeReceiving(DeviceRow row) => _devices.Trust.SetAskBeforeReceiving(row.Node.NodeId, !row.Node.AskBeforeReceiving);
 
     private void ShowStatus(DeviceRow row)
     {
@@ -380,6 +396,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
         foreach (var node in _devices.Trust.All.OrderBy(n => n.DisplayName, StringComparer.CurrentCultureIgnoreCase))
         {
             var row = new DeviceRow(node, _strings[$"Devices.Lifetime.{node.Lifetime}"]);
+            row.Menu = DeviceMenu(row);
             ShowStatus(row);
             Devices.Add(row);
         }
@@ -424,6 +441,10 @@ public partial class ExplorerPageViewModel : ViewModelBase
                 DeviceActivity = _strings.Get("Devices.Sending", name, total > 0 ? sent * 100 / total : 100);
             }));
             DeviceActivity = _strings.Get("Devices.Sent", name);
+        }
+        catch (DeviceLink.TransferDeclinedException declined)
+        {
+            DeviceActivity = _strings.Get(declined.TimedOut ? "Devices.NoAnswer" : "Devices.Declined", name);
         }
         catch (DeviceLink.LinkNode.UnreachableException)
         {
@@ -827,11 +848,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
             new MenuAction(strings["Menu.MoveTabToNewWindow"], null, MoveTabToNewWindowCommand) { IsVisible = ExplorerWindows.IsSupported },
             new MenuAction(strings["Menu.CloseTab"], null, CloseTabCommand),
         ];
-        DeviceMenu =
-        [
-            new MenuAction(strings["Devices.Rename"], "Edit.svg", RenameDeviceCommand),
-            new MenuAction(strings["Devices.Forget"], "Delete.svg", ForgetDeviceCommand) { IsDestructive = true },
-        ];
+
         PlaceMenu =
         [
             new MenuAction(strings["Menu.Open"], null, OpenPlaceCommand),

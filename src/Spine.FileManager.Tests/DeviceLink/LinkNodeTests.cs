@@ -162,6 +162,31 @@ public sealed class LinkNodeTests : IDisposable
     }
 
     [Fact]
+    public async Task A_transfer_waits_for_the_receivers_answer_and_a_no_sends_nothing()
+    {
+        var computer = Node("computer");
+        var phone = Node("phone");
+        await Link(computer, phone);
+        IncomingTransfer? asked = null;
+        var answer = false;
+        computer.AcceptTransfer = transfer => { asked = transfer; return Task.FromResult(answer); };
+        var file = _temp.File("send/report.pdf", "pdf bytes");
+        var inbox = Path.Combine(_temp.Path, "computer", "inbox");
+
+        var declined = await Assert.ThrowsAsync<TransferDeclinedException>(() => phone.SendAsync(computer.Identity.NodeId, [file]));
+
+        Assert.False(declined.TimedOut);
+        Assert.Equal(phone.Identity.NodeId, asked!.NodeId);
+        Assert.Equal(["report.pdf"], asked.Request.Names);
+        Assert.Equal((1, 9L), (asked.Request.Files, asked.Request.Bytes));
+        Assert.False(File.Exists(Path.Combine(inbox, "report.pdf")));
+
+        answer = true;
+        await phone.SendAsync(computer.Identity.NodeId, [file]);
+        Assert.Equal("pdf bytes", File.ReadAllText(Path.Combine(inbox, "report.pdf")));
+    }
+
+    [Fact]
     public async Task A_device_trusted_for_one_transfer_is_forgotten_after_it()
     {
         var computer = Node("computer");

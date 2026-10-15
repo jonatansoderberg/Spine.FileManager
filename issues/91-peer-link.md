@@ -23,7 +23,9 @@ The plan is [docs/plans/peer-link.md](../docs/plans/peer-link.md); the owner app
 - **A device that only reaches this one** (a phone on 5G) shows green with "Reaches this device": each check is now the authenticated endpoint swap, and the side that is reached raises `Contacted`; within 25 seconds of it the device counts as there. Sending to it waits for a way back (step 3).
 - **Within ten seconds (owner):** devices are checked every 10 seconds and at once when the network changes (Wi-Fi on or off), endpoints are swapped the moment two devices meet and then every two minutes, and a network change maps the router's port again.
 
+- **Ask before receiving (owner):** a transfer opens with a `TransferRequest` (top-level names, files, bytes) and waits for a `TransferAnswer`. Each linked device has "Ask Before Receiving" in its menu, on by default (`TrustedNode.AskBeforeReceiving`); with it on the receiver asks "“iPhone” wants to send 3 items" with Accept and Decline, and no answer within two minutes is a no. The sender says "iPhone declined the files" or "iPhone didn't answer". The whole suite failed once on the first run after this change and passed eleven runs after it; the failing test was not caught.
+
 **Verified 2026-10-15:** the phone on 5G showed the Mac as "Via routern", the Mac showed the phone as "Reaches this device", and a file sent from the phone over 5G arrived in the Mac's Downloads.
 
 ## Decisions
-- **Built in the file manager for now.** Where the link lives (a Spine package, as the plan proposes, or here) is still open with the owner; step 1 is moved together with the rest if the answer is Spine.
+- **The link lives in this repository** (owner, 2026-10-15): nothing else is to share it now, and changes reach the phone faster without a Spine release in between. The tracker is a project here too.

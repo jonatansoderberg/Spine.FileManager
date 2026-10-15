@@ -259,7 +259,7 @@
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="DeviceRow">
                         <Border Padding="8,0" Margin="8,1" HeightRequest="{DynamicResource SidebarItemHeight}" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent"
-                              ContextMenu.Items="{Binding DeviceMenu, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" ContextMenu.CommandParameter="{Binding .}"
+                              ContextMenu.Items="{Binding Menu}" ContextMenu.CommandParameter="{Binding .}"
                               ToolTipProperties.Text="{Binding StatusLine}">
                             <Border.Triggers>
                                 <DataTrigger TargetType="Border" Binding="{Binding IsDropTarget}" Value="True">
@@ -896,7 +896,7 @@
                         <BindableLayout.ItemTemplate>
                             <DataTemplate x:DataType="DeviceRow">
                                 <Border Style="{StaticResource HomeCard}" WidthRequest="220"
-                                        ContextMenu.Items="{Binding DeviceMenu, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" ContextMenu.CommandParameter="{Binding .}">
+                                        ContextMenu.Items="{Binding Menu}" ContextMenu.CommandParameter="{Binding .}">
                                     <Border.GestureRecognizers>
                                         <DropGestureRecognizer DragOver="OnFileDragOver" DragLeave="OnFileDragLeave" Drop="OnFileDrop" />
                                     </Border.GestureRecognizers>

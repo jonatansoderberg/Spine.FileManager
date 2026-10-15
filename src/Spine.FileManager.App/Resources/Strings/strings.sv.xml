@@ -176,6 +176,13 @@
   <s key="Devices.Status.ReachesUs">Når den här enheten</s>
   <s key="Devices.Status.Offline">Offline</s>
   <s key="Devices.NotAnswering">{0} svarade inte. Är Spine File Manager öppen där?</s>
+  <s key="Devices.AskBeforeReceiving">Fråga innan mottagning</s>
+  <s key="Devices.Declined">{0} avböjde filerna</s>
+  <s key="Devices.NoAnswer">{0} svarade inte</s>
+  <s key="Transfer.Ask.Title">”{0}” vill skicka {1}</s>
+  <s key="Transfer.Ask.Message">{0} ({1})</s>
+  <s key="Transfer.Ask.Accept">Ta emot</s>
+  <s key="Transfer.Ask.Decline">Avböj</s>
   <s key="Link.Title">Länka enhet</s>
   <s key="Link.Intro">Skanna koden med Spine File Manager på den andra enheten, eller öppna länken där.</s>
   <s key="Link.Keep">Lita på den andra enheten</s>
