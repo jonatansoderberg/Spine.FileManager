@@ -13,6 +13,9 @@ public partial class ExplorerPage
 {
     private double _splitStart;
 
+    // The icon grid's margin and the gap between its columns (GridItemsLayout.HorizontalItemSpacing in the view).
+    private const double IconsMargin = 8, GridSpacing = 4;
+
     public ExplorerPage()
     {
         InitializeComponent();
@@ -30,9 +33,21 @@ public partial class ExplorerPage
             {
                 vm.IsWide = Width >= 640;
                 var paneWidth = vm.IsSplit ? Root.ColumnDefinitions[3].Width.Value : 0;
-                // From the grid's own width when it is shown: the preview and the second pane take room from it too.
-                var room = Icons.Width > 0 ? Icons.Width : Width - (vm.ShowsSidebar ? vm.SidebarWidth : 0) - paneWidth;
-                vm.GridSpan = Math.Max(1, (int)(room / ItemSizes.GridCellWidth));
+                if (Icons.Width <= 0)
+                {
+                    vm.GridSpan = Math.Max(1, (int)((Width - (vm.ShowsSidebar ? vm.SidebarWidth : 0) - paneWidth) / ItemSizes.GridCellWidth));
+                    return;
+                }
+                // A wrapping grid, as Finder's: a CollectionView grid shares its width among its columns, so the cells
+                // moved apart as the pane grew. It is made exactly as wide as its whole columns (the room left goes to
+                // its right margin), so the icons stay where they are and only wrap when a column comes or goes.
+                var pitch = ItemSizes.GridCellWidth;
+                var room = Icons.Width + Icons.Margin.Right - IconsMargin;
+                var span = Math.Max(1, (int)((room + GridSpacing) / pitch));
+                vm.GridSpan = span;
+                var spare = Math.Max(0, room - (span * pitch - GridSpacing));
+                if (Math.Abs(Icons.Margin.Right - IconsMargin - spare) > 0.5)
+                    Icons.Margin = new Thickness(IconsMargin, IconsMargin, IconsMargin + spare, 0);
             }
         }
         SizeChanged += (_, _) => Fit();
