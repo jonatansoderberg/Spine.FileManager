@@ -1,6 +1,6 @@
 # Spine File Manager — Requirements and Plan
 
-**Last updated:** 2026-10-14 — icons and icon themes (#51); Other Devices (#38); undo (#48); tabs in the title bar (#46); file drag and drop (#44); Spike 6 transport (#37); tab drag (#41); Spike 5 identity and pairing (#36); preview (#34), filter (#32), Dual Pane (#23 part 1), last session (#25 part 1), windows (#22), terminal (#24), tabs (#21), journal (#20); milestone A done on the Mac; Windows (#3) compiled only.
+**Last updated:** 2026-10-15 — concept UI roadmap (#55, docs/plans/concept-ui.md); icons and icon themes (#51); Other Devices (#38); undo (#48); tabs in the title bar (#46); file drag and drop (#44); Spike 6 transport (#37); tab drag (#41); Spike 5 identity and pairing (#36); preview (#34), filter (#32), Dual Pane (#23 part 1), last session (#25 part 1), windows (#22), terminal (#24), tabs (#21), journal (#20); milestone A done on the Mac; Windows (#3) compiled only.
 
 A living plan. Each step links its GitHub issue once it has one; update the status, the decisions and the line above in the same PR as the work.
 
