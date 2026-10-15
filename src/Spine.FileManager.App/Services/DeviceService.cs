@@ -26,7 +26,7 @@ public sealed class DeviceService
     /// The tracker that tells linked devices where the others are (peer link plan, step 2); Preferences' "link.tracker"
     /// overrides it, and an empty value turns the tracker off.
     /// </summary>
-    public const string DefaultTracker = "";
+    public const string DefaultTracker = "wss://spinefm-tracker-bcaa2e.azurewebsites.net/link";
 
     public static string TrackerUrl => Preferences.Get("link.tracker", DefaultTracker);
 

@@ -38,6 +38,13 @@ A small ASP.NET Core service in Azure.
 - **What it stores:** node id, addresses, last seen, the hashed trust list. No names, no file data.
 - **Cost:** an always-on host. The free App Service tier (5 WebSockets) is enough to develop with; a real one is about 130 SEK a month. Traffic is a few kilobytes per connection.
 
+### Running in Azure
+
+- **Where:** the owner's Visual Studio Enterprise subscription, resource group `rg-spinefm-tracker` in Sweden Central, Linux App Service plan `plan-spinefm-tracker` on the free tier (F1), web app `spinefm-tracker-bcaa2e` with WebSockets on and HTTPS only. The app connects to `wss://spinefm-tracker-bcaa2e.azurewebsites.net/link` (`DeviceService.DefaultTracker`).
+- **Publish:** `dotnet publish src/Spine.FileManager.Tracker -c Release -o <out>`, zip the folder's contents, then `az webapp deploy -g rg-spinefm-tracker -n spinefm-tracker-bcaa2e --src-path <zip> --type zip --subscription <the subscription>`. `GET /` answers with how many devices are online.
+- **The free tier's limits:** the app sleeps after about 20 idle minutes and takes up to 20 seconds to wake, so the first sign-in after a quiet spell is slow (the client keeps retrying); 60 CPU minutes a day; few simultaneous WebSockets. Enough for development; the next tier up costs about 130 SEK a month.
+- **Checking it from a script:** a file-based C# app (`dotnet run check.cs` with `#:project` on Core) needs `#:property JsonSerializerIsReflectionEnabledByDefault=true`, or every message fails to parse and the client never signs in.
+
 ## Transfers
 
 - **Pieces:** a file is offered with a manifest of pieces (1 MB each, larger for big files), each with its SHA-256.
@@ -58,7 +65,7 @@ In this repository (owner, 2026-10-15: nothing else is to share it now). The cli
 | Step | What | Depends on |
 |---|---|---|
 | 1 | Router port mapping (NAT-PMP, PCP, UPnP) for the node's TCP port; the badge "Via router" — **done** (#93): the phone on 5G sent a file to the Mac at home | — |
-| 2 | Tracker: register with a signed challenge, look up, last seen; free tier in Azure — **built and tested locally** (#95); runs in Azure once the subscription is chosen | — |
+| 2 | Tracker: register with a signed challenge, look up, last seen; free tier in Azure — **done** (#95, #96): runs in Azure on the free tier | — |
 | 3 | The ladder in `LinkNode`: local, router, the tracker's addresses; the badge per rung | 1, 2 |
 | 4 | Pieces with checksums and resume; pause, resume, cancel in the operations panel | — |
 | 5 | Rung 3: ICE + KCP through the tracker's signalling, TLS inside | 2, 3 |
@@ -67,7 +74,7 @@ In this repository (owner, 2026-10-15: nothing else is to share it now). The cli
 
 ## Open questions for the owner
 
-1. **Azure subscription.** The one signed in on the Mac is the Knowit subscription. Which subscription should the tracker live in?
+1. ~~Azure subscription.~~ The owner's Visual Studio Enterprise subscription (2026-10-15).
 2. ~~Spine or the file manager.~~ The file manager (owner, 2026-10-15).
 3. **Order.** Steps 1–3 first (the case the spike proved), then 4 (pieces), then 5 and 6?
 4. **Wake through push.** Worth it in this round? It needs the app's push setup (APNs key, FCM).

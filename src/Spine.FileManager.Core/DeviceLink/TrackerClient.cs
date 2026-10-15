@@ -21,6 +21,9 @@ public sealed class TrackerClient(Uri url, NodeIdentity identity, Func<TrackerUp
     /// <summary>Signed in and listening for answers.</summary>
     public bool IsConnected { get; private set; }
 
+    /// <summary>Why the last attempt to reach the tracker failed, with its address; null once signed in.</summary>
+    public string? LastError { get; private set; }
+
     /// <summary>The line opened (true) or was cut (false).</summary>
     public event Action<bool>? ConnectionChanged;
 
@@ -50,6 +53,7 @@ public sealed class TrackerClient(Uri url, NodeIdentity identity, Func<TrackerUp
                 await SendAsync(new TrackerHello(identity.PublicKey, identity.Sign(TrackerProtocol.Signed(challenge.Nonce)), now.Endpoints, now.Trusted));
                 if (await ReceiveAsync(socket, cancel) is not TrackerWelcome)
                     throw new WebSocketException("The tracker turned the sign-in down.");
+                LastError = null;
                 SetConnected(true);
                 pause = TimeSpan.FromSeconds(1);
                 while (await ReceiveAsync(socket, cancel) is { } message)
@@ -65,8 +69,11 @@ public sealed class TrackerClient(Uri url, NodeIdentity identity, Func<TrackerUp
                     }
                 }
             }
-            catch (Exception e) when (e is WebSocketException or IOException or JsonException or OperationCanceledException && !cancel.IsCancellationRequested)
+            catch (Exception e) when (e is WebSocketException or IOException or JsonException or NotSupportedException or OperationCanceledException && !cancel.IsCancellationRequested)
             {
+                // Kept with the address, so a tracker that cannot be reached says where and why instead of failing quietly.
+                LastError = $"{url}: {e.GetType().Name}: {e.Message}";
+                System.Diagnostics.Debug.WriteLine($"[Tracker] {LastError}");
             }
             finally
             {
