@@ -449,6 +449,17 @@ public partial class ExplorerPage
     {
         Keys.Activate();
         _pressed = e.GetPosition(Shown);
+        // A click on the list's empty space clears the selection, as in Finder and Explorer; Cmd and Shift keep it.
+        if (_pressed is { } at && !ModifierKeys.Command && !ModifierKeys.Shift && BindingContext is ExplorerPageViewModel vm && !IsOnItem(at))
+            vm.ClearSelection();
+    }
+
+    private bool IsOnItem(Point at)
+    {
+        var content = new Rect(at.X, at.Y + _listOffset, 1, 1);
+        if (ItemsIn(Shown, content) is { } items)
+            return items.Count > 0;
+        return Shown == List && BindingContext is ExplorerPageViewModel vm && (int)(content.Y / ItemSizes.RowHeight) < vm.Rows.Count;
     }
 
     // A press on what drags files: a row's name or icon, a whole cell of the icon grid.
