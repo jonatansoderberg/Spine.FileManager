@@ -969,7 +969,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
     public partial string Status { get; private set; } = "";
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(NameChevron), nameof(ModifiedChevron), nameof(SizeChevron), nameof(KindChevron))]
+    [NotifyPropertyChangedFor(nameof(NameChevron), nameof(ModifiedChevron), nameof(SizeChevron), nameof(KindChevron),
+        nameof(NameSorted), nameof(ModifiedSorted), nameof(SizeSorted), nameof(KindSorted))]
     public partial ItemSort Sort { get; private set; } = new();
 
     [ObservableProperty]
@@ -1403,13 +1404,19 @@ public partial class ExplorerPageViewModel : ViewModelBase
     public partial int GridSpan { get; set; } = 6;
 
     // The column the list is sorted by shows a chevron: up ascending, down descending.
-    public string? NameChevron => Chevron(SortColumn.Name);
-    public string? ModifiedChevron => Chevron(SortColumn.Modified);
-    public string? SizeChevron => Chevron(SortColumn.Size);
-    public string? KindChevron => Chevron(SortColumn.Kind);
+    public string NameChevron => Chevron(SortColumn.Name);
+    public string ModifiedChevron => Chevron(SortColumn.Modified);
+    public string SizeChevron => Chevron(SortColumn.Size);
+    public string KindChevron => Chevron(SortColumn.Kind);
 
-    private string? Chevron(SortColumn column) =>
-        Sort.Column != column ? null : Sort.Descending ? "ChevronDown.svg" : "ChevronUp.svg";
+    // Every header has its chevron, as in the concept image; the sorted one points the way it sorts and stands out.
+    private string Chevron(SortColumn column) =>
+        Sort.Column == column && !Sort.Descending ? "ChevronUp.svg" : "ChevronDown.svg";
+
+    public bool NameSorted => Sort.Column == SortColumn.Name;
+    public bool ModifiedSorted => Sort.Column == SortColumn.Modified;
+    public bool SizeSorted => Sort.Column == SortColumn.Size;
+    public bool KindSorted => Sort.Column == SortColumn.Kind;
 
     /// <summary>The widths of the parts a user resizes, kept between runs; Name takes what the other columns leave.</summary>
     [ObservableProperty]
@@ -2378,7 +2385,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
             : _strings.Get("Explorer.Matches", Rows.Count) + " " + _strings.Get("Explorer.OfItems", _items.Count(i => ShowHidden || !i.IsHidden));
         var culture = System.Globalization.CultureInfo.CurrentCulture;
         if (_found is null && FolderTotal is { } total)
-            count += " · " + _strings.Get(total.Complete ? "Explorer.InAll" : "Explorer.InAllAtLeast", ByteSize.Format(total.Bytes, culture));
+            count += " · " + _strings.Get(total.Complete ? "Explorer.InAll" : "Explorer.Counting", ByteSize.Format(total.Bytes, culture));
         if (_selection.Count == 0)
         {
             Status = count;
@@ -2394,8 +2401,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     private CancellationTokenSource? _counting;
 
-    // Counted off the UI thread once the folder shows, for a folder on disk; a large tree (a home folder) stops after a
-    // while and says "at least". Links are not followed, so nothing is counted twice through them.
+    // Counted off the UI thread once the folder shows, for a folder on disk, until it is done or the folder is left.
+    // Links are not followed, so nothing is counted twice through them.
     private void CountFolder(StorageLocation folder)
     {
         _counting?.Cancel();
@@ -2404,17 +2411,13 @@ public partial class ExplorerPageViewModel : ViewModelBase
             return;
         var cancel = _counting = new CancellationTokenSource();
         long bytes = 0;
-        var published = 0;
         void Publish(bool complete)
         {
-            // The count or the time limit, whichever comes first; one listing that blocks (a cloud folder) cannot hold
-            // the limit back.
-            if (Interlocked.Exchange(ref published, 1) == 1)
-                return;
             var total = Interlocked.Read(ref bytes);
             MainThread.BeginInvokeOnMainThread(() =>
             {
-                if (cancel.IsCancellationRequested || !folder.Equals(Current))
+                // A progress tick still queued when the count finished must not take the result back.
+                if (cancel.IsCancellationRequested || !folder.Equals(Current) || !complete && FolderTotal is { Complete: true })
                     return;
                 FolderTotal = (total, complete);
                 UpdateStatus();
@@ -2423,11 +2426,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
         _ = Task.Run(async () =>
         {
             await Task.Delay(400, cancel.Token);
-            _ = Task.Delay(TimeSpan.FromSeconds(10), cancel.Token).ContinueWith(t =>
-            {
-                if (!t.IsCanceled)
-                    Publish(complete: false);
-            }, TaskScheduler.Default);
+            // What has been counted so far shows while it runs, a few times a second, so a large tree is seen to grow.
+            using var progress = new Timer(_ => Publish(complete: false), null, TimeSpan.FromMilliseconds(300), TimeSpan.FromMilliseconds(300));
             var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint };
             foreach (var length in new System.IO.Enumeration.FileSystemEnumerable<long>(path, (ref System.IO.Enumeration.FileSystemEntry e) => e.Length, options)
                      {
@@ -2435,9 +2435,10 @@ public partial class ExplorerPageViewModel : ViewModelBase
                      })
             {
                 Interlocked.Add(ref bytes, length);
-                if (cancel.IsCancellationRequested || Volatile.Read(ref published) == 1)
+                if (cancel.IsCancellationRequested)
                     return;
             }
+            progress.Change(Timeout.Infinite, Timeout.Infinite);
             Publish(complete: true);
         }, cancel.Token);
     }

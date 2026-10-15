@@ -56,7 +56,7 @@
             <Setter Property="BackgroundColor" Value="Transparent" />
             <Setter Property="InputTransparent" Value="True" />
             <Setter Property="VerticalOptions" Value="Center" />
-            <Setter Property="Opacity" Value="0.65" />
+            <Setter Property="Opacity" Value="0.35" />
             <Setter Property="SvgImageSource.EnableSvg" Value="True" />
             <Setter Property="SvgImageSource.LightTintColor" Value="#1B1B1B" />
             <Setter Property="SvgImageSource.DarkTintColor" Value="#E8E8E8" />
@@ -68,7 +68,7 @@
         </Style>
         <Style x:Key="GripLine" TargetType="BoxView">
             <Setter Property="WidthRequest" Value="1" />
-            <Setter Property="Margin" Value="0,7" />
+            <Setter Property="Margin" Value="0,9" />
             <Setter Property="HorizontalOptions" Value="Center" />
             <Setter Property="Color" Value="{AppThemeBinding Light=#D5D7DB, Dark=#3A3C40}" />
         </Style>
@@ -146,10 +146,10 @@
             <Setter Property="TextColor" Value="{AppThemeBinding Light=#1B1B1B, Dark=#E8E8E8}" />
         </Style>
         <Style x:Key="ColumnHeader" TargetType="Label">
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="Opacity" Value="0.65" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="TextColor" Value="{AppThemeBinding Light=#5F6670, Dark=#9DA3AB}" />
             <Setter Property="VerticalTextAlignment" Value="Center" />
-            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="Padding" Value="8,0" />
         </Style>
         <Style x:Key="Cell" TargetType="Label">
             <Setter Property="FontSize" Value="{DynamicResource ItemFontSize}" />
@@ -493,19 +493,46 @@
             <!-- Column headers: a click sorts, a second click reverses. -->
             <!-- Column headers: a click sorts, a second click reverses; the sorted column shows a chevron. The grip on a
                  column's right edge resizes it; Name takes what is left. -->
-            <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto,Auto" Padding="8,0" IsVisible="{Binding ShowsList}">
+            <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto,Auto" Padding="8,0" HeightRequest="34" IsVisible="{Binding ShowsList}">
+                <BoxView Grid.ColumnSpan="4" HeightRequest="1" VerticalOptions="End" Margin="-8,0" InputTransparent="True" Color="{AppThemeBinding Light=#E3E5E8, Dark=#34363A}" />
                 <Grid  Padding="38,0,0,0" ColumnDefinitions="*,Auto">
                     <Grid.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Name" /></Grid.GestureRecognizers>
                     <HorizontalStackLayout Spacing="0">
-                        <Label Text="{String Explorer.Column.Name}" Style="{StaticResource ColumnHeader}" Padding="8,6,2,6" />
-                        <ImageButton Style="{StaticResource SortChevron}" SvgImageSource.Svg="{Binding NameChevron}" IsVisible="{Binding NameChevron, Converter={StaticResource HasValue}}" />
+                        <Label Text="{String Explorer.Column.Name}" Style="{StaticResource ColumnHeader}" Padding="8,0,2,0">
+                            <Label.Triggers>
+                                <DataTrigger TargetType="Label" Binding="{Binding NameSorted}" Value="True">
+                                    <Setter Property="TextColor" Value="{AppThemeBinding Light=#1B1B1B, Dark=#E8E8E8}" />
+                                    <Setter Property="FontAttributes" Value="Bold" />
+                                </DataTrigger>
+                            </Label.Triggers>
+                        </Label>
+                        <ImageButton Style="{StaticResource SortChevron}" SvgImageSource.Svg="{Binding NameChevron}">
+                            <ImageButton.Triggers>
+                                <DataTrigger TargetType="ImageButton" Binding="{Binding NameSorted}" Value="True">
+                                    <Setter Property="Opacity" Value="0.9" />
+                                </DataTrigger>
+                            </ImageButton.Triggers>
+                        </ImageButton>
                     </HorizontalStackLayout>
                 </Grid>
                 <Grid Grid.Column="1" WidthRequest="{Binding ModifiedWidth}" IsVisible="{Binding HasColumns}" ColumnDefinitions="*,Auto">
                     <Grid.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Modified" /></Grid.GestureRecognizers>
                     <HorizontalStackLayout Spacing="0">
-                        <Label Text="{String Explorer.Column.Modified}" Style="{StaticResource ColumnHeader}" Padding="8,6,2,6" />
-                        <ImageButton Style="{StaticResource SortChevron}" SvgImageSource.Svg="{Binding ModifiedChevron}" IsVisible="{Binding ModifiedChevron, Converter={StaticResource HasValue}}" />
+                        <Label Text="{String Explorer.Column.Modified}" Style="{StaticResource ColumnHeader}" Padding="8,0,2,0">
+                            <Label.Triggers>
+                                <DataTrigger TargetType="Label" Binding="{Binding ModifiedSorted}" Value="True">
+                                    <Setter Property="TextColor" Value="{AppThemeBinding Light=#1B1B1B, Dark=#E8E8E8}" />
+                                    <Setter Property="FontAttributes" Value="Bold" />
+                                </DataTrigger>
+                            </Label.Triggers>
+                        </Label>
+                        <ImageButton Style="{StaticResource SortChevron}" SvgImageSource.Svg="{Binding ModifiedChevron}">
+                            <ImageButton.Triggers>
+                                <DataTrigger TargetType="ImageButton" Binding="{Binding ModifiedSorted}" Value="True">
+                                    <Setter Property="Opacity" Value="0.9" />
+                                </DataTrigger>
+                            </ImageButton.Triggers>
+                        </ImageButton>
                     </HorizontalStackLayout>
                     <Grid Grid.Column="1" Style="{StaticResource Grip}" ClassId="ModifiedWidth">
                         <Grid.GestureRecognizers><PanGestureRecognizer PanUpdated="OnGripPanned" /><PointerGestureRecognizer PointerEntered="OnGripEntered" PointerMoved="OnGripEntered" PointerExited="OnGripExited" /></Grid.GestureRecognizers>
@@ -515,8 +542,21 @@
                 <Grid Grid.Column="2" WidthRequest="{Binding SizeWidth}" ColumnDefinitions="*,Auto">
                     <Grid.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Size" /></Grid.GestureRecognizers>
                     <HorizontalStackLayout Spacing="0" HorizontalOptions="End">
-                        <Label Text="{String Explorer.Column.Size}" Style="{StaticResource ColumnHeader}" Padding="8,6,2,6" />
-                        <ImageButton Style="{StaticResource SortChevron}" SvgImageSource.Svg="{Binding SizeChevron}" IsVisible="{Binding SizeChevron, Converter={StaticResource HasValue}}" />
+                        <Label Text="{String Explorer.Column.Size}" Style="{StaticResource ColumnHeader}" Padding="8,0,2,0">
+                            <Label.Triggers>
+                                <DataTrigger TargetType="Label" Binding="{Binding SizeSorted}" Value="True">
+                                    <Setter Property="TextColor" Value="{AppThemeBinding Light=#1B1B1B, Dark=#E8E8E8}" />
+                                    <Setter Property="FontAttributes" Value="Bold" />
+                                </DataTrigger>
+                            </Label.Triggers>
+                        </Label>
+                        <ImageButton Style="{StaticResource SortChevron}" SvgImageSource.Svg="{Binding SizeChevron}">
+                            <ImageButton.Triggers>
+                                <DataTrigger TargetType="ImageButton" Binding="{Binding SizeSorted}" Value="True">
+                                    <Setter Property="Opacity" Value="0.9" />
+                                </DataTrigger>
+                            </ImageButton.Triggers>
+                        </ImageButton>
                     </HorizontalStackLayout>
                     <Grid Grid.Column="1" Style="{StaticResource Grip}" ClassId="SizeWidth">
                         <Grid.GestureRecognizers><PanGestureRecognizer PanUpdated="OnGripPanned" /><PointerGestureRecognizer PointerEntered="OnGripEntered" PointerMoved="OnGripEntered" PointerExited="OnGripExited" /></Grid.GestureRecognizers>
@@ -526,8 +566,21 @@
                 <Grid Grid.Column="3" WidthRequest="{Binding KindWidth}" IsVisible="{Binding HasColumns}" ColumnDefinitions="*,Auto">
                     <Grid.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Kind" /></Grid.GestureRecognizers>
                     <HorizontalStackLayout Spacing="0">
-                        <Label Text="{String Explorer.Column.Kind}" Style="{StaticResource ColumnHeader}" Padding="8,6,2,6" />
-                        <ImageButton Style="{StaticResource SortChevron}" SvgImageSource.Svg="{Binding KindChevron}" IsVisible="{Binding KindChevron, Converter={StaticResource HasValue}}" />
+                        <Label Text="{String Explorer.Column.Kind}" Style="{StaticResource ColumnHeader}" Padding="8,0,2,0">
+                            <Label.Triggers>
+                                <DataTrigger TargetType="Label" Binding="{Binding KindSorted}" Value="True">
+                                    <Setter Property="TextColor" Value="{AppThemeBinding Light=#1B1B1B, Dark=#E8E8E8}" />
+                                    <Setter Property="FontAttributes" Value="Bold" />
+                                </DataTrigger>
+                            </Label.Triggers>
+                        </Label>
+                        <ImageButton Style="{StaticResource SortChevron}" SvgImageSource.Svg="{Binding KindChevron}">
+                            <ImageButton.Triggers>
+                                <DataTrigger TargetType="ImageButton" Binding="{Binding KindSorted}" Value="True">
+                                    <Setter Property="Opacity" Value="0.9" />
+                                </DataTrigger>
+                            </ImageButton.Triggers>
+                        </ImageButton>
                     </HorizontalStackLayout>
                     <Grid Grid.Column="1" Style="{StaticResource Grip}" ClassId="KindWidth">
                         <Grid.GestureRecognizers><PanGestureRecognizer PanUpdated="OnGripPanned" /><PointerGestureRecognizer PointerEntered="OnGripEntered" PointerMoved="OnGripEntered" PointerExited="OnGripExited" /></Grid.GestureRecognizers>
