@@ -180,7 +180,11 @@ public sealed class OperationQueue
     private void Notify(FileOperation operation, bool save)
     {
         operation.Updated = DateTimeOffset.Now;
-        if (save)
+        // An operation counts as finished a moment before its last report; one removed in between stays removed.
+        bool known;
+        lock (_operations)
+            known = _operations.Contains(operation);
+        if (save && known)
             _journal?.Save(operation);
         Changed?.Invoke(operation);
     }
