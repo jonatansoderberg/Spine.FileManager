@@ -107,8 +107,6 @@
                     </SegmentedControl>
                 </VerticalStackLayout>
 
-                <Button Text="{String Link.OtherWays}" Command="{Binding ChooseCommand}" BackgroundColor="Transparent" HorizontalOptions="Center" Margin="0,8,0,0"
-                        TextColor="{AppThemeBinding Light=#2F6FEB, Dark=#7FA6F5}" />
             </VerticalStackLayout>
         </Grid>
     </ScrollView>

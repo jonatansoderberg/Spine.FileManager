@@ -192,7 +192,7 @@
   <s key="Link.Choice.Enter.Hint">Paste the link the other device shows, or scan its code if this computer has a camera.</s>
   <s key="Link.JoinIntro">Paste the link the other device shows under its code.</s>
   <s key="Link.TryScan">Scan with Camera</s>
-  <s key="Link.OtherWays">Other Ways to Link</s>
+  <s key="Link.Back">Back</s>
   <s key="Menu.Icons">Icons</s>
   <s key="Menu.Icons.Spine">Spine</s>
   <s key="Menu.Icons.System">System</s>

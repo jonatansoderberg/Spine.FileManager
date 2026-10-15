@@ -23,6 +23,15 @@ public partial class LinkDevicePageViewModel(ISpineStrings strings, INavigationS
     [NotifyPropertyChangedFor(nameof(IsChoosing), nameof(IsShowing), nameof(IsJoining), nameof(IsBridging))]
     private partial LinkMode Mode { get; set; }
 
+    private PageAction? _back;
+
+    // Back to the choice from any of its ways, in the header's leading slot.
+    partial void OnModeChanged(LinkMode value)
+    {
+        if (_back is not null)
+            _back.IsVisible = value != LinkMode.Choose;
+    }
+
     public bool IsChoosing => Mode == LinkMode.Choose;
     public bool IsShowing => Mode == LinkMode.Show;
     public bool IsJoining => Mode == LinkMode.Join;
@@ -60,6 +69,17 @@ public partial class LinkDevicePageViewModel(ISpineStrings strings, INavigationS
     public override async Task OnAppearingAsync(NavigationDirection navigationDirection)
     {
         Title = strings["Link.Title"];
+        if (_back is null)
+        {
+            _back = new PageAction(null, ChooseCommand)
+            {
+                Svg = "ChevronLeft.svg",
+                Description = strings["Link.Back"],
+                Placement = PageActionPlacement.Primary,
+                IsVisible = Mode != LinkMode.Choose,
+            };
+            PageActions.Add(_back);
+        }
         if (_node is not null)
             return;
         _node = await devices.GetNodeAsync();
