@@ -64,6 +64,10 @@ public sealed partial class ExplorerTab : ObservableObject
     [NotifyPropertyChangedFor(nameof(ShowsClose))]
     public partial bool IsHovered { get; set; }
 
+    /// <summary>Showing Home rather than a folder; <see cref="Location"/> is then the folder Back returns to.</summary>
+    [ObservableProperty]
+    public partial bool IsHome { get; set; }
+
     /// <summary>As in Edge: the active tab and the one under the pointer show their ×.</summary>
     public bool ShowsClose => IsActive || IsHovered;
 }
@@ -126,6 +130,31 @@ public sealed partial class BreadcrumbSegment(StorageLocation location, string n
 
     /// <summary>The segment's width as last laid out, kept while it is folded away, for deciding what fits.</summary>
     public double Width { get; set; }
+}
+
+/// <summary>A disk on Home's overview: how full it is, worded for its card.</summary>
+public sealed class DiskRow(Disk disk, string kind, string free, string used)
+{
+    public Disk Disk { get; } = disk;
+    public string Name => Disk.Name;
+    public string Kind { get; } = kind;
+    public string Icon => Disk.Kind == DiskKind.Network ? "cloud.png" : "drive.png";
+    public double Fraction => Disk.UsedFraction;
+
+    /// <summary>Nine tenths full or more: the bar turns red, as in Finder and Explorer.</summary>
+    public bool IsNearlyFull => Disk.UsedFraction >= 0.9;
+
+    public string Free { get; } = free;
+    public string Used { get; } = used;
+}
+
+/// <summary>A folder opened lately, on Home.</summary>
+public sealed class RecentRow(RecentLocation recent, string when)
+{
+    public StorageLocation Location => recent.Location;
+    public string Name => recent.Name;
+    public string Path => recent.Location.DisplayPath;
+    public string When { get; } = when;
 }
 
 /// <summary>How a list's rows are worded: the culture and the kind names, shared by every row of one listing.</summary>
@@ -237,6 +266,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
         foreach (var node in _devices.Trust.All.OrderBy(n => n.DisplayName, StringComparer.CurrentCultureIgnoreCase))
             Devices.Add(new DeviceRow(node, _strings[$"Devices.Lifetime.{node.Lifetime}"]));
         DevicesHeight = Devices.Count * SidebarRowHeight;
+        OnPropertyChanged(nameof(HasNoDevices));
     }
 
     [RelayCommand]
@@ -340,8 +370,16 @@ public partial class ExplorerPageViewModel : ViewModelBase
         OnPropertyChanged(nameof(TabWidth));
     }
 
+    /// <summary>A new tab opens on Home, as a browser's opens on its start page.</summary>
     [RelayCommand]
-    private Task NewTab() => OpenTab(Current, activate: true);
+    private void NewTab()
+    {
+        Remember();
+        var tab = new ExplorerTab { Sort = Sort, ShowHidden = ShowHidden, IsIcons = IsIcons, Location = Current };
+        _tabs.Add(tab, activate: true);
+        SyncTabs();
+        EnterHome(tab);
+    }
 
     private IReadOnlyList<ExplorerTab>? _startTabs;
     private int _startActive;
@@ -359,8 +397,11 @@ public partial class ExplorerPageViewModel : ViewModelBase
     // A tab opened in the background or restored and never shown has its folder only in its history.
     public WindowState Snapshot()
     {
-        var tabs = _tabs.Tabs.Where(t => (t.Location ?? t.History.Current) is not null).ToList();
-        return new([.. tabs.Select(t => new TabState((t.Location ?? t.History.Current)!, t.Sort, t.ShowHidden, t.IsIcons))], Math.Max(0, tabs.IndexOf(_tabs.Active)));
+        var fallback = Places.FirstOrDefault()?.Root.Location;
+        StorageLocation? Folder(ExplorerTab t) => t.Location ?? (t.History.Current is { } c && c != HomeLocation ? c : null) ?? (t.IsHome ? fallback : null);
+        var tabs = _tabs.Tabs.Where(t => Folder(t) is not null).ToList();
+        return new([.. tabs.Select(t => new TabState(Folder(t)!, t.Sort, t.ShowHidden, t.IsIcons, t.IsHome))],
+            Math.Max(0, tabs.IndexOf(_tabs.Active)));
     }
 
     private static string TabTitle(StorageLocation location) =>
@@ -368,8 +409,14 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     private static ExplorerTab Tab(TabState state)
     {
-        var tab = new ExplorerTab { Sort = state.Sort, ShowHidden = state.ShowHidden, IsIcons = state.IsIcons, Title = TabTitle(state.Location) };
-        tab.History.Navigate(state.Location);
+        var tab = new ExplorerTab { Sort = state.Sort, ShowHidden = state.ShowHidden, IsIcons = state.IsIcons, Title = TabTitle(state.Location), IsHome = state.IsHome };
+        if (state.IsHome)
+        {
+            tab.Location = state.Location;
+            tab.History.Navigate(HomeLocation);
+        }
+        else
+            tab.History.Navigate(state.Location);
         return tab;
     }
 
@@ -499,7 +546,9 @@ public partial class ExplorerPageViewModel : ViewModelBase
         Sort = tab.Sort;
         ShowHidden = tab.ShowHidden;
         IsIcons = tab.IsIcons;
-        if (tab.History.Current is { } location)
+        if (tab.IsHome)
+            EnterHome(tab);
+        else if (tab.History.Current is { } location)
             await Load(location, cached: tab.Items, keep: tab.Selected);
     }
 
@@ -717,7 +766,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
     [ObservableProperty]
     public partial bool CanGoForward { get; private set; }
 
-    public bool CanGoUp => Current is not null && _providers[Current].GetParent(Current) is not null;
+    public bool CanGoUp => !IsHome && Current is not null && _providers[Current].GetParent(Current) is not null;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowsSidebar))]
@@ -1143,7 +1192,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
     }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsList), nameof(ViewIndex))]
+    [NotifyPropertyChangedFor(nameof(IsList), nameof(ViewIndex), nameof(ShowsList), nameof(ShowsIconGrid))]
     public partial bool IsIcons { get; private set; }
 
     public bool IsList => !IsIcons;
@@ -1251,14 +1300,25 @@ public partial class ExplorerPageViewModel : ViewModelBase
         foreach (var provider in _providers.All)
             foreach (var root in await provider.GetRootsAsync())
                 Places.Add(new(root));
+        // This Device ends with the disks, as in the concept image, unless the provider already lists one.
+        foreach (var disk in await Task.Run(ListDisks))
+            if (!Places.Any(p => p.Root.Location.Equals(disk.Location)))
+                Places.Add(new(new StorageRoot(disk.Location, disk.Name, disk.Kind switch
+                {
+                    DiskKind.Network => StorageRootKind.NetworkVolume,
+                    DiskKind.External => StorageRootKind.RemovableVolume,
+                    _ => StorageRootKind.Volume,
+                })));
         PlacesHeight = Places.Count * SidebarRowHeight;
         LoadDevices();
         if (!IsSecondary)
             _devices.StartIfLinked();
-        if (_tabs.Active.History.Current is { } kept)
+        if (_tabs.Active.IsHome || _tabs.Active.History.Current is not null)
             await Show(_tabs.Active);
-        else if ((_startLocation ?? Places.FirstOrDefault()?.Root.Location) is { } start)
+        else if (_startLocation is { } start)
             await Navigate(start);
+        else
+            EnterHome(_tabs.Active);
         // Presented from the root page's first appearance the sheet never showed; after the first folder it does.
         if (FirstRunPageViewModel.IsNeeded && !IsSecondary)
             MainThread.BeginInvokeOnMainThread(async () => await _navigation.ShowAsync<FirstRunPage>());
@@ -1557,6 +1617,116 @@ public partial class ExplorerPageViewModel : ViewModelBase
         }
     }
 
+    /// <summary>Home's place in a tab's history, so Back and Forward pass through it as in a browser.</summary>
+    private static readonly StorageLocation HomeLocation = new(new StorageProviderId("home"), "", "Home");
+
+    private static RecentLocations? Recent => IPlatformApplication.Current?.Services.GetService<RecentLocations>();
+
+    /// <summary>The active tab shows Home: the disks, linked devices and recent folders instead of a folder.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsFiles), nameof(ShowsList), nameof(ShowsIconGrid), nameof(CanGoUp))]
+    public partial bool IsHome { get; private set; }
+
+    public bool ShowsFiles => !IsHome;
+
+    public bool ShowsList => IsList && !IsHome;
+
+    public bool ShowsIconGrid => IsIcons && !IsHome;
+
+    public ObservableCollection<DiskRow> Disks { get; } = [];
+
+    public ObservableCollection<RecentRow> RecentRows { get; } = [];
+
+    public bool HasNoRecent => RecentRows.Count == 0;
+
+    public bool HasNoDevices => Devices.Count == 0;
+
+    public string HomeDevice => DeviceService.DeviceName;
+
+    [RelayCommand]
+    private void ShowHome()
+    {
+        if (Target != this)
+        {
+            Target.ShowHomeCommand.Execute(null);
+            return;
+        }
+        if (IsHome)
+            return;
+        Remember();
+        EnterHome(_tabs.Active);
+    }
+
+    private void EnterHome(ExplorerTab tab)
+    {
+        _loading?.Cancel();
+        tab.History.Navigate(HomeLocation);
+        tab.IsHome = true;
+        tab.Location ??= Current;
+        tab.Title = _strings["Home.Title"];
+        IsHome = true;
+        StopSearch();
+        Filter = "";
+        CanGoBack = tab.History.CanGoBack;
+        CanGoForward = tab.History.CanGoForward;
+        foreach (var place in Places)
+            place.IsCurrent = false;
+        foreach (var favorite in Favorites)
+            favorite.IsCurrent = false;
+        SessionChanged();
+        _ = RefreshHome();
+    }
+
+    private async Task RefreshHome()
+    {
+        var disks = await Task.Run(ListDisks);
+        var culture = System.Globalization.CultureInfo.CurrentCulture;
+        Disks.Clear();
+        foreach (var disk in disks)
+            Disks.Add(new DiskRow(disk, _strings[$"Home.Disk.{disk.Kind}"],
+                _strings.Get("Home.Free", ByteSize.Format(disk.Free, culture), ByteSize.Format(disk.Total, culture)),
+                _strings.Get("Home.Used", $"{Math.Round(disk.UsedFraction * 100)}")));
+        RecentRows.Clear();
+        foreach (var recent in Recent?.Items ?? [])
+            RecentRows.Add(new RecentRow(recent, When(recent.At)));
+        OnPropertyChanged(nameof(HasNoRecent));
+        OnPropertyChanged(nameof(HasNoDevices));
+    }
+
+    private string When(DateTimeOffset at)
+    {
+        var ago = DateTimeOffset.Now - at;
+        if (ago.TotalMinutes < 1)
+            return _strings["Home.JustNow"];
+        if (ago.TotalHours < 1)
+            return _strings.Get("Home.MinutesAgo", (int)ago.TotalMinutes);
+        if (at.Date == DateTime.Today)
+            return _strings.Get("Home.HoursAgo", (int)ago.TotalHours);
+        if (at.Date == DateTime.Today.AddDays(-1))
+            return _strings["Home.Yesterday"];
+        return at.ToString("d MMM", System.Globalization.CultureInfo.CurrentCulture);
+    }
+
+    // As Finder: the start disk named "Macintosh HD" rather than "/", free space with what macOS can purge counted, and
+    // the volumes it hides (Recovery) left out.
+    private static IReadOnlyList<Disk> ListDisks()
+    {
+#if MACCATALYST
+        var visible = Foundation.NSFileManager.DefaultManager.GetMountedVolumes(Array.Empty<Foundation.NSString>(), Foundation.NSVolumeEnumerationOptions.SkipHiddenVolumes)?
+            .Select(url => url.Path?.TrimEnd('/') ?? "").ToHashSet();
+        return Explorer.Disks.List(
+            path => Foundation.NSFileManager.DefaultManager.DisplayName(path) is { Length: > 0 } name && name != "/" ? name : null,
+            path => Foundation.NSUrl.FromFilename(path).TryGetResource(Foundation.NSUrl.VolumeAvailableCapacityForImportantUsageKey, out var value)
+                && value is Foundation.NSNumber number && number.Int64Value > 0 ? number.Int64Value : null,
+            path => visible?.Contains(path.TrimEnd('/')) != false);
+#else
+        return Explorer.Disks.List();
+#endif
+    }
+
+    [RelayCommand]
+    private Task OpenDisk(DiskRow disk) => Navigate(disk.Disk.Location);
+
     private async Task Navigate(StorageLocation location)
     {
         _history.Navigate(location);
@@ -1565,6 +1735,11 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     private async Task Load(StorageLocation location, bool keepSelection = false, List<StorageItem>? cached = null, HashSet<StorageLocation>? keep = null)
     {
+        if (location == HomeLocation)
+        {
+            EnterHome(_tabs.Active);
+            return;
+        }
         _loading?.Cancel();
         var cancel = _loading = new CancellationTokenSource();
         var provider = _providers[location];
@@ -1572,10 +1747,15 @@ public partial class ExplorerPageViewModel : ViewModelBase
         // A tab switch always rebuilds the bar and the watcher, even onto the same folder.
         var changedFolder = !location.Equals(Current) || cached is not null || keep is { Count: > 0 } && !keepSelection;
         var tab = _tabs.Active;
+        var leftHome = tab.IsHome;
+        tab.IsHome = false;
+        IsHome = false;
         tab.Location = location;
         SessionChanged();
-        if (string.IsNullOrEmpty(tab.Title) || !location.Equals(Current))
+        if (string.IsNullOrEmpty(tab.Title) || !location.Equals(Current) || leftHome)
             tab.Title = TabTitle(location);
+        if (changedFolder || leftHome)
+            Recent?.Add(location, Places.FirstOrDefault(p => p.Root.Location.Equals(location))?.Name ?? TabTitle(location), DateTimeOffset.Now);
 
         Current = location;
         if (changedFolder)

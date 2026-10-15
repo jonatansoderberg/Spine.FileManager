@@ -201,4 +201,25 @@
   <s key="Settings.Material.Note">Skrivbordet syns genom sidopanelen. Gäller fönster som öppnas efter ändringen.</s>
   <s key="Settings.Received">Mottagna filer</s>
   <s key="Settings.ShowReceived">Visa mottagna filer</s>
+  <s key="Home.Title">Hem</s>
+  <s key="Home.Subtitle">Dina diskar, enheter och senaste mappar</s>
+  <s key="Home.ThisDevice">Den här enheten</s>
+  <s key="Home.Free">{0} ledigt av {1}</s>
+  <s key="Home.Used">{0} % använt</s>
+  <s key="Home.Disk.Internal">Intern disk</s>
+  <s key="Home.Disk.External">Extern disk</s>
+  <s key="Home.Disk.Network">Nätverksresurs</s>
+  <s key="Home.Recent">Senaste platser</s>
+  <s key="Home.NoRecent">Mappar du öppnar visas här.</s>
+  <s key="Home.NoDevices">Inga länkade enheter än. Länka en telefon eller en annan dator för att skicka filer mellan dem.</s>
+  <s key="Home.JustNow">Nyss</s>
+  <s key="Home.MinutesAgo.one">För en minut sedan</s>
+  <s key="Home.MinutesAgo.other">För {0} minuter sedan</s>
+  <s key="Home.HoursAgo.one">För en timme sedan</s>
+  <s key="Home.HoursAgo.other">För {0} timmar sedan</s>
+  <s key="Home.Yesterday">I går</s>
+  <s key="Explorer.Network">Nätverk</s>
+  <s key="Explorer.Network.Soon">Delade mappar (kommer)</s>
+  <s key="Explorer.Backups">Backup</s>
+  <s key="Explorer.Backups.Soon">Säkerhetskopior (kommer)</s>
 </strings>

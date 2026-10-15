@@ -201,4 +201,25 @@
   <s key="Settings.Material.Note">The desktop shows through the sidebar. Applies to windows opened after the change.</s>
   <s key="Settings.Received">Received files</s>
   <s key="Settings.ShowReceived">Show Received Files</s>
+  <s key="Home.Title">Home</s>
+  <s key="Home.Subtitle">Your disks, devices and recent folders</s>
+  <s key="Home.ThisDevice">This Device</s>
+  <s key="Home.Free">{0} free of {1}</s>
+  <s key="Home.Used">{0} % used</s>
+  <s key="Home.Disk.Internal">Internal disk</s>
+  <s key="Home.Disk.External">External disk</s>
+  <s key="Home.Disk.Network">Network share</s>
+  <s key="Home.Recent">Recent Locations</s>
+  <s key="Home.NoRecent">Folders you open show up here.</s>
+  <s key="Home.NoDevices">No linked devices yet. Link a phone or another computer to send files between them.</s>
+  <s key="Home.JustNow">Just now</s>
+  <s key="Home.MinutesAgo.one">A minute ago</s>
+  <s key="Home.MinutesAgo.other">{0} minutes ago</s>
+  <s key="Home.HoursAgo.one">An hour ago</s>
+  <s key="Home.HoursAgo.other">{0} hours ago</s>
+  <s key="Home.Yesterday">Yesterday</s>
+  <s key="Explorer.Network">Network</s>
+  <s key="Explorer.Network.Soon">Shared folders (coming)</s>
+  <s key="Explorer.Backups">Backups</s>
+  <s key="Explorer.Backups.Soon">Backups (coming)</s>
 </strings>

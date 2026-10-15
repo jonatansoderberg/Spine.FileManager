@@ -83,6 +83,7 @@ public static class MauiProgram
             services.GetRequiredService<StorageProviders>(), new Operations.OperationJournal(Path.Combine(AppPaths.Data, "operations"))));
         builder.Services.AddSingleton(new Favorites.FavoritesStore(Path.Combine(AppPaths.Data, "favorites.json")));
         builder.Services.AddSingleton(new Workspaces.SessionStore(Path.Combine(AppPaths.Data, "session.json")));
+        builder.Services.AddSingleton(new Explorer.RecentLocations(Path.Combine(AppPaths.Data, "recent.json")));
         builder.Services.AddSingleton<SessionTracker>();
         builder.Services.AddSingleton<UndoService>();
         builder.Services.AddSingleton<DeviceService>();
