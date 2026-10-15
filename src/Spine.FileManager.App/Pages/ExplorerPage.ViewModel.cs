@@ -225,6 +225,9 @@ public partial class ExplorerPageViewModel : ViewModelBase
     private Task LinkDevice() => _navigation.ShowAsync<LinkDevicePage>();
 
     [RelayCommand]
+    private Task ShowSettings() => _navigation.ShowAsync<SettingsPage>();
+
+    [RelayCommand]
     private async Task RenameDevice(DeviceRow row)
     {
         if (await Prompt("Devices.Rename.Title", "Devices.Rename.Message", row.Name) is { } name)

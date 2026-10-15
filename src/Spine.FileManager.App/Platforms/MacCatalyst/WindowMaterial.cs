@@ -29,8 +29,17 @@ public static class WindowMaterial
             return;
         NSNotificationCenter.DefaultCenter.AddObserver(new NSString("NSWindowDidBecomeKeyNotification"), notification =>
         {
-            if (notification.Object is { } window && Applied.Add(window.Handle))
-                Apply(window.Handle);
+            if (notification.Object is not { } window || !Applied.Add(window.Handle))
+                return;
+            // The app exists by the time a window does.
+            if (Applied.Count == 1 && Microsoft.Maui.Controls.Application.Current is { } app)
+                app.RequestedThemeChanged += (_, _) =>
+                {
+                    foreach (var applied in Applied)
+                        Follow(applied);
+                };
+            Apply(window.Handle);
+            Follow(window.Handle);
         });
     }
 
@@ -62,6 +71,19 @@ public static class WindowMaterial
         }
     }
 
+    // The material follows the window's appearance, which is the system's unless the app chose light or dark itself.
+    private static void Follow(IntPtr window)
+    {
+        var name = Microsoft.Maui.Controls.Application.Current?.UserAppTheme switch
+        {
+            AppTheme.Light => "NSAppearanceNameAqua",
+            AppTheme.Dark => "NSAppearanceNameDarkAqua",
+            _ => null,
+        };
+        var appearance = name is null ? IntPtr.Zero : IntPtr_objc_msgSend_IntPtr(Class.GetHandle("NSAppearance"), Selector.GetHandle("appearanceNamed:"), new NSString(name).Handle);
+        SendPtr(window, "setAppearance:", appearance);
+    }
+
     private static IntPtr Send(IntPtr receiver, string selector) => IntPtr_objc_msgSend(receiver, Selector.GetHandle(selector));
     private static IntPtr Send(IntPtr receiver, string selector, CGRect rect) => IntPtr_objc_msgSend_CGRect(receiver, Selector.GetHandle(selector), rect);
     private static void SendNint(IntPtr receiver, string selector, nint value) => Void_objc_msgSend_nint(receiver, Selector.GetHandle(selector), value);
@@ -91,6 +113,9 @@ public static class WindowMaterial
 
     [DllImport(ObjC, EntryPoint = "objc_msgSend")]
     private static extern void Void_objc_msgSend_IntPtr(IntPtr receiver, IntPtr selector, IntPtr value);
+
+    [DllImport(ObjC, EntryPoint = "objc_msgSend")]
+    private static extern IntPtr IntPtr_objc_msgSend_IntPtr(IntPtr receiver, IntPtr selector, IntPtr value);
 
     [DllImport(ObjC, EntryPoint = "objc_msgSend")]
     private static extern void AddBelow(IntPtr receiver, IntPtr selector, IntPtr view, nint place, IntPtr relativeTo);

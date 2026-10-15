@@ -189,4 +189,11 @@
   <s key="Search.Found">{0} hittade</s>
   <s key="Search.Stop">Stoppa</s>
   <s key="Explorer.Search">Sök</s>
+  <s key="Settings.Title">Inställningar</s>
+  <s key="Settings.Open">Inställningar…</s>
+  <s key="Settings.Appearance">Utseende</s>
+  <s key="Settings.Material">Genomskinligt fönster</s>
+  <s key="Settings.Material.Note">Skrivbordet syns genom sidopanelen. Gäller fönster som öppnas efter ändringen.</s>
+  <s key="Settings.Received">Mottagna filer</s>
+  <s key="Settings.ShowReceived">Visa mottagna filer</s>
 </strings>

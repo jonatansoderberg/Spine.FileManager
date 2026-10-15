@@ -80,6 +80,13 @@
 		<Compile Include="Pages\FirstRunPage.ViewModel.cs">
 			<DependentUpon>FirstRunPage.cs</DependentUpon>
 		</Compile>
+		<MauiXaml Update="Pages\SettingsPage.View.xaml">
+			<Generator>MSBuild:Compile</Generator>
+			<DependentUpon>SettingsPage.cs</DependentUpon>
+		</MauiXaml>
+		<Compile Include="Pages\SettingsPage.ViewModel.cs">
+			<DependentUpon>SettingsPage.cs</DependentUpon>
+		</Compile>
 		<MauiXaml Update="Pages\LinkDevicePage.View.xaml">
 			<Generator>MSBuild:Compile</Generator>
 			<DependentUpon>LinkDevicePage.cs</DependentUpon>

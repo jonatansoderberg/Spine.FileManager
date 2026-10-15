@@ -100,8 +100,11 @@
         </Grid.GestureRecognizers>
 
         <!-- Sidebar: favorites (reorderable, right-click to remove), then the places. -->
-        <Grid x:Name="Sidebar" WidthRequest="{Binding SidebarWidth}" IsVisible="{Binding ShowsSidebar}" Padding="{Binding SidebarPadding}" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*"
+        <Grid x:Name="Sidebar" WidthRequest="{Binding SidebarWidth}" IsVisible="{Binding ShowsSidebar}" Padding="{Binding SidebarPadding}" RowDefinitions="*,Auto"
               BackgroundColor="{AppThemeBinding Light=#F3F4F6, Dark=#1E1F22}">
+            <!-- Everything but Settings scrolls when the window is lower than the sidebar. -->
+            <ScrollView VerticalScrollBarVisibility="Never">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
             <Label Text="{String Explorer.Favorites}" FontSize="12" Opacity="0.6" Padding="16,12,16,4" />
             <CollectionView Grid.Row="1" ItemsSource="{Binding Favorites}" SelectionMode="None" HeightRequest="{Binding FavoritesHeight}"
                             Reorder.Mode="LongPress" Reorder.Command="{Binding SaveFavoriteOrderCommand}">
@@ -176,6 +179,20 @@
             </CollectionView>
             <Button Grid.Row="7" Text="{String Devices.Link}" Command="{Binding LinkDeviceCommand}" FontSize="13" Padding="16,0" HeightRequest="30"
                     HorizontalOptions="Start" BackgroundColor="Transparent" TextColor="{AppThemeBinding Light=#2F6FEB, Dark=#7FA6F5}" />
+
+            </Grid>
+            </ScrollView>
+
+            <!-- Settings at the sidebar's foot, as in the concept image. -->
+            <Border Grid.Row="1" Padding="8,0" Margin="8,4,8,10" HeightRequest="30" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding ShowSettingsCommand}" />
+                </Border.GestureRecognizers>
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                    <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="Settings.svg" />
+                    <Label Grid.Column="1" Text="{String Settings.Title}" FontSize="13" VerticalTextAlignment="Center" />
+                </Grid>
+            </Border>
         </Grid>
 
         <!-- The sidebar's right edge resizes it. -->

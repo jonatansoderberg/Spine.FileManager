@@ -52,6 +52,9 @@ public static class AppMenu
         Build(host, vm, strings);
         strings.Changed += (_, _) => Build(host, vm, strings);
         FileIcons.Changed += () => MainThread.BeginInvokeOnMainThread(() => Build(host, vm, strings));
+        // The check marks follow a change made in Settings too.
+        if (Application.Current is { } app)
+            app.RequestedThemeChanged += (_, _) => MainThread.BeginInvokeOnMainThread(() => Build(host, vm, strings));
     }
 
     static void Build(Page host, ExplorerPageViewModel vm, ISpineStrings strings)
@@ -129,6 +132,7 @@ public static class AppMenu
             new MenuFlyoutSeparator(),
             Item("Menu.OpenInTerminal", x => x.OpenInTerminalCommand, mac ? command | KeyboardAcceleratorModifiers.Alt : KeyboardAcceleratorModifiers.Ctrl | KeyboardAcceleratorModifiers.Shift, mac ? "T" : "Enter"),
             Item("Devices.Link", x => x.LinkDeviceCommand, KeyboardAcceleratorModifiers.None, null),
+            Item("Settings.Open", x => x.ShowSettingsCommand, command, ","),
             new MenuFlyoutSeparator(),
             Item("Menu.NewFolder", x => x.NewFolderCommand, command | KeyboardAcceleratorModifiers.Shift, "N"),
             Item("Menu.Open", x => x.ActivateCommand, mac ? command : KeyboardAcceleratorModifiers.None, mac ? "O" : "Enter"),
