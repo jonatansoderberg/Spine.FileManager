@@ -14,6 +14,7 @@ public class AppDelegate : MauiUIApplicationDelegate
 	public override bool FinishedLaunching(UIApplication application, NSDictionary? launchOptions)
 	{
 		NSUserDefaults.StandardUserDefaults.SetBool(false, "NSQuitAlwaysKeepsWindows");
+		WindowMaterial.Start();
 		return base.FinishedLaunching(application, launchOptions);
 	}
 

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<SpinePage
+    xmlns="http://schemas.microsoft.com/dotnet/maui/global"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="Spine.FileManager.Pages.SettingsPage"
+    x:TypeArguments="SettingsPageViewModel"
+    x:DataType="SettingsPageViewModel">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="{x:Static HeaderBarConstants.PagePadding}" Spacing="10">
+            <Label Text="{String Settings.Appearance}" FontSize="13" FontAttributes="Bold" />
+            <SegmentedControl SelectedIndex="{Binding AppearanceIndex}">
+                <Segment Title="{String Menu.Appearance.System}" />
+                <Segment Title="{String Menu.Appearance.Light}" />
+                <Segment Title="{String Menu.Appearance.Dark}" />
+            </SegmentedControl>
+
+            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasWindowMaterial}" Margin="0,8,0,0">
+                <VerticalStackLayout>
+                    <Label Text="{String Settings.Material}" FontSize="14" />
+                    <Label Text="{String Settings.Material.Note}" FontSize="12" Opacity="0.6" />
+                </VerticalStackLayout>
+                <Switch Grid.Column="1" IsToggled="{Binding WindowMaterial}" VerticalOptions="Center" />
+            </Grid>
+
+            <Label Text="{String Menu.Icons}" FontSize="13" FontAttributes="Bold" Margin="0,12,0,0" />
+            <Picker ItemsSource="{Binding IconStyles}" ItemDisplayBinding="{Binding Title, x:DataType=IconStyleChoice}" SelectedItem="{Binding IconStyle}" />
+            <Button Text="{String Menu.Icons.OpenThemes}" Command="{Binding OpenThemesCommand}" HorizontalOptions="Start" />
+
+            <Label Text="{String Settings.Received}" FontSize="13" FontAttributes="Bold" Margin="0,12,0,0" />
+            <Label Text="{Binding ReceivedFolder}" FontSize="13" Opacity="0.7" LineBreakMode="MiddleTruncation" />
+            <Button Text="{String Settings.ShowReceived}" Command="{Binding ShowReceivedCommand}" HorizontalOptions="Start" />
+        </VerticalStackLayout>
+    </ScrollView>
+
+</SpinePage>

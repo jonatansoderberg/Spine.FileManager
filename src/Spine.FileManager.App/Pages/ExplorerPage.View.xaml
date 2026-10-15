@@ -47,6 +47,48 @@
             <Setter Property="SvgImageSource.LightTintColor" Value="{StaticResource Accent}" />
             <Setter Property="SvgImageSource.DarkTintColor" Value="{StaticResource AccentDark}" />
         </Style>
+        <Style x:Key="SortChevron" TargetType="ImageButton">
+            <Setter Property="WidthRequest" Value="18" />
+            <Setter Property="HeightRequest" Value="18" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="BackgroundColor" Value="Transparent" />
+            <Setter Property="InputTransparent" Value="True" />
+            <Setter Property="VerticalOptions" Value="Center" />
+            <Setter Property="Opacity" Value="0.65" />
+            <Setter Property="SvgImageSource.EnableSvg" Value="True" />
+            <Setter Property="SvgImageSource.LightTintColor" Value="#1B1B1B" />
+            <Setter Property="SvgImageSource.DarkTintColor" Value="#E8E8E8" />
+        </Style>
+        <!-- A thin line to drag, with a wider transparent edge to hit. -->
+        <Style x:Key="Grip" TargetType="Grid">
+            <Setter Property="WidthRequest" Value="8" />
+            <Setter Property="BackgroundColor" Value="Transparent" />
+        </Style>
+        <Style x:Key="GripLine" TargetType="BoxView">
+            <Setter Property="WidthRequest" Value="1" />
+            <Setter Property="Margin" Value="0,7" />
+            <Setter Property="HorizontalOptions" Value="Center" />
+            <Setter Property="Color" Value="{AppThemeBinding Light=#D5D7DB, Dark=#3A3C40}" />
+        </Style>
+        <Style x:Key="SidebarSection" TargetType="Label">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontAttributes" Value="Bold" />
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="Padding" Value="16,14,16,4" />
+        </Style>
+        <Style x:Key="HomeSection" TargetType="Label">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontAttributes" Value="Bold" />
+            <Setter Property="Margin" Value="0,20,0,8" />
+        </Style>
+        <Style x:Key="HomeCard" TargetType="Border">
+            <Setter Property="StrokeShape" Value="RoundRectangle 10" />
+            <Setter Property="StrokeThickness" Value="1" />
+            <Setter Property="Stroke" Value="{AppThemeBinding Light=#E3E5E8, Dark=#34363A}" />
+            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#F7F8FA, Dark=#26272A}" />
+            <Setter Property="Padding" Value="14,12" />
+            <Setter Property="Margin" Value="0,0,12,12" />
+        </Style>
         <Style x:Key="Crumb" TargetType="Button">
             <Setter Property="FontSize" Value="13" />
             <Setter Property="Padding" Value="6,0" />
@@ -76,11 +118,29 @@
             <DropGestureRecognizer DragOver="OnWindowDragOver" DragLeave="OnWindowDragLeave" />
         </Grid.GestureRecognizers>
 
-        <!-- Sidebar: favorites (reorderable, right-click to remove), then the places. -->
-        <Grid WidthRequest="210" IsVisible="{Binding ShowsSidebar}" Padding="{Binding SidebarPadding}" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*"
+        <!-- Sidebar, as in the concept image: Home, Favorites (reorderable, right-click to remove), This Device (places and
+             disks), Other Devices, then Network and Backups dimmed until they exist; Settings at the foot. -->
+        <Grid x:Name="Sidebar" WidthRequest="{Binding SidebarWidth}" IsVisible="{Binding ShowsSidebar}" Padding="{Binding SidebarPadding}" RowDefinitions="*,Auto"
               BackgroundColor="{AppThemeBinding Light=#F3F4F6, Dark=#1E1F22}">
-            <Label Text="{String Explorer.Favorites}" FontSize="12" Opacity="0.6" Padding="16,12,16,4" />
-            <CollectionView Grid.Row="1" ItemsSource="{Binding Favorites}" SelectionMode="None" HeightRequest="{Binding FavoritesHeight}"
+            <!-- Everything but Settings scrolls when the window is lower than the sidebar. -->
+            <ScrollView VerticalScrollBarVisibility="Never">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+            <Border Padding="8,0" Margin="8,10,8,1" HeightRequest="30" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent">
+                <Border.Triggers>
+                    <DataTrigger TargetType="Border" Binding="{Binding IsHome}" Value="True">
+                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SelectionLight}, Dark={StaticResource SelectionDark}}" />
+                    </DataTrigger>
+                </Border.Triggers>
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding ShowHomeCommand}" />
+                </Border.GestureRecognizers>
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                    <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="House.svg" />
+                    <Label Grid.Column="1" Text="{String Home.Title}" FontSize="13" VerticalTextAlignment="Center" />
+                </Grid>
+            </Border>
+            <Label Grid.Row="1" Text="{String Explorer.Favorites}" Style="{StaticResource SidebarSection}" />
+            <CollectionView Grid.Row="2" ItemsSource="{Binding Favorites}" SelectionMode="None" HeightRequest="{Binding FavoritesHeight}" VerticalScrollBarVisibility="Never"
                             Reorder.Mode="LongPress" Reorder.Command="{Binding SaveFavoriteOrderCommand}">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="FavoriteRow">
@@ -96,16 +156,16 @@
                                 <DropGestureRecognizer DragOver="OnFileDragOver" DragLeave="OnFileDragLeave" Drop="OnFileDrop" />
                             </Border.GestureRecognizers>
                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                                <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="{Binding Glyph}" />
+                                <Image Source="folder.png" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" Margin="0,0,2,0" />
                                 <Label Grid.Column="1" Text="{Binding Name}" FontSize="13" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
                             </Grid>
                         </Border>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>
-            <Label Grid.Row="2" Text="{String Explorer.FavoritesHint}" IsVisible="{Binding HasNoFavorites}" FontSize="12" Opacity="0.5" Padding="16,0,16,8" />
-            <Label Grid.Row="3" Text="{String Explorer.Places}" FontSize="12" Opacity="0.6" Padding="16,12,16,4" />
-            <CollectionView Grid.Row="4" ItemsSource="{Binding Places}" SelectionMode="None" HeightRequest="{Binding PlacesHeight}">
+            <Label Grid.Row="3" Text="{String Explorer.FavoritesHint}" IsVisible="{Binding HasNoFavorites}" FontSize="12" Opacity="0.5" Padding="16,0,16,8" />
+            <Label Grid.Row="4" Text="{String Home.ThisDevice}" Style="{StaticResource SidebarSection}" />
+            <CollectionView Grid.Row="5" ItemsSource="{Binding Places}" SelectionMode="None" HeightRequest="{Binding PlacesHeight}" VerticalScrollBarVisibility="Never">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="PlaceRow">
                         <Border Padding="8,0" Margin="8,1" HeightRequest="30" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent">
@@ -127,9 +187,20 @@
                 </CollectionView.ItemTemplate>
             </CollectionView>
 
+            <!-- The trash closes This Device, as in Finder's Dock and Explorer's desktop. -->
+            <Border Grid.Row="6" Padding="8,0" Margin="8,1" HeightRequest="30" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding OpenTrashCommand}" />
+                </Border.GestureRecognizers>
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                    <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="Trashcan.svg" />
+                    <Label Grid.Column="1" Text="{Binding TrashName}" FontSize="13" VerticalTextAlignment="Center" />
+                </Grid>
+            </Border>
+
             <!-- Other Devices: linked devices; files dropped on one are sent there. -->
-            <Label Grid.Row="5" Text="{String Devices.Title}" FontSize="12" Opacity="0.6" Padding="16,12,16,4" />
-            <CollectionView Grid.Row="6" ItemsSource="{Binding Devices}" SelectionMode="None" HeightRequest="{Binding DevicesHeight}">
+            <Label Grid.Row="7" Text="{String Devices.Title}" Style="{StaticResource SidebarSection}" />
+            <CollectionView Grid.Row="8" ItemsSource="{Binding Devices}" SelectionMode="None" HeightRequest="{Binding DevicesHeight}" VerticalScrollBarVisibility="Never">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="DeviceRow">
                         <Border Padding="8,0" Margin="8,1" HeightRequest="30" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent"
@@ -151,11 +222,44 @@
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>
-            <Button Grid.Row="7" Text="{String Devices.Link}" Command="{Binding LinkDeviceCommand}" FontSize="13" Padding="16,0" HeightRequest="30"
-                    HorizontalOptions="Start" BackgroundColor="Transparent" TextColor="{AppThemeBinding Light=#2F6FEB, Dark=#7FA6F5}" />
+            <Button Grid.Row="9" Text="{String Devices.Link}" Command="{Binding LinkDeviceCommand}" FontSize="12" Padding="12,0" HeightRequest="26" CornerRadius="13"
+                    Margin="16,6,16,0" HorizontalOptions="Start" BackgroundColor="{AppThemeBinding Light=#E4ECFD, Dark=#25324D}" TextColor="{AppThemeBinding Light=#2F6FEB, Dark=#9BB9F7}" />
+
+            <!-- Not built yet: shown dimmed so the sidebar has the concept image's sections. -->
+            <Label Grid.Row="10" Text="{String Explorer.Network}" Style="{StaticResource SidebarSection}" />
+            <Grid Grid.Row="11" ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="16,0" HeightRequest="30" Margin="0,1" Opacity="0.4">
+                <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="Globe.svg" />
+                <Label Grid.Column="1" Text="{String Explorer.Network.Soon}" FontSize="13" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
+            </Grid>
+            <Label Grid.Row="12" Text="{String Explorer.Backups}" Style="{StaticResource SidebarSection}" />
+            <Grid Grid.Row="13" ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="16,0" HeightRequest="30" Margin="0,1,0,8" Opacity="0.4">
+                <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="Clock.svg" />
+                <Label Grid.Column="1" Text="{String Explorer.Backups.Soon}" FontSize="13" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
+            </Grid>
+
+            </Grid>
+            </ScrollView>
+
+            <!-- Settings at the sidebar's foot, as in the concept image. -->
+            <Border Grid.Row="1" Padding="8,0" Margin="8,4,8,10" HeightRequest="30" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding ShowSettingsCommand}" />
+                </Border.GestureRecognizers>
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                    <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="Settings.svg" />
+                    <Label Grid.Column="1" Text="{String Settings.Title}" FontSize="13" VerticalTextAlignment="Center" />
+                </Grid>
+            </Border>
         </Grid>
 
-        <Grid Grid.Column="1" RowDefinitions="Auto,Auto,Auto,*,Auto" ColumnDefinitions="*,Auto">
+        <!-- The sidebar's right edge resizes it. -->
+        <Grid Style="{StaticResource Grip}" HorizontalOptions="End" Margin="0,0,-4,0" ZIndex="1" IsVisible="{Binding ShowsSidebar}" ClassId="SidebarWidth">
+            <Grid.GestureRecognizers><PanGestureRecognizer PanUpdated="OnGripPanned" /><PointerGestureRecognizer PointerEntered="OnGripEntered" PointerMoved="OnGripEntered" PointerExited="OnGripExited" /></Grid.GestureRecognizers>
+            <!-- Shown only under the pointer: the sidebar's own background marks its edge. -->
+            <BoxView Style="{StaticResource GripLine}" Margin="0" Opacity="0" StyleId="HoverOnly" />
+        </Grid>
+
+        <Grid x:Name="Pane" Grid.Column="1" RowDefinitions="Auto,Auto,Auto,*,Auto" ColumnDefinitions="*,Auto">
             <Grid.GestureRecognizers>
                 <PointerGestureRecognizer PointerPressed="OnPanePressed" />
                 <!-- Files dropped anywhere else in the pane go to the folder shown; a CollectionView takes no drop itself. -->
@@ -175,77 +279,135 @@
                 </BoxView.Triggers>
             </BoxView>
             <!-- Tabs, always at least one: a click shows the tab, × closes it, a drag moves it within the bar, to
-                 another window or, let go outside the app's windows, to a window of its own. A fixed height: measured
-                 while still empty, a horizontal ScrollView keeps that height when the tabs arrive. -->
-            <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never" HeightRequest="{Binding TabBarHeight}"
-                        BackgroundColor="{AppThemeBinding Light=#E9EAEE, Dark=#16171A}">
-                <ScrollView.GestureRecognizers>
+                 another window or, let go outside the app's windows, to a window of its own. Tabs narrow as they grow
+                 in number, as in a browser, rather than scroll: on the Mac a scroll view under the title bar makes
+                 macOS treat the area as its own, drawing its bar over the tabs and taking their clicks. -->
+            <Grid x:Name="TabBar" HeightRequest="{Binding TabBarHeight}" BackgroundColor="{AppThemeBinding Light=#E9EAEE, Dark=#16171A}">
+                <Grid.GestureRecognizers>
                     <DropGestureRecognizer DragOver="OnTabDragOver" DragLeave="OnTabDragLeave" Drop="OnTabDrop" />
-                </ScrollView.GestureRecognizers>
-                <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Tabs}" Padding="{Binding TabBarPadding}" Spacing="2">
-                    <BindableLayout.ItemTemplate>
-                        <DataTemplate x:DataType="ExplorerTab">
-                            <Grid ColumnDefinitions="*,Auto" WidthRequest="180" HeightRequest="28" Padding="10,0,2,0"
-                                  BackgroundColor="Transparent"
-                                  ContextMenu.Items="{Binding TabMenu, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" ContextMenu.CommandParameter="{Binding .}">
-                                <Grid.Triggers>
-                                    <DataTrigger TargetType="Grid" Binding="{Binding IsActive}" Value="True">
-                                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#FFFFFF, Dark=#232427}" />
-                                    </DataTrigger>
-                                </Grid.Triggers>
-                                <Grid.GestureRecognizers>
-                                    <DragGestureRecognizer DragStarting="OnTabDragStarting" DropCompleted="OnTabDropCompleted" />
-                                    <DropGestureRecognizer DragOver="OnTabDragOver" DragLeave="OnTabDragLeave" Drop="OnTabDrop" />
-                                    <TapGestureRecognizer Command="{Binding SelectTabCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
-                                </Grid.GestureRecognizers>
-                                <Label Text="{Binding Title}" FontSize="12" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
-                                <Button Grid.Column="1" Text="×" FontSize="14" Padding="6,0" HeightRequest="24" MinimumWidthRequest="0" BackgroundColor="Transparent"
-                                        TextColor="{AppThemeBinding Light=#555, Dark=#BBB}" SemanticProperties.Description="{String Menu.CloseTab}"
-                                        Command="{Binding CloseTabCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
-                            </Grid>
-                        </DataTemplate>
-                    </BindableLayout.ItemTemplate>
+                </Grid.GestureRecognizers>
+                <HorizontalStackLayout Padding="{Binding TabBarPadding}" Spacing="2">
+                    <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Tabs}" Spacing="2">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="ExplorerTab">
+                                <!-- Edge-like: the active tab is raised, lighter and joined to the toolbar below it. -->
+                                <Border WidthRequest="{Binding TabWidth, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}"
+                                        HeightRequest="{Binding TabHeight, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}"
+                                        Padding="10,0,2,0" StrokeThickness="0" StrokeShape="RoundRectangle 8,8,0,0" BackgroundColor="Transparent"
+                                        ContextMenu.Items="{Binding TabMenu, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" ContextMenu.CommandParameter="{Binding .}">
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding IsHovered}" Value="True">
+                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#DDDFE4, Dark=#202124}" />
+                                        </DataTrigger>
+                                        <DataTrigger TargetType="Border" Binding="{Binding IsActive}" Value="True">
+                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                    <Border.GestureRecognizers>
+                                        <DragGestureRecognizer DragStarting="OnTabDragStarting" DropCompleted="OnTabDropCompleted" />
+                                        <DropGestureRecognizer DragOver="OnTabDragOver" DragLeave="OnTabDragLeave" Drop="OnTabDrop" />
+                                        <PointerGestureRecognizer PointerEntered="OnTabPointerEntered" PointerExited="OnTabPointerExited" />
+                                    </Border.GestureRecognizers>
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                        <Grid InputTransparent="True" VerticalOptions="Center">
+                                            <Image Source="folder.png" WidthRequest="16" HeightRequest="16" IsVisible="{Binding IsHome, Converter={StaticResource Not}}" />
+                                            <ImageButton SvgImageSource.Svg="House.svg" SvgImageSource.EnableSvg="True" SvgImageSource.LightTintColor="#2F6FEB" SvgImageSource.DarkTintColor="#7FA6F5"
+                                                         WidthRequest="26" HeightRequest="26" Margin="-5" Padding="0" BackgroundColor="Transparent" IsVisible="{Binding IsHome}" />
+                                        </Grid>
+                                        <Label Grid.Column="1" Text="{Binding Title}" FontSize="12" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" InputTransparent="True" />
+                                        <!-- A button takes the click, so a tab answers like the other controls (keyboard, accessibility). -->
+                                        <Button Grid.ColumnSpan="3" BackgroundColor="Transparent" Padding="0" MinimumHeightRequest="0" MinimumWidthRequest="0" SemanticProperties.Description="{Binding Title}"
+                                                Command="{Binding SelectTabCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
+                                        <Button Grid.Column="2" Text="×" FontSize="14" Padding="6,0" HeightRequest="22" MinimumWidthRequest="0" CornerRadius="4" BackgroundColor="Transparent"
+                                                TextColor="{AppThemeBinding Light=#555, Dark=#BBB}" SemanticProperties.Description="{String Menu.CloseTab}" ToolTipProperties.Text="{String Menu.CloseTab}"
+                                                Opacity="0" Command="{Binding CloseTabCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}">
+                                            <Button.Triggers>
+                                                <DataTrigger TargetType="Button" Binding="{Binding ShowsClose}" Value="True">
+                                                    <Setter Property="Opacity" Value="1" />
+                                                </DataTrigger>
+                                            </Button.Triggers>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </HorizontalStackLayout>
+                    <Button Text="+" FontSize="18" WidthRequest="28" HeightRequest="28" Padding="0" MinimumHeightRequest="0" MinimumWidthRequest="0" CornerRadius="6" VerticalOptions="Center"
+                            BackgroundColor="Transparent" TextColor="{AppThemeBinding Light=#444, Dark=#CCC}" Command="{Binding NewTabCommand}"
+                            SemanticProperties.Description="{String Menu.NewTab}" ToolTipProperties.Text="{String Menu.NewTab}" />
                 </HorizontalStackLayout>
-            </ScrollView>
+            </Grid>
 
-            <!-- Toolbar: history, up, refresh, the breadcrumb, view and hidden files. -->
-            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="2" Padding="8,6">
+            <!-- Toolbar: history and up, the breadcrumb with all the room left, refresh and search. -->
+            <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto" ColumnSpacing="2" Padding="8,6,8,2">
                 <ImageButton Style="{StaticResource ToolButton}" SvgImageSource.Svg="ChevronLeft.svg" Command="{Binding BackCommand}" IsEnabled="{Binding CanGoBack}"
                              SemanticProperties.Description="{String Explorer.Back}" ToolTipProperties.Text="{String Explorer.Back}" />
                 <ImageButton Grid.Column="1" Style="{StaticResource ToolButton}" SvgImageSource.Svg="ChevronRight.svg" Command="{Binding ForwardCommand}" IsEnabled="{Binding CanGoForward}"
                              SemanticProperties.Description="{String Explorer.Forward}" ToolTipProperties.Text="{String Explorer.Forward}" />
                 <ImageButton Grid.Column="2" Style="{StaticResource ToolButton}" SvgImageSource.Svg="ChevronUp.svg" Command="{Binding UpCommand}" IsEnabled="{Binding CanGoUp}"
                              SemanticProperties.Description="{String Explorer.Up}" ToolTipProperties.Text="{String Explorer.Up}" />
-                <ImageButton Grid.Column="3" Style="{StaticResource ToolButton}" SvgImageSource.Svg="Refresh.svg" Command="{Binding RefreshCommand}"
+                <!-- Breadcrumb in a capsule: a segment opens its folder, the chevron after it lists that folder's
+                     subfolders. As in Windows, segments that do not fit fold from the root end into « before them,
+                     which lists them nearest first; the current folder always shows. -->
+                <Border Grid.Column="3" Margin="6,0" Padding="4,0" HeightRequest="32" StrokeThickness="0" StrokeShape="RoundRectangle 8"
+                        BackgroundColor="{AppThemeBinding Light=#F1F2F4, Dark=#2A2B2E}">
+                    <Grid ColumnDefinitions="Auto,*">
+                        <Button x:Name="CrumbOverflow" Text="«" Style="{StaticResource Crumb}" Padding="6,0" MenuButton.Items="{Binding CollapsedMenu}" IsVisible="{Binding HasCollapsed}"
+                                SemanticProperties.Description="{String Explorer.EarlierFolders}" ToolTipProperties.Text="{String Explorer.EarlierFolders}" />
+                        <Label Grid.Column="1" Text="{String Home.Title}" FontSize="13" Padding="6,0" VerticalOptions="Center" IsVisible="{Binding IsHome}" />
+                        <Grid x:Name="CrumbArea" Grid.Column="1" IsClippedToBounds="True" IsVisible="{Binding ShowsFiles}">
+                            <HorizontalStackLayout x:Name="Crumbs" BindableLayout.ItemsSource="{Binding Segments}" VerticalOptions="Center" HorizontalOptions="Start">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="BreadcrumbSegment">
+                                        <HorizontalStackLayout IsVisible="{Binding IsCollapsed, Converter={StaticResource Not}}" SizeChanged="OnCrumbSizeChanged">
+                                            <HorizontalStackLayout.GestureRecognizers>
+                                                <DropGestureRecognizer DragOver="OnFileDragOver" DragLeave="OnFileDragLeave" Drop="OnFileDrop" />
+                                            </HorizontalStackLayout.GestureRecognizers>
+                                            <Button Text="{Binding Name}" Style="{StaticResource Crumb}"
+                                                    Command="{Binding OpenLocationCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding Location}" />
+                                            <Button Text="›" Style="{StaticResource Crumb}" Padding="4,0" MenuButton.Items="{Binding Children}"
+                                                    SemanticProperties.Description="{String Explorer.Subfolders}" />
+                                        </HorizontalStackLayout>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </HorizontalStackLayout>
+                        </Grid>
+                    </Grid>
+                </Border>
+                <ImageButton Grid.Column="4" Style="{StaticResource ToolButton}" SvgImageSource.Svg="Refresh.svg" Command="{Binding RefreshCommand}"
                              SemanticProperties.Description="{String Explorer.Refresh}" ToolTipProperties.Text="{String Explorer.Refresh}" />
-                <!-- Breadcrumb: a segment opens its folder, the chevron after it lists that folder's subfolders. -->
-                <ScrollView x:Name="BreadcrumbScroll" Grid.Column="4" Orientation="Horizontal" HorizontalScrollBarVisibility="Never" Margin="6,0">
-                    <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Segments}" VerticalOptions="Center">
-                        <BindableLayout.ItemTemplate>
-                            <DataTemplate x:DataType="BreadcrumbSegment">
-                                <HorizontalStackLayout>
-                                    <HorizontalStackLayout.GestureRecognizers>
-                                        <DropGestureRecognizer DragOver="OnFileDragOver" DragLeave="OnFileDragLeave" Drop="OnFileDrop" />
-                                    </HorizontalStackLayout.GestureRecognizers>
-                                    <Button Text="{Binding Name}" Style="{StaticResource Crumb}"
-                                            Command="{Binding OpenLocationCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding Location}" />
-                                    <Button Text="›" Style="{StaticResource Crumb}" Padding="4,0" MenuButton.Items="{Binding Children}"
-                                            SemanticProperties.Description="{String Explorer.Subfolders}" />
-                                </HorizontalStackLayout>
-                            </DataTemplate>
-                        </BindableLayout.ItemTemplate>
-                    </HorizontalStackLayout>
-                </ScrollView>
-                <Entry x:Name="FilterField" Grid.Column="8" Text="{Binding Filter}" Placeholder="{String Explorer.Filter}" FontSize="13" WidthRequest="170"
-                       ClearButtonVisibility="WhileEditing" IsVisible="{Binding IsWide}" VerticalOptions="Center" Margin="6,0,0,0"
-                       SemanticProperties.Description="{String Explorer.Filter}" />
-                <!-- Icons only, as in Finder: a segment with a title shows it as text too. -->
-                <SegmentedControl Grid.Column="5" Grid.ColumnSpan="2" SelectedIndex="{Binding ViewIndex}" VerticalOptions="Center" Margin="4,0"
-                                  ToolTipProperties.Text="{String Explorer.View}" SemanticProperties.Description="{String Explorer.View}">
-                    <Segment Svg="List.svg" />
-                    <Segment Svg="Grid.svg" />
-                </SegmentedControl>
-                <ImageButton Grid.Column="7" Style="{StaticResource ToolButton}" Command="{Binding ToggleHiddenCommand}"
+                <!-- Search folds out of its magnifier and folds back when left empty. -->
+                <Grid Grid.Column="5">
+                    <ImageButton Style="{StaticResource ToolButton}" SvgImageSource.Svg="Search.svg" Command="{Binding FindCommand}" IsVisible="{Binding IsSearchOpen, Converter={StaticResource Not}}"
+                                 SemanticProperties.Description="{String Explorer.Search}" ToolTipProperties.Text="{String Explorer.Search}" />
+                    <Border x:Name="SearchCapsule" WidthRequest="200" HeightRequest="32" Margin="4,0,0,0" Padding="10,0,4,0" StrokeThickness="0" StrokeShape="RoundRectangle 16"
+                            BackgroundColor="{AppThemeBinding Light=#F1F2F4, Dark=#2A2B2E}" Stroke="{AppThemeBinding Light=#2F6FEB, Dark=#5B8DEF}"
+                            IsVisible="{Binding IsSearchOpen}">
+                        <Entry x:Name="FilterField" ClassId="Bare" Text="{Binding Filter}" Placeholder="{String Explorer.Search}" FontSize="13" BackgroundColor="Transparent"
+                               ClearButtonVisibility="WhileEditing" VerticalOptions="Center" Focused="OnFilterFocused" Unfocused="OnFilterUnfocused"
+                               SemanticProperties.Description="{String Explorer.Filter}" />
+                    </Border>
+                </Grid>
+            </Grid>
+
+            <!-- Command bar: what can be done with the selection, then the view and hidden files. -->
+            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto" ColumnSpacing="2" Padding="8,0,8,6" IsVisible="{Binding ShowsFiles}">
+                <ImageButton Style="{StaticResource ToolButton}" SvgImageSource.Svg="NewFolder.svg" Command="{Binding NewFolderCommand}"
+                             SemanticProperties.Description="{String Menu.NewFolder}" ToolTipProperties.Text="{String Menu.NewFolder}" />
+                <ImageButton Grid.Column="1" Style="{StaticResource ToolButton}" SvgImageSource.Svg="Cut.svg" Command="{Binding CutCommand}" IsEnabled="{Binding HasSelection}"
+                             SemanticProperties.Description="{String Menu.Cut}" ToolTipProperties.Text="{String Menu.Cut}" />
+                <ImageButton Grid.Column="2" Style="{StaticResource ToolButton}" SvgImageSource.Svg="Copy.svg" Command="{Binding CopyCommand}" IsEnabled="{Binding HasSelection}"
+                             SemanticProperties.Description="{String Menu.Copy}" ToolTipProperties.Text="{String Menu.Copy}" />
+                <ImageButton Grid.Column="3" Style="{StaticResource ToolButton}" SvgImageSource.Svg="Paste.svg" Command="{Binding PasteCommand}"
+                             SemanticProperties.Description="{String Menu.Paste}" ToolTipProperties.Text="{String Menu.Paste}" />
+                <ImageButton Grid.Column="4" Style="{StaticResource ToolButton}" SvgImageSource.Svg="Duplicate.svg" Command="{Binding DuplicateCommand}" IsEnabled="{Binding HasSelection}"
+                             SemanticProperties.Description="{String Menu.Duplicate}" ToolTipProperties.Text="{String Menu.Duplicate}" />
+                <ImageButton Grid.Column="5" Style="{StaticResource ToolButton}" SvgImageSource.Svg="Edit.svg" Command="{Binding RenameCommand}" IsEnabled="{Binding HasSelection}"
+                             SemanticProperties.Description="{String Menu.Rename}" ToolTipProperties.Text="{String Menu.Rename}" />
+                <ImageButton Grid.Column="6" Style="{StaticResource ToolButton}" SvgImageSource.Svg="Trashcan.svg" Command="{Binding DeleteCommand}" IsEnabled="{Binding HasSelection}"
+                             SvgImageSource.LightTintColor="#C5221F" SvgImageSource.DarkTintColor="#F28B82"
+                             SemanticProperties.Description="{String Menu.Delete}" ToolTipProperties.Text="{String Menu.Delete}" />
+                <ImageButton Grid.Column="8" Style="{StaticResource ToolButton}" Command="{Binding ToggleHiddenCommand}"
                              SemanticProperties.Description="{String Explorer.ShowHidden}" ToolTipProperties.Text="{String Explorer.ShowHidden}">
                     <ImageButton.Triggers>
                         <DataTrigger TargetType="ImageButton" Binding="{Binding ShowHidden}" Value="True">
@@ -256,6 +418,22 @@
                         </DataTrigger>
                     </ImageButton.Triggers>
                 </ImageButton>
+                <!-- Icons only, as in Finder: a segment with a title shows it as text too. -->
+                <SegmentedControl Grid.Column="9" SelectedIndex="{Binding ViewIndex}" VerticalOptions="Center" Margin="4,0,0,0"
+                                  ToolTipProperties.Text="{String Explorer.View}" SemanticProperties.Description="{String Explorer.View}">
+                    <Segment Svg="List.svg" />
+                    <Segment Svg="Grid.svg" />
+                </SegmentedControl>
+            </Grid>
+
+            <!-- Search: the field filters the folder shown; here the search reaches into its subfolders. -->
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="10" Padding="16,0,16,6" IsVisible="{Binding ShowsSearchScope}">
+                <SegmentedControl SelectedIndex="{Binding SearchScope}" WidthRequest="320" HorizontalOptions="Start">
+                    <Segment Title="{String Search.ThisFolder}" />
+                    <Segment Title="{String Search.Subfolders}" />
+                </SegmentedControl>
+                <ActivityIndicator Grid.Column="1" IsRunning="{Binding IsSearching}" IsVisible="{Binding IsSearching}" HeightRequest="16" WidthRequest="16" />
+                <Button Grid.Column="3" Text="{String Search.Stop}" Command="{Binding StopSearchingCommand}" IsVisible="{Binding IsSearching}" FontSize="13" />
             </Grid>
             </VerticalStackLayout>
 
@@ -263,30 +441,62 @@
                    TextColor="{AppThemeBinding Light=#B3261E, Dark=#F2B8B5}" BackgroundColor="{AppThemeBinding Light=#FDECEA, Dark=#3B1F1E}" />
 
             <!-- Column headers: a click sorts, a second click reverses. -->
-            <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto,Auto" Padding="8,0" IsVisible="{Binding IsList}">
-                <Label Text="{Binding NameHeader}" Style="{StaticResource ColumnHeader}" Padding="38,6,8,6">
-                    <Label.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Name" /></Label.GestureRecognizers>
-                </Label>
-                <Label Grid.Column="1" Text="{Binding ModifiedHeader}" Style="{StaticResource ColumnHeader}" WidthRequest="160" IsVisible="{Binding HasColumns}">
-                    <Label.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Modified" /></Label.GestureRecognizers>
-                </Label>
-                <Label Grid.Column="2" Text="{Binding SizeHeader}" Style="{StaticResource ColumnHeader}" WidthRequest="90" HorizontalTextAlignment="End">
-                    <Label.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Size" /></Label.GestureRecognizers>
-                </Label>
-                <Label Grid.Column="3" Text="{Binding KindHeader}" Style="{StaticResource ColumnHeader}" WidthRequest="130" IsVisible="{Binding HasColumns}">
-                    <Label.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Kind" /></Label.GestureRecognizers>
-                </Label>
+            <!-- Column headers: a click sorts, a second click reverses; the sorted column shows a chevron. The grip on a
+                 column's right edge resizes it; Name takes what is left. -->
+            <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto,Auto" Padding="8,0" IsVisible="{Binding ShowsList}">
+                <Grid  Padding="38,0,0,0" ColumnDefinitions="*,Auto">
+                    <Grid.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Name" /></Grid.GestureRecognizers>
+                    <HorizontalStackLayout Spacing="0">
+                        <Label Text="{String Explorer.Column.Name}" Style="{StaticResource ColumnHeader}" Padding="8,6,2,6" />
+                        <ImageButton Style="{StaticResource SortChevron}" SvgImageSource.Svg="{Binding NameChevron}" IsVisible="{Binding NameChevron, Converter={StaticResource HasValue}}" />
+                    </HorizontalStackLayout>
+                </Grid>
+                <Grid Grid.Column="1" WidthRequest="{Binding ModifiedWidth}" IsVisible="{Binding HasColumns}" ColumnDefinitions="*,Auto">
+                    <Grid.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Modified" /></Grid.GestureRecognizers>
+                    <HorizontalStackLayout Spacing="0">
+                        <Label Text="{String Explorer.Column.Modified}" Style="{StaticResource ColumnHeader}" Padding="8,6,2,6" />
+                        <ImageButton Style="{StaticResource SortChevron}" SvgImageSource.Svg="{Binding ModifiedChevron}" IsVisible="{Binding ModifiedChevron, Converter={StaticResource HasValue}}" />
+                    </HorizontalStackLayout>
+                    <Grid Grid.Column="1" Style="{StaticResource Grip}" ClassId="ModifiedWidth">
+                        <Grid.GestureRecognizers><PanGestureRecognizer PanUpdated="OnGripPanned" /><PointerGestureRecognizer PointerEntered="OnGripEntered" PointerMoved="OnGripEntered" PointerExited="OnGripExited" /></Grid.GestureRecognizers>
+                        <BoxView Style="{StaticResource GripLine}" />
+                    </Grid>
+                </Grid>
+                <Grid Grid.Column="2" WidthRequest="{Binding SizeWidth}" ColumnDefinitions="*,Auto">
+                    <Grid.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Size" /></Grid.GestureRecognizers>
+                    <HorizontalStackLayout Spacing="0" HorizontalOptions="End">
+                        <Label Text="{String Explorer.Column.Size}" Style="{StaticResource ColumnHeader}" Padding="8,6,2,6" />
+                        <ImageButton Style="{StaticResource SortChevron}" SvgImageSource.Svg="{Binding SizeChevron}" IsVisible="{Binding SizeChevron, Converter={StaticResource HasValue}}" />
+                    </HorizontalStackLayout>
+                    <Grid Grid.Column="1" Style="{StaticResource Grip}" ClassId="SizeWidth">
+                        <Grid.GestureRecognizers><PanGestureRecognizer PanUpdated="OnGripPanned" /><PointerGestureRecognizer PointerEntered="OnGripEntered" PointerMoved="OnGripEntered" PointerExited="OnGripExited" /></Grid.GestureRecognizers>
+                        <BoxView Style="{StaticResource GripLine}" />
+                    </Grid>
+                </Grid>
+                <Grid Grid.Column="3" WidthRequest="{Binding KindWidth}" IsVisible="{Binding HasColumns}" ColumnDefinitions="*,Auto">
+                    <Grid.GestureRecognizers><TapGestureRecognizer Command="{Binding SortByCommand}" CommandParameter="Kind" /></Grid.GestureRecognizers>
+                    <HorizontalStackLayout Spacing="0">
+                        <Label Text="{String Explorer.Column.Kind}" Style="{StaticResource ColumnHeader}" Padding="8,6,2,6" />
+                        <ImageButton Style="{StaticResource SortChevron}" SvgImageSource.Svg="{Binding KindChevron}" IsVisible="{Binding KindChevron, Converter={StaticResource HasValue}}" />
+                    </HorizontalStackLayout>
+                    <Grid Grid.Column="1" Style="{StaticResource Grip}" ClassId="KindWidth">
+                        <Grid.GestureRecognizers><PanGestureRecognizer PanUpdated="OnGripPanned" /><PointerGestureRecognizer PointerEntered="OnGripEntered" PointerMoved="OnGripEntered" PointerExited="OnGripExited" /></Grid.GestureRecognizers>
+                        <BoxView Style="{StaticResource GripLine}" />
+                    </Grid>
+                </Grid>
             </Grid>
 
             <!-- Every row is one height; measuring only the first keeps a 100 000-row list from measuring them all. -->
-            <FileListView x:Name="List" Grid.Row="3" ItemsSource="{Binding Rows}" SelectionMode="None" ItemSizingStrategy="MeasureFirstItem" IsVisible="{Binding IsList}"
+            <FileListView x:Name="List" Grid.Row="3" ItemsSource="{Binding Rows}" SelectionMode="None" ItemSizingStrategy="MeasureFirstItem" IsVisible="{Binding ShowsList}"
                           ContextMenu.Items="{Binding BackgroundMenu}">
                 <FileListView.GestureRecognizers>
                     <PointerGestureRecognizer PointerPressed="OnListPressed" />
+                    <!-- A drag that does not start on a name or icon draws a selection rectangle. -->
+                    <PanGestureRecognizer PanUpdated="OnListPanned" />
                 </FileListView.GestureRecognizers>
                 <FileListView.ItemTemplate>
                     <DataTemplate x:DataType="ItemRow">
-                        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" HeightRequest="28" Padding="16,0,8,0" Opacity="{Binding Dimmed}"
+                        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" HeightRequest="{x:Static ExplorerPage.RowHeight}" Padding="16,0,8,0" Opacity="{Binding Dimmed}"
                               ContextMenu.Items="{Binding RowMenu, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" ContextMenu.CommandParameter="{Binding .}">
                             <Grid.Triggers>
                                 <DataTrigger TargetType="Grid" Binding="{Binding IsSelected}" Value="True">
@@ -297,16 +507,33 @@
                                 </DataTrigger>
                             </Grid.Triggers>
                             <Grid.GestureRecognizers>
-                                <DragGestureRecognizer DragStarting="OnRowDragStarting" DropCompleted="OnRowDropCompleted" />
                                 <DropGestureRecognizer DragOver="OnFileDragOver" DragLeave="OnFileDragLeave" Drop="OnFileDrop" />
                                 <TapGestureRecognizer NumberOfTapsRequired="2" Command="{Binding ActivateCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
                                 <TapGestureRecognizer Command="{Binding TapCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
                             </Grid.GestureRecognizers>
-                            <Image Source="{Binding Icon}" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
-                            <Label Grid.Column="1" Text="{Binding Name}" Style="{StaticResource Cell}" />
-                            <Label Grid.Column="2" Text="{Binding Modified}" Style="{StaticResource Cell}" Opacity="0.7" WidthRequest="160" IsVisible="{Binding HasColumns, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" />
-                            <Label Grid.Column="3" Text="{Binding Size}" Style="{StaticResource Cell}" Opacity="0.7" WidthRequest="90" HorizontalTextAlignment="End" />
-                            <Label Grid.Column="4" Text="{Binding Kind}" Style="{StaticResource Cell}" Opacity="0.7" WidthRequest="130" IsVisible="{Binding HasColumns, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" />
+                            <!-- Files are dragged by their icon or name, as in Finder and Explorer; the name is only as wide as its text. -->
+                            <Image Source="{Binding Icon}" WidthRequest="18" HeightRequest="18" VerticalOptions="Center">
+                                <Image.GestureRecognizers>
+                                    <DragGestureRecognizer DragStarting="OnRowDragStarting" DropCompleted="OnRowDropCompleted" />
+                                    <PointerGestureRecognizer PointerPressed="OnNamePressed" />
+                                </Image.GestureRecognizers>
+                            </Image>
+                            <!-- A search result also says which folder it is in. -->
+                            <Label Grid.Column="1" Style="{StaticResource Cell}" HorizontalOptions="Start">
+                                <Label.GestureRecognizers>
+                                    <DragGestureRecognizer DragStarting="OnRowDragStarting" DropCompleted="OnRowDropCompleted" />
+                                    <PointerGestureRecognizer PointerPressed="OnNamePressed" />
+                                </Label.GestureRecognizers>
+                                <Label.FormattedText>
+                                    <FormattedString>
+                                        <Span Text="{Binding Name}" />
+                                        <Span Text="{Binding WhereSuffix}" TextColor="{AppThemeBinding Light=#8A8F98, Dark=#8E939B}" />
+                                    </FormattedString>
+                                </Label.FormattedText>
+                            </Label>
+                            <Label Grid.Column="2" Text="{Binding Modified}" Style="{StaticResource Cell}" Opacity="0.7" WidthRequest="{Binding ModifiedWidth, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" IsVisible="{Binding HasColumns, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" />
+                            <Label Grid.Column="3" Text="{Binding Size}" Style="{StaticResource Cell}" Opacity="0.7" WidthRequest="{Binding SizeWidth, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" HorizontalTextAlignment="End" />
+                            <Label Grid.Column="4" Text="{Binding Kind}" Style="{StaticResource Cell}" Opacity="0.7" WidthRequest="{Binding KindWidth, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" IsVisible="{Binding HasColumns, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" />
                         </Grid>
                     </DataTemplate>
                 </FileListView.ItemTemplate>
@@ -314,9 +541,12 @@
                     <Label Text="{String Explorer.Empty}" IsVisible="{Binding IsLoading, Converter={StaticResource Not}}" Opacity="0.5" HorizontalTextAlignment="Center" Padding="24" />
                 </FileListView.EmptyView>
             </FileListView>
+            <Border x:Name="Marquee" Grid.Row="3" IsVisible="False" InputTransparent="True" HorizontalOptions="Start" VerticalOptions="Start" ZIndex="2"
+                    StrokeThickness="1" StrokeShape="Rectangle" Stroke="{AppThemeBinding Light=#2F6FEB, Dark=#5B8DEF}"
+                    BackgroundColor="{AppThemeBinding Light=#332F6FEB, Dark=#335B8DEF}" />
 
             <!-- Icons: a second list rather than a new ItemsLayout, which a shown CollectionView ignores on iOS. -->
-            <FileListView x:Name="Icons" Grid.Row="2" Grid.RowSpan="2" ItemsSource="{Binding Rows}" SelectionMode="None" ItemSizingStrategy="MeasureFirstItem" IsVisible="{Binding IsIcons}" Margin="8,8,8,0"
+            <FileListView x:Name="Icons" Grid.Row="2" Grid.RowSpan="2" ItemsSource="{Binding Rows}" SelectionMode="None" ItemSizingStrategy="MeasureFirstItem" IsVisible="{Binding ShowsIconGrid}" Margin="8,8,8,0"
                           ContextMenu.Items="{Binding BackgroundMenu}">
                 <FileListView.GestureRecognizers>
                     <PointerGestureRecognizer PointerPressed="OnListPressed" />
@@ -358,7 +588,7 @@
             </Grid>
 
             <!-- Preview: the selected item's picture (the system's thumbnail), its text and its facts. -->
-            <ScrollView Grid.Row="2" Grid.RowSpan="2" Grid.Column="1" WidthRequest="300" IsVisible="{Binding ShowsPreview}"
+            <ScrollView Grid.Row="2" Grid.RowSpan="2" Grid.Column="1" WidthRequest="{Binding PreviewWidth}" IsVisible="{Binding ShowsPreview}"
                         BackgroundColor="{AppThemeBinding Light=#F7F7F8, Dark=#1B1C1F}">
                 <VerticalStackLayout Padding="16" Spacing="10">
                     <Image Source="{Binding PreviewImage}" HeightRequest="220" Aspect="AspectFit" />
@@ -370,6 +600,128 @@
                     <Label Text="{String Preview.None}" IsVisible="{Binding PreviewTitle, Converter={StaticResource IsNull}}" FontSize="12" Opacity="0.5" HorizontalTextAlignment="Center" />
                 </VerticalStackLayout>
             </ScrollView>
+            <!-- Home: the disks with how full they are, the linked devices and the folders opened lately. -->
+            <ScrollView Grid.Row="2" Grid.RowSpan="2" IsVisible="{Binding IsHome}">
+                <VerticalStackLayout Padding="28,12,28,28">
+                    <Label Text="{String Home.Title}" FontSize="26" FontAttributes="Bold" />
+                    <Label Text="{String Home.Subtitle}" FontSize="13" Opacity="0.6" />
+
+                    <Label Style="{StaticResource HomeSection}">
+                        <Label.FormattedText>
+                            <FormattedString>
+                                <Span Text="{String Home.ThisDevice}" />
+                                <Span Text="  ·  " FontAttributes="None" />
+                                <Span Text="{Binding HomeDevice}" FontAttributes="None" />
+                            </FormattedString>
+                        </Label.FormattedText>
+                    </Label>
+                    <FlexLayout Wrap="Wrap" BindableLayout.ItemsSource="{Binding Disks}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="DiskRow">
+                                <Border Style="{StaticResource HomeCard}" WidthRequest="270">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding OpenDiskCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
+                                    </Border.GestureRecognizers>
+                                    <VerticalStackLayout Spacing="8">
+                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                            <Image Source="{Binding Icon}" WidthRequest="36" HeightRequest="36" />
+                                            <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                                <Label Text="{Binding Name}" FontSize="14" FontAttributes="Bold" LineBreakMode="TailTruncation" />
+                                                <Label Text="{Binding Kind}" FontSize="12" Opacity="0.6" />
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                        <ProgressBar Progress="{Binding Fraction}" ProgressColor="{AppThemeBinding Light=#2F6FEB, Dark=#5B8DEF}">
+                                            <ProgressBar.Triggers>
+                                                <DataTrigger TargetType="ProgressBar" Binding="{Binding IsNearlyFull}" Value="True">
+                                                    <Setter Property="ProgressColor" Value="{AppThemeBinding Light=#D93025, Dark=#F28B82}" />
+                                                </DataTrigger>
+                                            </ProgressBar.Triggers>
+                                        </ProgressBar>
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <Label Text="{Binding Free}" FontSize="12" />
+                                            <Label Grid.Column="1" Text="{Binding Used}" FontSize="12" Opacity="0.6" />
+                                        </Grid>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </FlexLayout>
+
+                    <Border Style="{StaticResource HomeCard}" WidthRequest="270" HorizontalOptions="Start">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding OpenTrashCommand}" />
+                        </Border.GestureRecognizers>
+                        <VerticalStackLayout Spacing="8">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="Trashcan.svg" WidthRequest="40" HeightRequest="40" />
+                                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                    <Label Text="{Binding TrashName}" FontSize="14" FontAttributes="Bold" />
+                                    <Label Text="{Binding TrashSummary}" FontSize="12" Opacity="0.6" />
+                                </VerticalStackLayout>
+                            </Grid>
+                            <ProgressBar Progress="{Binding TrashProgress}" IsVisible="{Binding IsEmptyingTrash}" />
+                            <HorizontalStackLayout Spacing="8">
+                                <Button Text="{String Trash.EmptyButton}" Command="{Binding EmptyTrashCommand}" IsEnabled="{Binding CanEmptyTrash}" FontSize="12" Padding="12,0" HeightRequest="28" CornerRadius="14"
+                                        BackgroundColor="{AppThemeBinding Light=#FCE8E6, Dark=#4A2522}" TextColor="{AppThemeBinding Light=#C5221F, Dark=#F28B82}" />
+                                <Button Text="{String Trash.OpenSettings}" Command="{Binding OpenFullDiskAccessCommand}" IsVisible="{Binding TrashNeedsAccess}" FontSize="12" Padding="12,0" HeightRequest="28" CornerRadius="14"
+                                        BackgroundColor="{AppThemeBinding Light=#E4ECFD, Dark=#25324D}" TextColor="{AppThemeBinding Light=#2F6FEB, Dark=#9BB9F7}" />
+                            </HorizontalStackLayout>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Label Text="{String Devices.Title}" Style="{StaticResource HomeSection}" />
+                    <Label Text="{String Home.NoDevices}" FontSize="13" Opacity="0.6" IsVisible="{Binding HasNoDevices}" Margin="0,0,0,8" />
+                    <FlexLayout Wrap="Wrap" BindableLayout.ItemsSource="{Binding Devices}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="DeviceRow">
+                                <Border Style="{StaticResource HomeCard}" WidthRequest="220"
+                                        ContextMenu.Items="{Binding DeviceMenu, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" ContextMenu.CommandParameter="{Binding .}">
+                                    <Border.GestureRecognizers>
+                                        <DropGestureRecognizer DragOver="OnFileDragOver" DragLeave="OnFileDragLeave" Drop="OnFileDrop" />
+                                    </Border.GestureRecognizers>
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                        <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="{Binding Glyph}" WidthRequest="34" HeightRequest="34" />
+                                        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                            <Label Text="{Binding Name}" FontSize="14" FontAttributes="Bold" LineBreakMode="TailTruncation" />
+                                            <Label Text="{Binding Lifetime}" FontSize="12" Opacity="0.6" LineBreakMode="TailTruncation" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </FlexLayout>
+                    <Button Text="{String Devices.Link}" Command="{Binding LinkDeviceCommand}" FontSize="12" Padding="12,0" HeightRequest="28" CornerRadius="14" HorizontalOptions="Start"
+                            BackgroundColor="{AppThemeBinding Light=#E4ECFD, Dark=#25324D}" TextColor="{AppThemeBinding Light=#2F6FEB, Dark=#9BB9F7}" />
+
+                    <Label Text="{String Home.Recent}" Style="{StaticResource HomeSection}" />
+                    <Label Text="{String Home.NoRecent}" FontSize="13" Opacity="0.6" IsVisible="{Binding HasNoRecent}" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding RecentRows}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="RecentRow">
+                                <Border Padding="8,6" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding OpenLocationCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding Location}" />
+                                    </Border.GestureRecognizers>
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                        <Image Source="folder.png" WidthRequest="22" HeightRequest="22" VerticalOptions="Center" />
+                                        <VerticalStackLayout Grid.Column="1">
+                                            <Label Text="{Binding Name}" FontSize="13" LineBreakMode="TailTruncation" />
+                                            <Label Text="{Binding Path}" FontSize="11" Opacity="0.55" LineBreakMode="MiddleTruncation" />
+                                        </VerticalStackLayout>
+                                        <Label Grid.Column="2" Text="{Binding When}" FontSize="12" Opacity="0.6" VerticalOptions="Center" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </ScrollView>
+
+            <!-- The preview's left edge resizes it. -->
+            <Grid Grid.Row="2" Grid.RowSpan="2" Grid.Column="1" Style="{StaticResource Grip}" HorizontalOptions="Start" Margin="-4,0,0,0" IsVisible="{Binding ShowsPreview}" ClassId="PreviewWidth">
+                <Grid.GestureRecognizers><PanGestureRecognizer PanUpdated="OnGripPanned" /><PointerGestureRecognizer PointerEntered="OnGripEntered" PointerMoved="OnGripEntered" PointerExited="OnGripExited" /></Grid.GestureRecognizers>
+                <BoxView Style="{StaticResource GripLine}" Margin="0" />
+            </Grid>
 
             <!-- Operations the app found unfinished at start, waiting to be resumed. -->
             <Grid Grid.Row="4" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" Padding="16,4" IsVisible="{Binding ShowsInterrupted}"
@@ -391,12 +743,14 @@
         </Grid>
 
         <!-- Dual Pane: a splitter to drag, and the second pane (an explorer of its own, without a sidebar). -->
-        <BoxView x:Name="Splitter" Grid.Column="2" WidthRequest="5" IsVisible="{Binding IsSplit}"
-                 Color="{AppThemeBinding Light=#E2E4E8, Dark=#2A2C30}">
-            <BoxView.GestureRecognizers>
+        <!-- The same grip as the sidebar's edge: a hairline between the panes, an 8-point strip to drag. -->
+        <Grid x:Name="Splitter" Grid.Column="2" Style="{StaticResource Grip}" Margin="-4,0" ZIndex="1" IsVisible="{Binding IsSplit}">
+            <Grid.GestureRecognizers>
                 <PanGestureRecognizer PanUpdated="OnSplitterPanned" />
-            </BoxView.GestureRecognizers>
-        </BoxView>
+                <PointerGestureRecognizer PointerEntered="OnGripEntered" PointerMoved="OnGripEntered" PointerExited="OnGripExited" />
+            </Grid.GestureRecognizers>
+            <BoxView Style="{StaticResource GripLine}" Margin="0" />
+        </Grid>
         <ContentView x:Name="SecondPane" Grid.Column="3" IsVisible="{Binding IsSplit}" />
     </Grid>
 

@@ -4,6 +4,7 @@ using Spine.FileManager.Controls;
 using Spine.FileManager.Explorer;
 using Spine.FileManager.Favorites;
 using Spine.FileManager.Operations;
+using Spine.FileManager.Storage.FileSystem;
 using Spine.FileManager.Workspaces;
 using MenuAction = Plugin.Maui.Spine.Core.MenuAction;
 using MenuItems = Plugin.Maui.Spine.Core.MenuItems;
@@ -57,7 +58,19 @@ public sealed partial class ExplorerTab : ObservableObject
     public partial string Title { get; set; } = "";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsClose))]
     public partial bool IsActive { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsClose))]
+    public partial bool IsHovered { get; set; }
+
+    /// <summary>Showing Home rather than a folder; <see cref="Location"/> is then the folder Back returns to.</summary>
+    [ObservableProperty]
+    public partial bool IsHome { get; set; }
+
+    /// <summary>As in Edge: the active tab and the one under the pointer show their ×.</summary>
+    public bool ShowsClose => IsActive || IsHovered;
 }
 
 /// <summary>A linked device in the sidebar's Other Devices; files dropped on it are sent there.</summary>
@@ -111,6 +124,38 @@ public sealed partial class BreadcrumbSegment(StorageLocation location, string n
 
     /// <summary>Whether <see cref="Children"/> lists hidden folders.</summary>
     public bool ChildrenWithHidden { get; set; }
+
+    /// <summary>Folded into the bar's « because the breadcrumb does not fit.</summary>
+    [ObservableProperty]
+    public partial bool IsCollapsed { get; set; }
+
+    /// <summary>The segment's width as last laid out, kept while it is folded away, for deciding what fits.</summary>
+    public double Width { get; set; }
+}
+
+/// <summary>A disk on Home's overview: how full it is, worded for its card.</summary>
+public sealed class DiskRow(Disk disk, string kind, string free, string used)
+{
+    public Disk Disk { get; } = disk;
+    public string Name => Disk.Name;
+    public string Kind { get; } = kind;
+    public string Icon => Disk.Kind == DiskKind.Network ? "cloud.png" : "drive.png";
+    public double Fraction => Disk.UsedFraction;
+
+    /// <summary>Nine tenths full or more: the bar turns red, as in Finder and Explorer.</summary>
+    public bool IsNearlyFull => Disk.UsedFraction >= 0.9;
+
+    public string Free { get; } = free;
+    public string Used { get; } = used;
+}
+
+/// <summary>A folder opened lately, on Home.</summary>
+public sealed class RecentRow(RecentLocation recent, string when)
+{
+    public StorageLocation Location => recent.Location;
+    public string Name => recent.Name;
+    public string Path => recent.Location.DisplayPath;
+    public string When { get; } = when;
 }
 
 /// <summary>How a list's rows are worded: the culture and the kind names, shared by every row of one listing.</summary>
@@ -137,6 +182,11 @@ public sealed partial class ItemRow(StorageItem item, RowFormat format) : Observ
     public string Size => Item.Size is { } size ? ByteSize.Format(size, format.Culture) : "";
     public ImageSource Icon => FileIcons.For(Item);
     public double Dimmed => Item.IsHidden ? 0.5 : 1;
+
+    /// <summary>In a search of the subfolders, the folder the item is in, from the folder searched.</summary>
+    public string? Where { get; init; }
+
+    public string WhereSuffix => Where is null ? "" : "   " + Where;
 
     /// <summary>A folder row a dragged item is over.</summary>
     [ObservableProperty]
@@ -195,6 +245,9 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     public ObservableCollection<DeviceRow> Devices { get; } = [];
 
+    // A sidebar row is 30 points with a point of margin above and below; a list a point short per row scrolled itself.
+    private const double SidebarRowHeight = 32;
+
     [ObservableProperty]
     public partial double DevicesHeight { get; private set; }
 
@@ -213,11 +266,15 @@ public partial class ExplorerPageViewModel : ViewModelBase
         Devices.Clear();
         foreach (var node in _devices.Trust.All.OrderBy(n => n.DisplayName, StringComparer.CurrentCultureIgnoreCase))
             Devices.Add(new DeviceRow(node, _strings[$"Devices.Lifetime.{node.Lifetime}"]));
-        DevicesHeight = Devices.Count * 30;
+        DevicesHeight = Devices.Count * SidebarRowHeight;
+        OnPropertyChanged(nameof(HasNoDevices));
     }
 
     [RelayCommand]
     private Task LinkDevice() => _navigation.ShowAsync<LinkDevicePage>();
+
+    [RelayCommand]
+    private Task ShowSettings() => _navigation.ShowAsync<SettingsPage>();
 
     [RelayCommand]
     private async Task RenameDevice(DeviceRow row)
@@ -298,7 +355,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
         }
         if (tab == _tabs.Active)
             Remember();
-        await CloseTab(tab);
+        await Close(tab, reopenable: false);
         return true;
     }
 
@@ -311,10 +368,19 @@ public partial class ExplorerPageViewModel : ViewModelBase
             tab.IsActive = tab == _tabs.Active;
             Tabs.Add(tab);
         }
+        OnPropertyChanged(nameof(TabWidth));
     }
 
+    /// <summary>A new tab opens on Home, as a browser's opens on its start page.</summary>
     [RelayCommand]
-    private Task NewTab() => OpenTab(Current, activate: true);
+    private void NewTab()
+    {
+        Remember();
+        var tab = new ExplorerTab { Sort = Sort, ShowHidden = ShowHidden, IsIcons = IsIcons, Location = Current };
+        _tabs.Add(tab, activate: true);
+        SyncTabs();
+        EnterHome(tab);
+    }
 
     private IReadOnlyList<ExplorerTab>? _startTabs;
     private int _startActive;
@@ -332,8 +398,11 @@ public partial class ExplorerPageViewModel : ViewModelBase
     // A tab opened in the background or restored and never shown has its folder only in its history.
     public WindowState Snapshot()
     {
-        var tabs = _tabs.Tabs.Where(t => (t.Location ?? t.History.Current) is not null).ToList();
-        return new([.. tabs.Select(t => new TabState((t.Location ?? t.History.Current)!, t.Sort, t.ShowHidden, t.IsIcons))], Math.Max(0, tabs.IndexOf(_tabs.Active)));
+        var fallback = Places.FirstOrDefault()?.Root.Location;
+        StorageLocation? Folder(ExplorerTab t) => t.Location ?? (t.History.Current is { } c && c != HomeLocation ? c : null) ?? (t.IsHome ? fallback : null);
+        var tabs = _tabs.Tabs.Where(t => Folder(t) is not null).ToList();
+        return new([.. tabs.Select(t => new TabState(Folder(t)!, t.Sort, t.ShowHidden, t.IsIcons, t.IsHome))],
+            Math.Max(0, tabs.IndexOf(_tabs.Active)));
     }
 
     private static string TabTitle(StorageLocation location) =>
@@ -341,8 +410,14 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     private static ExplorerTab Tab(TabState state)
     {
-        var tab = new ExplorerTab { Sort = state.Sort, ShowHidden = state.ShowHidden, IsIcons = state.IsIcons, Title = TabTitle(state.Location) };
-        tab.History.Navigate(state.Location);
+        var tab = new ExplorerTab { Sort = state.Sort, ShowHidden = state.ShowHidden, IsIcons = state.IsIcons, Title = TabTitle(state.Location), IsHome = state.IsHome };
+        if (state.IsHome)
+        {
+            tab.Location = state.Location;
+            tab.History.Navigate(HomeLocation);
+        }
+        else
+            tab.History.Navigate(state.Location);
         return tab;
     }
 
@@ -402,15 +477,44 @@ public partial class ExplorerPageViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task CloseTab(ExplorerTab? tab)
+    private Task CloseTab(ExplorerTab? tab) => Close(tab ?? _tabs.Active, reopenable: true);
+
+    private async Task Close(ExplorerTab closing, bool reopenable)
     {
-        var closing = tab ?? _tabs.Active;
         var wasActive = closing == _tabs.Active;
+        if (wasActive)
+            Remember();
         if (!_tabs.Close(closing))
             return;
+        if (reopenable)
+            _closed.Push(closing);
         SyncTabs();
         if (wasActive)
             await Show(_tabs.Active);
+    }
+
+    // Closed tabs with their history, for Reopen Closed Tab; a tab moved to another pane or window is not closed.
+    private readonly Stack<ExplorerTab> _closed = [];
+
+    [RelayCommand]
+    private async Task ReopenClosedTab()
+    {
+        if (!_closed.TryPop(out var tab))
+            return;
+        Remember();
+        tab.IsHovered = false;
+        _tabs.Add(tab, activate: true);
+        SyncTabs();
+        await Show(tab);
+    }
+
+    /// <summary>Ctrl+1 to Ctrl+8 choose that tab, Ctrl+9 the last, as in a browser.</summary>
+    [RelayCommand]
+    private Task GoToTab(string number)
+    {
+        var index = int.Parse(number);
+        var tabs = _tabs.Tabs;
+        return index == 9 ? SelectTab(tabs[^1]) : index <= tabs.Count ? SelectTab(tabs[index - 1]) : Task.CompletedTask;
     }
 
     [RelayCommand]
@@ -443,7 +547,9 @@ public partial class ExplorerPageViewModel : ViewModelBase
         Sort = tab.Sort;
         ShowHidden = tab.ShowHidden;
         IsIcons = tab.IsIcons;
-        if (tab.History.Current is { } location)
+        if (tab.IsHome)
+            EnterHome(tab);
+        else if (tab.History.Current is { } location)
             await Load(location, cached: tab.Items, keep: tab.Selected);
     }
 
@@ -560,7 +666,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
         Favorites.Clear();
         foreach (var favorite in _favorites.Items)
             Favorites.Add(new FavoriteRow(favorite) { IsCurrent = favorite.Location.Equals(Current) });
-        FavoritesHeight = Favorites.Count * 30;
+        FavoritesHeight = Favorites.Count * SidebarRowHeight;
         foreach (var row in Favorites.ToList())
             row.IsAvailable = await IsReachable(row.Favorite.Location);
     }
@@ -661,10 +767,10 @@ public partial class ExplorerPageViewModel : ViewModelBase
     [ObservableProperty]
     public partial bool CanGoForward { get; private set; }
 
-    public bool CanGoUp => Current is not null && _providers[Current].GetParent(Current) is not null;
+    public bool CanGoUp => !IsHome && Current is not null && _providers[Current].GetParent(Current) is not null;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowsSidebar), nameof(TabBarPadding))]
+    [NotifyPropertyChangedFor(nameof(ShowsSidebar))]
     public partial bool IsWide { get; set; } = true;
 
     /// <summary>Whether the list is wide enough for the Date modified and Kind columns; in Dual Pane each pane decides.</summary>
@@ -688,17 +794,30 @@ public partial class ExplorerPageViewModel : ViewModelBase
     public bool ShowsSidebar => IsWide && !IsSecondary;
 
     /// <summary>
-    /// The window's title bar on the Mac, which the explorer reaches into: the tab bar is as tall as it, and the sidebar
-    /// starts below the traffic lights. Elsewhere 0, and the tab bar keeps its own height.
+    /// The window's title bar on the Mac, which the explorer reaches into without a title: the tab bar is as tall as it,
+    /// and the sidebar starts below the traffic lights. Elsewhere 0, and the tab bar keeps its own height.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(TabBarHeight), nameof(TabBarPadding), nameof(SidebarPadding))]
+    [NotifyPropertyChangedFor(nameof(TabBarHeight), nameof(TabBarPadding), nameof(TabHeight), nameof(SidebarPadding))]
     public partial double TitleBarHeight { get; set; }
 
     public double TabBarHeight => Math.Max(32, TitleBarHeight);
 
-    // Clear of the traffic lights when no sidebar is under them.
-    public Thickness TabBarPadding => new(TitleBarHeight > 0 && !ShowsSidebar && !IsSecondary ? 80 : 8, (TabBarHeight - 28) / 2, 8, 0);
+    // The tabs stand on the toolbar below them, the active one joined to it.
+    public Thickness TabBarPadding => new(TitleBarHeight > 0 && !ShowsSidebar && !IsSecondary ? 80 : 8, TabBarHeight - TabHeight, 8, 0);
+
+    public double TabHeight => TabBarHeight - 6;
+
+    /// <summary>The tab bar's width, from the page: tabs share it, each at most 180 and at least 70 wide.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TabWidth))]
+    public partial double TabBarWidth { get; set; }
+
+    // Room is left for the + after the tabs.
+    public double TabWidth => Tabs.Count == 0 || TabBarWidth <= 0 ? 200
+        : Math.Clamp((TabBarWidth - TabBarPadding.Left - TabBarPadding.Right - NewTabWidth) / Tabs.Count - 2, 70, 200);
+
+    private const double NewTabWidth = 32;
 
     public Thickness SidebarPadding => new(0, TitleBarHeight, 0, 0);
 
@@ -786,7 +905,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
     public partial string Status { get; private set; } = "";
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(NameHeader), nameof(ModifiedHeader), nameof(SizeHeader), nameof(KindHeader))]
+    [NotifyPropertyChangedFor(nameof(NameChevron), nameof(ModifiedChevron), nameof(SizeChevron), nameof(KindChevron))]
     public partial ItemSort Sort { get; private set; } = new();
 
     [ObservableProperty]
@@ -796,7 +915,101 @@ public partial class ExplorerPageViewModel : ViewModelBase
     [ObservableProperty]
     public partial string Filter { get; set; } = "";
 
-    partial void OnFilterChanged(string value) => Rebuild(keepSelection: true);
+    partial void OnFilterChanged(string value)
+    {
+        OnPropertyChanged(nameof(ShowsSearchScope));
+        if (SearchSubfolders && !string.IsNullOrWhiteSpace(value))
+            Search();
+        else
+        {
+            StopSearch();
+            Rebuild(keepSelection: true);
+        }
+    }
+
+    public bool ShowsSearchScope => !string.IsNullOrWhiteSpace(Filter);
+
+    /// <summary>Whether the filter searches the subfolders too: 0 the folder shown, 1 it and everything below it.</summary>
+    [ObservableProperty]
+    public partial int SearchScope { get; set; }
+
+    public bool SearchSubfolders => SearchScope == 1;
+
+    partial void OnSearchScopeChanged(int value) => OnFilterChanged(Filter);
+
+    [ObservableProperty]
+    public partial bool IsSearching { get; private set; }
+
+    partial void OnIsSearchingChanged(bool value) => UpdateStatus();
+
+    private CancellationTokenSource? _search;
+    private List<StorageItem>? _found;
+
+    // The subfolders are searched in the background a moment after the typing stops; what is found shows in batches,
+    // and a new text, another scope or another folder stops the search.
+    private void Search()
+    {
+        _search?.Cancel();
+        if (Current is not { } root)
+            return;
+        var cancel = _search = new CancellationTokenSource();
+        var query = Filter;
+        var includeHidden = ShowHidden;
+        var provider = _providers[root];
+        var found = _found = [];
+        IsSearching = true;
+        Show([], null);
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(250, cancel.Token);
+                var shown = DateTime.UtcNow;
+                await foreach (var item in FileSearch.SearchAsync(provider, root, query, includeHidden, cancellationToken: cancel.Token))
+                {
+                    lock (found)
+                        found.Add(item);
+                    if (DateTime.UtcNow - shown > TimeSpan.FromMilliseconds(300))
+                    {
+                        shown = DateTime.UtcNow;
+                        MainThread.BeginInvokeOnMainThread(() => ShowFound(cancel));
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                if (cancel != _search)
+                    return;
+                IsSearching = false;
+                ShowFound(cancel);
+            });
+        });
+    }
+
+    private void ShowFound(CancellationTokenSource search)
+    {
+        if (search == _search && !search.IsCancellationRequested)
+            Rebuild(keepSelection: true);
+    }
+
+    private void StopSearch()
+    {
+        _search?.Cancel();
+        _search = null;
+        _found = null;
+        IsSearching = false;
+    }
+
+    [RelayCommand]
+    private void StopSearching()
+    {
+        _search?.Cancel();
+        IsSearching = false;
+    }
 
     // ---- Preview ----
 
@@ -947,10 +1160,40 @@ public partial class ExplorerPageViewModel : ViewModelBase
     public event Action? FilterRequested;
 
     [RelayCommand]
-    private void Find() => FilterRequested?.Invoke();
+    private void Find()
+    {
+        IsSearchOpen = true;
+        FilterRequested?.Invoke();
+    }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsList), nameof(ViewIndex))]
+    public partial bool IsSearchOpen { get; set; }
+
+    /// <summary>The segments folded into « , nearest first as in Windows; null when everything fits.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCollapsed))]
+    public partial Plugin.Maui.Spine.Core.MenuItems? CollapsedMenu { get; private set; }
+
+    public bool HasCollapsed => CollapsedMenu is not null;
+
+    /// <summary>Folds the first <paramref name="count"/> segments, those nearest the root, into « .</summary>
+    public void Collapse(int count)
+    {
+        for (var i = 0; i < Segments.Count; i++)
+            Segments[i].IsCollapsed = i < count;
+        if (count == 0)
+        {
+            CollapsedMenu = null;
+            return;
+        }
+        var menu = new Plugin.Maui.Spine.Core.MenuItems();
+        foreach (var segment in Segments.Take(count).Reverse())
+            menu.Add(new Plugin.Maui.Spine.Core.MenuAction(segment.Name, "folder.svg", OpenLocationCommand) { CommandParameter = segment.Location });
+        CollapsedMenu = menu;
+    }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsList), nameof(ViewIndex), nameof(ShowsList), nameof(ShowsIconGrid))]
     public partial bool IsIcons { get; private set; }
 
     public bool IsList => !IsIcons;
@@ -966,15 +1209,66 @@ public partial class ExplorerPageViewModel : ViewModelBase
     [ObservableProperty]
     public partial int GridSpan { get; set; } = 6;
 
-    public string NameHeader => Header("Explorer.Column.Name", SortColumn.Name);
-    public string ModifiedHeader => Header("Explorer.Column.Modified", SortColumn.Modified);
-    public string SizeHeader => Header("Explorer.Column.Size", SortColumn.Size);
-    public string KindHeader => Header("Explorer.Column.Kind", SortColumn.Kind);
+    // The column the list is sorted by shows a chevron: up ascending, down descending.
+    public string? NameChevron => Chevron(SortColumn.Name);
+    public string? ModifiedChevron => Chevron(SortColumn.Modified);
+    public string? SizeChevron => Chevron(SortColumn.Size);
+    public string? KindChevron => Chevron(SortColumn.Kind);
+
+    private string? Chevron(SortColumn column) =>
+        Sort.Column != column ? null : Sort.Descending ? "ChevronDown.svg" : "ChevronUp.svg";
+
+    /// <summary>The widths of the parts a user resizes, kept between runs; Name takes what the other columns leave.</summary>
+    [ObservableProperty]
+    public partial double SidebarWidth { get; set; } = Preferences.Get(nameof(SidebarWidth), 210.0);
+
+    [ObservableProperty]
+    public partial double PreviewWidth { get; set; } = Preferences.Get(nameof(PreviewWidth), 300.0);
+
+    [ObservableProperty]
+    public partial double ModifiedWidth { get; set; } = Preferences.Get(nameof(ModifiedWidth), 160.0);
+
+    [ObservableProperty]
+    public partial double SizeWidth { get; set; } = Preferences.Get(nameof(SizeWidth), 90.0);
+
+    [ObservableProperty]
+    public partial double KindWidth { get; set; } = Preferences.Get(nameof(KindWidth), 130.0);
+
+    /// <summary>Resizes one of the parts by the width's name, within its limits; <paramref name="keep"/> saves it for the next run.</summary>
+    public void Resize(string part, double width, bool keep)
+    {
+        var (min, max) = part switch
+        {
+            nameof(SidebarWidth) => (150.0, 400.0),
+            nameof(PreviewWidth) => (200.0, 600.0),
+            _ => (50.0, 400.0),
+        };
+        width = Math.Clamp(width, min, max);
+        switch (part)
+        {
+            case nameof(SidebarWidth): SidebarWidth = width; break;
+            case nameof(PreviewWidth): PreviewWidth = width; break;
+            case nameof(ModifiedWidth): ModifiedWidth = width; break;
+            case nameof(SizeWidth): SizeWidth = width; break;
+            case nameof(KindWidth): KindWidth = width; break;
+            default: return;
+        }
+        if (keep)
+            Preferences.Set(part, width);
+    }
+
+    public double Width(string part) => part switch
+    {
+        nameof(SidebarWidth) => SidebarWidth,
+        nameof(PreviewWidth) => PreviewWidth,
+        nameof(ModifiedWidth) => ModifiedWidth,
+        nameof(SizeWidth) => SizeWidth,
+        nameof(KindWidth) => KindWidth,
+        _ => 0,
+    };
 
     public IEnumerable<StorageItem> SelectedItems => _selection.Indices.Where(i => i < Rows.Count).Select(i => Rows[i].Item);
 
-    private string Header(string key, SortColumn column) =>
-        Sort.Column == column ? $"{_strings[key]} {(Sort.Descending ? "▼" : "▲")}" : _strings[key];
 
     public override async Task OnAppearingAsync(NavigationDirection navigationDirection)
     {
@@ -1007,17 +1301,30 @@ public partial class ExplorerPageViewModel : ViewModelBase
         foreach (var provider in _providers.All)
             foreach (var root in await provider.GetRootsAsync())
                 Places.Add(new(root));
-        PlacesHeight = Places.Count * 30;
+        // This Device ends with the disks, as in the concept image, unless the provider already lists one.
+        foreach (var disk in await Task.Run(ListDisks))
+            if (!Places.Any(p => p.Root.Location.Equals(disk.Location)))
+                Places.Add(new(new StorageRoot(disk.Location, disk.Name, disk.Kind switch
+                {
+                    DiskKind.Network => StorageRootKind.NetworkVolume,
+                    DiskKind.External => StorageRootKind.RemovableVolume,
+                    _ => StorageRootKind.Volume,
+                })));
+        PlacesHeight = Places.Count * SidebarRowHeight;
         LoadDevices();
         if (!IsSecondary)
             _devices.StartIfLinked();
-        if (_tabs.Active.History.Current is { } kept)
+        if (_tabs.Active.IsHome || _tabs.Active.History.Current is not null)
             await Show(_tabs.Active);
-        else if ((_startLocation ?? Places.FirstOrDefault()?.Root.Location) is { } start)
+        else if (_startLocation is { } start)
             await Navigate(start);
+        else
+            EnterHome(_tabs.Active);
         // Presented from the root page's first appearance the sheet never showed; after the first folder it does.
         if (FirstRunPageViewModel.IsNeeded && !IsSecondary)
             MainThread.BeginInvokeOnMainThread(async () => await _navigation.ShowAsync<FirstRunPage>());
+        else if (!IsSecondary)
+            await AskTrashAccessOnce();
     }
 
     [RelayCommand]
@@ -1073,7 +1380,11 @@ public partial class ExplorerPageViewModel : ViewModelBase
         var item = row?.Item ?? (_selection.Count == 1 ? SelectedItems.First() : null);
         if (item is null)
             return;
-        if (item.IsFolder)
+        // Ctrl-double-click (⌘ on the Mac) opens a folder in a new tab, as in Windows' Explorer. Only a click: the menu's
+        // Open has no row, and its shortcut holds the key.
+        if (item.IsFolder && row is not null && ModifierKeys.Command)
+            await OpenTab(item.Location, activate: true);
+        else if (item.IsFolder)
             await Navigate(item.Location);
         else if (!await FileLauncher.OpenAsync(item))
             Error = _strings.Get("Explorer.Error.CannotOpen", item.Name);
@@ -1210,6 +1521,20 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     public bool HasSelection => _selection.Count > 0;
 
+    public IReadOnlyCollection<int> SelectedIndices => [.. _selection.Indices];
+
+    /// <summary>Selects the rows a selection rectangle covers, <paramref name="first"/> to <paramref name="last"/>, beside <paramref name="kept"/>.</summary>
+    public void SelectRows(int first, int last, IReadOnlyCollection<int> kept)
+    {
+        if (AppMenu.Explorer != this)
+            Focus();
+        last = Math.Min(last, Rows.Count - 1);
+        if (first > last)
+            first = last = -1;
+        _selection.Box(first, last, kept);
+        ApplySelection();
+    }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasOperation), nameof(ShowsOperation), nameof(ShowsInterrupted))]
     public partial string? OperationText { get; private set; }
@@ -1309,6 +1634,220 @@ public partial class ExplorerPageViewModel : ViewModelBase
         }
     }
 
+    /// <summary>Home's place in a tab's history, so Back and Forward pass through it as in a browser.</summary>
+    private static readonly StorageLocation HomeLocation = new(new StorageProviderId("home"), "", "Home");
+
+    private static RecentLocations? Recent => IPlatformApplication.Current?.Services.GetService<RecentLocations>();
+
+    /// <summary>The active tab shows Home: the disks, linked devices and recent folders instead of a folder.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsFiles), nameof(ShowsList), nameof(ShowsIconGrid), nameof(CanGoUp))]
+    public partial bool IsHome { get; private set; }
+
+    public bool ShowsFiles => !IsHome;
+
+    public bool ShowsList => IsList && !IsHome;
+
+    public bool ShowsIconGrid => IsIcons && !IsHome;
+
+    public ObservableCollection<DiskRow> Disks { get; } = [];
+
+    public ObservableCollection<RecentRow> RecentRows { get; } = [];
+
+    public bool HasNoRecent => RecentRows.Count == 0;
+
+    public bool HasNoDevices => Devices.Count == 0;
+
+    public string HomeDevice => DeviceService.DeviceName;
+
+    [RelayCommand]
+    private void ShowHome()
+    {
+        if (Target != this)
+        {
+            Target.ShowHomeCommand.Execute(null);
+            return;
+        }
+        if (IsHome)
+            return;
+        Remember();
+        EnterHome(_tabs.Active);
+    }
+
+    private void EnterHome(ExplorerTab tab)
+    {
+        _loading?.Cancel();
+        tab.History.Navigate(HomeLocation);
+        tab.IsHome = true;
+        tab.Location ??= Current;
+        tab.Title = _strings["Home.Title"];
+        IsHome = true;
+        StopSearch();
+        Filter = "";
+        CanGoBack = tab.History.CanGoBack;
+        CanGoForward = tab.History.CanGoForward;
+        foreach (var place in Places)
+            place.IsCurrent = false;
+        foreach (var favorite in Favorites)
+            favorite.IsCurrent = false;
+        SessionChanged();
+        _ = RefreshHome();
+    }
+
+    private async Task RefreshHome()
+    {
+        var disks = await Task.Run(ListDisks);
+        var culture = System.Globalization.CultureInfo.CurrentCulture;
+        Disks.Clear();
+        foreach (var disk in disks)
+            Disks.Add(new DiskRow(disk, _strings[$"Home.Disk.{disk.Kind}"],
+                _strings.Get("Home.Free", ByteSize.Format(disk.Free, culture), ByteSize.Format(disk.Total, culture)),
+                _strings.Get("Home.Used", $"{Math.Round(disk.UsedFraction * 100)}")));
+        RecentRows.Clear();
+        foreach (var recent in Recent?.Items ?? [])
+            RecentRows.Add(new RecentRow(recent, When(recent.At)));
+        OnPropertyChanged(nameof(HasNoRecent));
+        OnPropertyChanged(nameof(HasNoDevices));
+        await RefreshTrash();
+    }
+
+    private string When(DateTimeOffset at)
+    {
+        var ago = DateTimeOffset.Now - at;
+        if (ago.TotalMinutes < 1)
+            return _strings["Home.JustNow"];
+        if (ago.TotalHours < 1)
+            return _strings.Get("Home.MinutesAgo", (int)ago.TotalMinutes);
+        if (at.Date == DateTime.Today)
+            return _strings.Get("Home.HoursAgo", (int)ago.TotalHours);
+        if (at.Date == DateTime.Today.AddDays(-1))
+            return _strings["Home.Yesterday"];
+        return at.ToString("d MMM", System.Globalization.CultureInfo.CurrentCulture);
+    }
+
+    // As Finder: the start disk named "Macintosh HD" rather than "/", free space with what macOS can purge counted, and
+    // the volumes it hides (Recovery) left out.
+    private static IReadOnlyList<Disk> ListDisks()
+    {
+#if MACCATALYST
+        var visible = Foundation.NSFileManager.DefaultManager.GetMountedVolumes(Array.Empty<Foundation.NSString>(), Foundation.NSVolumeEnumerationOptions.SkipHiddenVolumes)?
+            .Select(url => url.Path?.TrimEnd('/') ?? "").ToHashSet();
+        return Explorer.Disks.List(
+            path => Foundation.NSFileManager.DefaultManager.DisplayName(path) is { Length: > 0 } name && name != "/" ? name : null,
+            path => Foundation.NSUrl.FromFilename(path).TryGetResource(Foundation.NSUrl.VolumeAvailableCapacityForImportantUsageKey, out var value)
+                && value is Foundation.NSNumber number && number.Int64Value > 0 ? number.Int64Value : null,
+            path => visible?.Contains(path.TrimEnd('/')) != false);
+#else
+        return Explorer.Disks.List();
+#endif
+    }
+
+    [RelayCommand]
+    private Task OpenDisk(DiskRow disk) => Navigate(disk.Disk.Location);
+
+    private static IFileSystemPlatform Platform => IPlatformApplication.Current!.Services.GetRequiredService<IFileSystemPlatform>();
+
+    public string TrashName => _strings[OperatingSystem.IsWindows() ? "Trash.Title.Windows" : "Trash.Title"];
+
+    /// <summary>How many items and how much the trash holds, that it is empty, or that the app may not look.</summary>
+    [ObservableProperty]
+    public partial string TrashSummary { get; private set; } = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanEmptyTrash))]
+    public partial bool TrashNeedsAccess { get; private set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanEmptyTrash))]
+    public partial TrashContents? Trash { get; private set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanEmptyTrash))]
+    public partial bool IsEmptyingTrash { get; private set; }
+
+    [ObservableProperty]
+    public partial double TrashProgress { get; private set; }
+
+    public bool CanEmptyTrash => Trash is { Items: > 0 } && !IsEmptyingTrash;
+
+    private async Task RefreshTrash()
+    {
+        Trash = await Platform.MeasureTrashAsync(CancellationToken.None);
+        TrashNeedsAccess = Trash is null && Platform.TrashFolder is not null;
+        TrashSummary = Trash switch
+        {
+            null => TrashNeedsAccess ? _strings["Trash.NeedsAccess"] : "",
+            { Items: 0 } => _strings["Trash.IsEmpty"],
+            var t => _strings.Get("Trash.Summary", t.Items, ByteSize.Format(t.Bytes, System.Globalization.CultureInfo.CurrentCulture)),
+        };
+    }
+
+    /// <summary>The Mac's Trash in the explorer, once the app may read it; elsewhere the system's own Recycle Bin.</summary>
+    [RelayCommand]
+    private async Task OpenTrash()
+    {
+        if (Platform.TrashFolder is not { } folder)
+        {
+            Platform.ShowTrash();
+            return;
+        }
+        if (await Platform.MeasureTrashAsync(CancellationToken.None) is null)
+        {
+            await AskTrashAccess();
+            return;
+        }
+        await Target.OpenLocationCommand.ExecuteAsync(Storage.FileSystem.FileSystemStorageProvider.Location(folder));
+    }
+
+    [RelayCommand]
+    private async Task EmptyTrash()
+    {
+        await RefreshTrash();
+        if (Trash is not { Items: > 0 } trash)
+            return;
+        var size = ByteSize.Format(trash.Bytes, System.Globalization.CultureInfo.CurrentCulture);
+        if (!await Confirm(_strings["Trash.Confirm.Title"], _strings.Get("Trash.Confirm.Message", trash.Items, size), _strings["Trash.Confirm.Accept"]))
+            return;
+        IsEmptyingTrash = true;
+        TrashProgress = 0;
+        TrashSummary = _strings["Trash.Emptying"];
+        try
+        {
+            var failed = await Platform.EmptyTrashAsync(new Progress<double>(p => TrashProgress = p), CancellationToken.None);
+            if (failed.Count > 0)
+                Error = _strings.Get("Trash.Failed", string.Join(", ", failed.Take(5)));
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            Error = e.Message;
+        }
+        finally
+        {
+            IsEmptyingTrash = false;
+            await RefreshTrash();
+        }
+    }
+
+    [RelayCommand]
+    private Task OpenFullDiskAccess() =>
+        Launcher.Default.OpenAsync("x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles");
+
+    private async Task AskTrashAccess()
+    {
+        if (await Confirm(_strings["Trash.Access.Title"], _strings["Trash.Access.Message"], _strings["Trash.OpenSettings"]))
+            await OpenFullDiskAccess();
+    }
+
+    // Asked once, at start, when the Mac's Trash cannot be read (the first-run sheet offers it to new users).
+    private async Task AskTrashAccessOnce()
+    {
+        const string asked = "trash.accessAsked";
+        if (Platform.TrashFolder is null || Preferences.Get(asked, false) || await Platform.MeasureTrashAsync(CancellationToken.None) is not null)
+            return;
+        Preferences.Set(asked, true);
+        await AskTrashAccess();
+    }
+
     private async Task Navigate(StorageLocation location)
     {
         _history.Navigate(location);
@@ -1317,6 +1856,11 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     private async Task Load(StorageLocation location, bool keepSelection = false, List<StorageItem>? cached = null, HashSet<StorageLocation>? keep = null)
     {
+        if (location == HomeLocation)
+        {
+            EnterHome(_tabs.Active);
+            return;
+        }
         _loading?.Cancel();
         var cancel = _loading = new CancellationTokenSource();
         var provider = _providers[location];
@@ -1324,10 +1868,15 @@ public partial class ExplorerPageViewModel : ViewModelBase
         // A tab switch always rebuilds the bar and the watcher, even onto the same folder.
         var changedFolder = !location.Equals(Current) || cached is not null || keep is { Count: > 0 } && !keepSelection;
         var tab = _tabs.Active;
+        var leftHome = tab.IsHome;
+        tab.IsHome = false;
+        IsHome = false;
         tab.Location = location;
         SessionChanged();
-        if (string.IsNullOrEmpty(tab.Title) || !location.Equals(Current))
+        if (string.IsNullOrEmpty(tab.Title) || !location.Equals(Current) || leftHome)
             tab.Title = TabTitle(location);
+        if (changedFolder || leftHome)
+            Recent?.Add(location, Places.FirstOrDefault(p => p.Root.Location.Equals(location))?.Name ?? TabTitle(location), DateTimeOffset.Now);
 
         Current = location;
         if (changedFolder)
@@ -1345,7 +1894,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
             _selection.Clear();
             _items = cached ?? [];
             Rows = [];
-            // A filter belongs to the folder it was typed in, as in Finder.
+            // A filter belongs to the folder it was typed in, as in Finder; so does a search.
+            StopSearch();
             Filter = "";
             Watch(provider, location);
             if (cached is not null)
@@ -1366,7 +1916,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
                 return;
             _items = items;
             tab.Items = items;
-            Show(rows, keep);
+            if (_found is null)
+                Show(rows, keep);
         }
         catch (OperationCanceledException)
         {
@@ -1475,7 +2026,22 @@ public partial class ExplorerPageViewModel : ViewModelBase
     }
 
     private void Rebuild(bool keepSelection = false) =>
-        Show(BuildRows(_items), keepSelection ? SelectedItems.Select(i => i.Location).ToHashSet() : null);
+        Show(_found is { } found ? BuildFoundRows(found) : BuildRows(_items), keepSelection ? SelectedItems.Select(i => i.Location).ToHashSet() : null);
+
+    // Search results, sorted as the list is, each with the folder it is in.
+    private ItemRow[] BuildFoundRows(List<StorageItem> found)
+    {
+        StorageItem[] items;
+        lock (found)
+            items = [.. found];
+        Sort.Sort(items);
+        var format = new RowFormat(_strings);
+        var root = Current?.DisplayPath ?? "";
+        return Array.ConvertAll(items, item => new ItemRow(item, format)
+        {
+            Where = Path.GetRelativePath(root, Path.GetDirectoryName(item.Location.DisplayPath) ?? root) is var where && where != "." ? where : null,
+        });
+    }
 
     private void Show(ItemRow[] rows, HashSet<StorageLocation>? keep)
     {
@@ -1504,13 +2070,16 @@ public partial class ExplorerPageViewModel : ViewModelBase
     {
         for (var i = 0; i < Rows.Count; i++)
             Rows[i].IsSelected = _selection.Contains(i);
+        OnPropertyChanged(nameof(HasSelection));
         UpdateStatus();
         UpdatePreview();
     }
 
     private void UpdateStatus()
     {
-        var count = string.IsNullOrWhiteSpace(Filter)
+        var count = _found is not null
+            ? _strings.Get(IsSearching ? "Search.Searching" : "Search.Found", Rows.Count)
+            : string.IsNullOrWhiteSpace(Filter)
             ? _strings.Get("Explorer.Items", Rows.Count)
             : _strings.Get("Explorer.Matches", Rows.Count) + " " + _strings.Get("Explorer.OfItems", _items.Count(i => ShowHidden || !i.IsHidden));
         Status = _selection.Count == 0 ? count : $"{count} · {_strings.Get("Explorer.Selected", _selection.Count)}";

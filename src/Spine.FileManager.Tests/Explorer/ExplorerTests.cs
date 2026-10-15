@@ -108,6 +108,20 @@ public sealed class ExplorerTests
     }
 
     [Fact]
+    public void A_selection_rectangle_replaces_the_selection_or_adds_to_what_was_kept()
+    {
+        var selection = new Selection();
+        selection.Click(9);
+        selection.Box(4, 2, kept: []);
+        Assert.Equal([2, 3, 4], selection.Indices);
+        // Shrinking the rectangle drops the rows it no longer covers.
+        selection.Box(4, 3, kept: []);
+        Assert.Equal([3, 4], selection.Indices);
+        selection.Box(0, 1, kept: [7, 9]);
+        Assert.Equal([0, 1, 7, 9], selection.Indices);
+    }
+
+    [Fact]
     public void Arrow_keys_move_or_extend_the_selection_within_the_list()
     {
         var selection = new Selection();

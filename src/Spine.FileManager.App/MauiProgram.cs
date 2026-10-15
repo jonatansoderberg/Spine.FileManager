@@ -22,6 +22,19 @@ public static class MauiProgram
                 options.Windows.MinWidth = 480;
                 options.Windows.MinHeight = 360;
                 options.Windows.PersistWindowPosition = true;
+                // Windows 11's Mica behind the window, following light and dark (the Mac's material: WindowMaterial).
+                options.Windows.Backdrop = WindowBackdrop.Mica;
+                // A tray icon with the shortcuts (ShortcutHandler). Closing the window keeps the app running in the
+                // background, so other devices can still send files and transfers go on.
+                options.Shortcuts.UseHandler<ShortcutHandler>();
+                options.MacOS.ShowTrayIcon = true;
+                options.MacOS.TrayIconSvg = "tray.svg";
+                options.MacOS.TrayIconTooltip = "Spine File Manager";
+                options.MacOS.CloseToBackground = true;
+                options.Windows.ShowTrayIcon = true;
+                options.Windows.TrayIconSvg = "tray.svg";
+                options.Windows.TrayIconTooltip = "Spine File Manager";
+                options.Windows.CloseToBackground = true;
             })
             .ConfigureLifecycleEvents(events =>
             {
@@ -41,6 +54,20 @@ public static class MauiProgram
 #if MACCATALYST
         builder.ConfigureMauiHandlers(h => h.AddHandler<Controls.KeySink, KeySinkHandler>());
 #endif
+        // A field in a capsule of its own (search) draws neither its border nor the system's focus ring, whose shape
+        // differs from the capsule; the capsule shows the focus instead.
+        Microsoft.Maui.Handlers.EntryHandler.Mapper.AppendToMapping("Bare", (handler, entry) =>
+        {
+            if (entry is not Entry { ClassId: "Bare" })
+                return;
+#if IOS || MACCATALYST
+            handler.PlatformView.BorderStyle = UIKit.UITextBorderStyle.None;
+            handler.PlatformView.FocusEffect = null;
+#elif WINDOWS
+            handler.PlatformView.BorderThickness = new Microsoft.UI.Xaml.Thickness(0);
+            handler.PlatformView.Background = null;
+#endif
+        });
         builder.Services.AddSingleton<IFileSystemPlatform>(
 #if MACCATALYST
             new MacFileSystemPlatform()
@@ -56,6 +83,7 @@ public static class MauiProgram
             services.GetRequiredService<StorageProviders>(), new Operations.OperationJournal(Path.Combine(AppPaths.Data, "operations"))));
         builder.Services.AddSingleton(new Favorites.FavoritesStore(Path.Combine(AppPaths.Data, "favorites.json")));
         builder.Services.AddSingleton(new Workspaces.SessionStore(Path.Combine(AppPaths.Data, "session.json")));
+        builder.Services.AddSingleton(new Explorer.RecentLocations(Path.Combine(AppPaths.Data, "recent.json")));
         builder.Services.AddSingleton<SessionTracker>();
         builder.Services.AddSingleton<UndoService>();
         builder.Services.AddSingleton<DeviceService>();

@@ -40,6 +40,19 @@ public sealed class Selection
         Anchor = index;
     }
 
+    /// <summary>
+    /// The rows a selection rectangle covers, from <paramref name="first"/> to <paramref name="last"/> in either order,
+    /// on top of <paramref name="kept"/>: what was selected when the rectangle began with Cmd/Ctrl held, else nothing.
+    /// </summary>
+    public void Box(int first, int last, IReadOnlyCollection<int> kept)
+    {
+        _selected.Clear();
+        _selected.UnionWith(kept);
+        for (var i = Math.Max(0, Math.Min(first, last)); i <= Math.Max(first, last); i++)
+            _selected.Add(i);
+        Anchor = first >= 0 ? first : null;
+    }
+
     public void SelectAll(int count)
     {
         _selected.Clear();

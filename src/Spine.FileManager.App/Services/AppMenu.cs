@@ -52,6 +52,9 @@ public static class AppMenu
         Build(host, vm, strings);
         strings.Changed += (_, _) => Build(host, vm, strings);
         FileIcons.Changed += () => MainThread.BeginInvokeOnMainThread(() => Build(host, vm, strings));
+        // The check marks follow a change made in Settings too.
+        if (Application.Current is { } app)
+            app.RequestedThemeChanged += (_, _) => MainThread.BeginInvokeOnMainThread(() => Build(host, vm, strings));
     }
 
     static void Build(Page host, ExplorerPageViewModel vm, ISpineStrings strings)
@@ -71,6 +74,24 @@ public static class AppMenu
             if (shortcut is not null)
                 item.KeyboardAccelerators.Add(new KeyboardAccelerator { Modifiers = modifiers, Key = shortcut });
             return item;
+        }
+
+        // View › Appearance: light, dark or the system's, through Spine's theme service, which keeps the choice.
+        MenuFlyoutSubItem Appearance()
+        {
+            var appearance = new MenuFlyoutSubItem { Text = strings["Menu.Appearance"] };
+            var theme = IPlatformApplication.Current!.Services.GetRequiredService<IThemeService>();
+            foreach (var (key, choice) in new[] { ("Menu.Appearance.System", AppTheme.Unspecified), ("Menu.Appearance.Light", AppTheme.Light), ("Menu.Appearance.Dark", AppTheme.Dark) })
+                appearance.Add(new MenuFlyoutItem
+                {
+                    Text = (theme.Current == choice ? "✓ " : "") + strings[key],
+                    Command = new Command(() =>
+                    {
+                        theme.Current = choice;
+                        Build(host, vm, strings);
+                    }),
+                });
+            return appearance;
         }
 
         // View › Icons: Spine's, the system's, and the icon themes the user has added; the one in use has a check mark.
@@ -93,6 +114,29 @@ public static class AppMenu
             return icons;
         }
 
+        // Go › Go to Tab: Ctrl+1 to Ctrl+8 and Ctrl+9 for the last, as in Windows' Explorer and the browsers. ⌘1 and ⌘2
+        // choose the view on the Mac, as in Finder, so there the tabs take ⌘⌥.
+        MenuFlyoutSubItem GoToTab()
+        {
+            var tabs = new MenuFlyoutSubItem { Text = strings["Menu.GoToTab"] };
+            var modifiers = mac ? command | KeyboardAcceleratorModifiers.Alt : command;
+            for (var n = 1; n <= 8; n++)
+                tabs.Add(TabItem(strings.Get("Menu.Tab", $"{n}"), n, modifiers));
+            tabs.Add(TabItem(strings["Menu.LastTab"], 9, modifiers));
+            return tabs;
+
+            MenuFlyoutItem TabItem(string text, int n, KeyboardAcceleratorModifiers modifiers)
+            {
+                var item = new MenuFlyoutItem
+                {
+                    Text = text,
+                    Command = new Command(() => Explorer?.GoToTabCommand.Execute($"{n}")),
+                };
+                item.KeyboardAccelerators.Add(new KeyboardAccelerator { Modifiers = modifiers, Key = $"{n}" });
+                return item;
+            }
+        }
+
         MenuBarItem Menu(string key, params Microsoft.Maui.IMenuElement[] items)
         {
             var menu = new MenuBarItem { Text = strings[key] };
@@ -106,11 +150,14 @@ public static class AppMenu
             Item("Menu.NewWindow", x => x.NewWindowCommand, command, "N"),
             Item("Menu.NewTab", x => x.NewTabCommand, command, "T"),
             Item("Menu.MoveTabToNewWindow", x => x.MoveTabToNewWindowCommand, KeyboardAcceleratorModifiers.None, null),
-            Item("Menu.OpenInNewTab", x => x.OpenInNewTabCommand, mac ? command | KeyboardAcceleratorModifiers.Ctrl : command | KeyboardAcceleratorModifiers.Shift, mac ? "O" : "T"),
+            // Ctrl+Enter as in Windows' Explorer; Ctrl+Shift+T reopens a closed tab there, as in the browsers.
+            Item("Menu.OpenInNewTab", x => x.OpenInNewTabCommand, mac ? command | KeyboardAcceleratorModifiers.Ctrl : command, mac ? "O" : "Enter"),
             Item("Menu.CloseTab", x => x.CloseTabCommand, command, "W"),
+            Item("Menu.ReopenClosedTab", x => x.ReopenClosedTabCommand, command | KeyboardAcceleratorModifiers.Shift, "T"),
             new MenuFlyoutSeparator(),
             Item("Menu.OpenInTerminal", x => x.OpenInTerminalCommand, mac ? command | KeyboardAcceleratorModifiers.Alt : KeyboardAcceleratorModifiers.Ctrl | KeyboardAcceleratorModifiers.Shift, mac ? "T" : "Enter"),
             Item("Devices.Link", x => x.LinkDeviceCommand, KeyboardAcceleratorModifiers.None, null),
+            Item("Settings.Open", x => x.ShowSettingsCommand, command, ","),
             new MenuFlyoutSeparator(),
             Item("Menu.NewFolder", x => x.NewFolderCommand, command | KeyboardAcceleratorModifiers.Shift, "N"),
             Item("Menu.Open", x => x.ActivateCommand, mac ? command : KeyboardAcceleratorModifiers.None, mac ? "O" : "Enter"),
@@ -150,6 +197,7 @@ public static class AppMenu
             Item("Menu.SortSize", x => x.SortByCommand, KeyboardAcceleratorModifiers.None, null, "Size"),
             Item("Menu.SortKind", x => x.SortByCommand, KeyboardAcceleratorModifiers.None, null, "Kind"),
             new MenuFlyoutSeparator(),
+            Appearance(),
             Icons()));
         host.MenuBarItems.Add(Menu("Menu.Go",
             Item("Menu.Back", x => x.BackCommand, mac ? command : KeyboardAcceleratorModifiers.Alt, mac ? "[" : "Left"),
@@ -159,6 +207,7 @@ public static class AppMenu
             new MenuFlyoutSeparator(),
             Item("Menu.NextTab", x => x.StepTabCommand, mac ? command | KeyboardAcceleratorModifiers.Shift : KeyboardAcceleratorModifiers.Ctrl, mac ? "]" : "Tab", "1"),
             Item("Menu.PreviousTab", x => x.StepTabCommand, mac ? command | KeyboardAcceleratorModifiers.Shift : KeyboardAcceleratorModifiers.Ctrl | KeyboardAcceleratorModifiers.Shift, mac ? "[" : "Tab", "-1"),
+            GoToTab(),
             new MenuFlyoutSeparator(),
             // The arrows come from the list itself on the Mac (KeySink), for the same reason as Return.
             Item("Menu.NextItem", x => x.StepCommand, KeyboardAcceleratorModifiers.None, mac ? null : "Down", "1"),

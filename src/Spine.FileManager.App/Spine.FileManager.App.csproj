@@ -26,6 +26,10 @@
 		<MauiImage Include="Resources\Images\*.svg" BaseSize="32,32" />
 		<!-- Menus (MenuAction.Svg) draw their icons from embedded SVGs. -->
 		<EmbeddedResource Include="Resources\Images\folder.svg" />
+		<!-- The tray icon, drawn at runtime by Spine from an embedded SVG. -->
+		<EmbeddedResource Include="Resources\Tray\tray.svg" />
+		<!-- Glyphs Spine's set lacks, drawn in its style (50×50, 2-point stroke in currentColor). -->
+		<EmbeddedResource Include="Resources\Glyphs\*.svg" />
 		<!-- Icons in menus also come from Spine's set (Star, Edit, Copy, Trashcan, Unpin). -->
 		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#2F6FEB" BaseSize="128,128" />
 		<!-- English is the neutral document, Swedish strings.sv.xml (ISpineStrings). WithCulture="false" keeps the
@@ -77,6 +81,13 @@
 		</MauiXaml>
 		<Compile Include="Pages\FirstRunPage.ViewModel.cs">
 			<DependentUpon>FirstRunPage.cs</DependentUpon>
+		</Compile>
+		<MauiXaml Update="Pages\SettingsPage.View.xaml">
+			<Generator>MSBuild:Compile</Generator>
+			<DependentUpon>SettingsPage.cs</DependentUpon>
+		</MauiXaml>
+		<Compile Include="Pages\SettingsPage.ViewModel.cs">
+			<DependentUpon>SettingsPage.cs</DependentUpon>
 		</Compile>
 		<MauiXaml Update="Pages\LinkDevicePage.View.xaml">
 			<Generator>MSBuild:Compile</Generator>

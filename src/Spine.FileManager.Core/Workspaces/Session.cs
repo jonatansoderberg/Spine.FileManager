@@ -5,7 +5,8 @@ using Spine.FileManager.Storage;
 namespace Spine.FileManager.Workspaces;
 
 /// <summary>One tab as it is saved: where it is and how it shows (its history is not kept).</summary>
-public sealed record TabState(StorageLocation Location, ItemSort Sort, bool ShowHidden, bool IsIcons);
+/// <summary>A tab as saved; a Home tab keeps the folder it would go back to as its location.</summary>
+public sealed record TabState(StorageLocation Location, ItemSort Sort, bool ShowHidden, bool IsIcons, bool IsHome = false);
 
 public sealed record WindowState(IReadOnlyList<TabState> Tabs, int Active);
 

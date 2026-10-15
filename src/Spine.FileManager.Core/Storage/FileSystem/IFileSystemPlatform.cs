@@ -14,6 +14,18 @@ public interface IFileSystemPlatform
 
     Task MoveToTrashAsync(string path, CancellationToken cancellationToken);
 
+    /// <summary>The trash as a folder the explorer can show (the Mac's ~/.Trash), or null where it is not one.</summary>
+    string? TrashFolder { get; }
+
+    /// <summary>What is in the trash, or null when there is none or the app may not look.</summary>
+    Task<TrashContents?> MeasureTrashAsync(CancellationToken cancellationToken);
+
+    /// <summary>Deletes what is in the trash for good; returns the names it could not delete.</summary>
+    Task<IReadOnlyList<string>> EmptyTrashAsync(IProgress<double>? progress, CancellationToken cancellationToken);
+
+    /// <summary>Shows the trash in the system's own file manager, for a trash that is not a folder.</summary>
+    void ShowTrash();
+
     /// <summary>The name to show for a folder when it differs from its file name (localised system folders), or null.</summary>
     string? FolderDisplayName(string path, string name);
 }
@@ -56,4 +68,18 @@ public class DefaultFileSystemPlatform : IFileSystemPlatform
         throw new PlatformNotSupportedException("This platform has no trash.");
 
     public virtual string? FolderDisplayName(string path, string name) => null;
+
+    public virtual string? TrashFolder => null;
+
+    public virtual Task<TrashContents?> MeasureTrashAsync(CancellationToken cancellationToken) =>
+        TrashFolder is { } folder ? Task.Run(() => FolderTrash.Measure(folder, cancellationToken), cancellationToken) : Task.FromResult<TrashContents?>(null);
+
+    public virtual Task<IReadOnlyList<string>> EmptyTrashAsync(IProgress<double>? progress, CancellationToken cancellationToken) =>
+        TrashFolder is { } folder
+            ? Task.Run(() => FolderTrash.Empty(folder, progress, cancellationToken), cancellationToken)
+            : throw new PlatformNotSupportedException("This platform has no trash.");
+
+    public virtual void ShowTrash()
+    {
+    }
 }

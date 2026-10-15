@@ -16,13 +16,21 @@ public partial class ExplorerPage
     public ExplorerPage()
     {
         InitializeComponent();
+#if MACCATALYST
+        // With the window's material the sidebar shows the desktop through it; the files keep a solid background.
+        if (WindowMaterial.IsOn)
+        {
+            Sidebar.BackgroundColor = Colors.Transparent;
+            Pane.SetAppThemeColor(BackgroundColorProperty, Colors.White, Color.FromArgb("#1E1E1E"));
+        }
+#endif
         SizeChanged += (_, _) =>
         {
             if (BindingContext is ExplorerPageViewModel vm)
             {
                 vm.IsWide = Width >= 640;
                 var paneWidth = vm.IsSplit ? Root.ColumnDefinitions[3].Width.Value : 0;
-                vm.GridSpan = Math.Max(2, (int)((Width - (vm.ShowsSidebar ? 210 : 0) - paneWidth) / 104));
+                vm.GridSpan = Math.Max(2, (int)((Width - (vm.ShowsSidebar ? vm.SidebarWidth : 0) - paneWidth) / 104));
             }
         };
         Loaded += (_, _) =>
@@ -30,6 +38,7 @@ public partial class ExplorerPage
             if (BindingContext is not ExplorerPageViewModel vm)
                 return;
             vm.HostPage = () => Window?.Page;
+            TabBar.SizeChanged += (_, _) => vm.TabBarWidth = TabBar.Width;
 #if MACCATALYST
             // Spine measures the title bar for its page; a window of its own has it as the window's safe area. Neither
             // is known when the page loads, so it is read again once they are.
@@ -57,7 +66,13 @@ public partial class ExplorerPage
 #endif
             // Name, Date modified, Size and Kind need about 560 points; a narrower pane shows Name and Size.
             List.SizeChanged += (_, _) => vm.HasColumns = List.Width >= 560;
-            vm.FilterRequested += () => FilterField.Focus();
+            List.Scrolled += (_, e) =>
+            {
+                _listOffset = e.VerticalOffset;
+                UpdateBox();
+            };
+            // Focused once the field has folded out.
+            vm.FilterRequested += () => Dispatcher.Dispatch(() => FilterField.Focus());
             Keys.Pressed += vm.OnListKey;
             vm.RevealRequested += index =>
             {
@@ -66,12 +81,8 @@ public partial class ExplorerPage
             };
             if (!vm.IsSecondary)
                 AppMenu.Install(this, vm);
-            // A deep folder's breadcrumb is wider than the bar; keep its end, the current folder, in view as the
-            // segments arrive, their names fill in and the pane is resized.
-            void KeepEnd(object? sender, EventArgs e) => Dispatcher.Dispatch(async () => await BreadcrumbScroll.ScrollToAsync(double.MaxValue, 0, false));
-            BreadcrumbScroll.SizeChanged += KeepEnd;
-            if (BreadcrumbScroll.Content is View crumbs)
-                crumbs.SizeChanged += KeepEnd;
+            CrumbArea.SizeChanged += (_, _) => FitCrumbs();
+            vm.Segments.CollectionChanged += (_, _) => Dispatcher.Dispatch(FitCrumbs);
             vm.PropertyChanged += (_, e) =>
             {
                 if (e.PropertyName == nameof(ExplorerPageViewModel.IsSplit))
@@ -92,6 +103,65 @@ public partial class ExplorerPage
         e.PlatformArgs?.SetItemProvider(new Foundation.NSItemProvider());
 #endif
         TabDrag.Start(vm, tab);
+    }
+
+    private void OnCrumbSizeChanged(object? sender, EventArgs e)
+    {
+        if (sender is View { BindingContext: BreadcrumbSegment segment, Width: > 0 } view && view.IsVisible)
+        {
+            segment.Width = view.Width;
+            FitCrumbs();
+        }
+    }
+
+    private string? _collapsed;
+
+    // As Windows' address bar: the current folder and as many of its parents as fit show, the rest fold from the root
+    // end into « . Widths are those last laid out, so a folded segment still counts with its own width.
+    private void FitCrumbs()
+    {
+        if (BindingContext is not ExplorerPageViewModel vm || CrumbArea.Width <= 0 || vm.Segments.Count == 0)
+            return;
+        var segments = vm.Segments.ToList();
+        if (segments.Any(s => s.Width <= 0))
+            return;
+        var room = CrumbArea.Width + (CrumbOverflow.IsVisible ? CrumbOverflow.Width : 0);
+        var count = 0;
+        if (segments.Sum(s => s.Width) > room)
+        {
+            var budget = room - 30;
+            var used = 0d;
+            var kept = 0;
+            for (var i = segments.Count - 1; i >= 0 && (kept == 0 || used + segments[i].Width <= budget); i--, kept++)
+                used += segments[i].Width;
+            count = segments.Count - kept;
+        }
+        var key = $"{count}|{string.Join('/', segments.Take(count).Select(s => s.Name))}";
+        if (key == _collapsed)
+            return;
+        _collapsed = key;
+        vm.Collapse(count);
+    }
+
+    private void OnFilterFocused(object? sender, FocusEventArgs e) => SearchCapsule.StrokeThickness = 2;
+
+    private void OnFilterUnfocused(object? sender, FocusEventArgs e)
+    {
+        SearchCapsule.StrokeThickness = 0;
+        if (BindingContext is ExplorerPageViewModel { IsSearching: false } vm && string.IsNullOrEmpty(vm.Filter))
+            vm.IsSearchOpen = false;
+    }
+
+    private void OnTabPointerEntered(object? sender, PointerEventArgs e)
+    {
+        if (sender is View { BindingContext: ExplorerTab tab })
+            tab.IsHovered = true;
+    }
+
+    private void OnTabPointerExited(object? sender, PointerEventArgs e)
+    {
+        if (sender is View { BindingContext: ExplorerTab tab })
+            tab.IsHovered = false;
     }
 
     private void OnTabDropCompleted(object? sender, DropCompletedEventArgs e)
@@ -299,7 +369,7 @@ public partial class ExplorerPage
             vm.Partner = partner;
             partner.Start(null, 0, vm.Current);
             partner.TitleBarHeight = vm.TitleBarHeight;
-            Root.ColumnDefinitions[3].Width = new GridLength(Math.Max(320, (Width - (vm.ShowsSidebar ? 210 : 0)) / 2));
+            Root.ColumnDefinitions[3].Width = new GridLength(Math.Max(320, (Width - (vm.ShowsSidebar ? vm.SidebarWidth : 0)) / 2));
             SecondPane.Content = second;
             _ = partner.OnAppearingAsync(NavigationDirection.NavigateTo);
             partner.Focus();
@@ -320,7 +390,174 @@ public partial class ExplorerPage
     }
 
     // A click in the list gives it the keyboard (arrows, Return, Space, typing); a click in a text field takes it back.
-    private void OnListPressed(object? sender, PointerEventArgs e) => Keys.Activate();
+    /// <summary>A row of the details list; the selection rectangle finds rows by it.</summary>
+    public const double RowHeight = 28;
+
+    private Point? _pressed;
+    private Point? _namePressed;
+    private double _listOffset;
+    private bool _boxing;
+    private Point _boxStart;
+    private Point _boxPress;
+    private Point _boxTotal;
+    private IReadOnlyCollection<int> _boxKept = [];
+    private IDispatcherTimer? _autoScroll;
+
+    private void OnListPressed(object? sender, PointerEventArgs e)
+    {
+        Keys.Activate();
+        _pressed = e.GetPosition(List);
+    }
+
+    private void OnNamePressed(object? sender, PointerEventArgs e) => _namePressed = e.GetPosition(List);
+
+    // As in Finder and Explorer, a drag from a name or icon moves the files and a drag from anywhere else in the list
+    // draws a selection rectangle. It keeps its start in the list's content, so it stretches as the list scrolls: by
+    // the wheel, or on its own while the pointer is near the top or bottom edge.
+    private void OnListPanned(object? sender, PanUpdatedEventArgs e)
+    {
+        if (BindingContext is not ExplorerPageViewModel vm)
+            return;
+        switch (e.StatusType)
+        {
+            case GestureStatus.Started:
+                if (_pressed is not { } start || _namePressed is { } name && start.Distance(name) < 4)
+                    return;
+                _boxing = true;
+                _boxPress = start;
+                _boxStart = new Point(start.X, start.Y + _listOffset);
+                _boxTotal = Point.Zero;
+                _boxKept = ModifierKeys.Command ? vm.SelectedIndices : [];
+                Marquee.IsVisible = true;
+                _autoScroll ??= CreateAutoScroll();
+                _autoScroll.Start();
+                UpdateBox();
+                break;
+            case GestureStatus.Running when _boxing:
+                _boxTotal = new Point(e.TotalX, e.TotalY);
+                UpdateBox();
+                break;
+            case GestureStatus.Completed or GestureStatus.Canceled:
+                _boxing = false;
+                _namePressed = null;
+                _autoScroll?.Stop();
+                Marquee.IsVisible = false;
+                break;
+        }
+    }
+
+    // The pointer in the list's frame now: where the press was, moved by the drag.
+    private Point BoxPointer => new(_boxPress.X + _boxTotal.X, _boxPress.Y + _boxTotal.Y);
+
+    private void UpdateBox()
+    {
+        if (!_boxing || BindingContext is not ExplorerPageViewModel vm)
+            return;
+        var pointer = BoxPointer;
+        var left = Math.Max(0, Math.Min(_boxStart.X, pointer.X));
+        var right = Math.Min(List.Width, Math.Max(_boxStart.X, pointer.X));
+        var top = Math.Min(_boxStart.Y, pointer.Y + _listOffset);
+        var bottom = Math.Max(_boxStart.Y, pointer.Y + _listOffset);
+        // Drawn in the list's visible part only.
+        var shownTop = Math.Clamp(top - _listOffset, 0, List.Height);
+        var shownBottom = Math.Clamp(bottom - _listOffset, 0, List.Height);
+        Marquee.TranslationX = left;
+        Marquee.TranslationY = shownTop;
+        Marquee.WidthRequest = Math.Max(0, right - left);
+        Marquee.HeightRequest = Math.Max(0, shownBottom - shownTop);
+        vm.SelectRows((int)Math.Floor(Math.Max(0, top) / RowHeight), (int)Math.Floor(bottom / RowHeight), _boxKept);
+    }
+
+    private IDispatcherTimer CreateAutoScroll()
+    {
+        var timer = Dispatcher.CreateTimer();
+        timer.Interval = TimeSpan.FromMilliseconds(16);
+        timer.Tick += (_, _) =>
+        {
+            const double edge = 24;
+            var y = BoxPointer.Y;
+            var step = y < edge ? -(edge - y) : y > List.Height - edge ? y - (List.Height - edge) : 0;
+            if (step != 0)
+                ScrollListBy(Math.Clamp(step / 2, -24, 24));
+        };
+        return timer;
+    }
+
+    private void ScrollListBy(double dy)
+    {
+#if IOS || MACCATALYST
+        if (FindScrollView(List.Handler?.PlatformView as UIKit.UIView) is { } scroll)
+        {
+            var max = Math.Max(0, scroll.ContentSize.Height + scroll.AdjustedContentInset.Bottom - scroll.Bounds.Height);
+            var y = Math.Clamp(scroll.ContentOffset.Y + dy, 0, max);
+            scroll.SetContentOffset(new CoreGraphics.CGPoint(scroll.ContentOffset.X, y), false);
+        }
+#endif
+    }
+
+#if IOS || MACCATALYST
+    private static UIKit.UIScrollView? FindScrollView(UIKit.UIView? view) => view switch
+    {
+        null => null,
+        UIKit.UIScrollView scroll => scroll,
+        _ => view.Subviews.Select(FindScrollView).FirstOrDefault(s => s is not null),
+    };
+#endif
+
+    private double _gripStart;
+
+    // A grip resizes the part its ClassId names: the sidebar, the preview (its left edge, so it grows to the left) or
+    // a list column. The width is kept when the drag ends.
+    private void OnGripPanned(object? sender, PanUpdatedEventArgs e)
+    {
+        if (sender is not Element { ClassId: { } part } || BindingContext is not ExplorerPageViewModel vm)
+            return;
+        var direction = part == nameof(ExplorerPageViewModel.PreviewWidth) ? -1 : 1;
+        switch (e.StatusType)
+        {
+            case GestureStatus.Started:
+                _gripStart = vm.Width(part);
+                break;
+            case GestureStatus.Running:
+                var width = _gripStart + direction * e.TotalX;
+                QueueResize(() => vm.Resize(part, width, keep: false));
+                break;
+            case GestureStatus.Completed:
+                FlushResize();
+                vm.Resize(part, vm.Width(part), keep: true);
+                break;
+        }
+    }
+
+    private static readonly Color GripAccent = Color.FromArgb("#2F6FEB");
+
+    // Over a grip the pointer turns into the resize arrows and the grip's line into the accent, so the edge reads as
+    // something to drag.
+    private void OnGripEntered(object? sender, PointerEventArgs e)
+    {
+        ResizeCursor.Show();
+        if (GripLine(sender) is { } line)
+        {
+            line.Color = GripAccent;
+            line.Opacity = 1;
+        }
+    }
+
+    private void OnGripExited(object? sender, PointerEventArgs e)
+    {
+        ResizeCursor.Hide();
+        if (GripLine(sender) is not { } line)
+            return;
+        line.SetAppThemeColor(BoxView.ColorProperty, Color.FromArgb("#D5D7DB"), Color.FromArgb("#3A3C40"));
+        line.Opacity = line.StyleId == "HoverOnly" ? 0 : 1;
+    }
+
+    private static BoxView? GripLine(object? sender) => sender switch
+    {
+        BoxView box => box,
+        Grid grid => grid.Children.OfType<BoxView>().FirstOrDefault(),
+        _ => null,
+    };
 
     private void OnSplitterPanned(object? sender, PanUpdatedEventArgs e)
     {
@@ -328,6 +565,35 @@ public partial class ExplorerPage
         if (e.StatusType == GestureStatus.Started)
             _splitStart = column.Width.Value;
         else if (e.StatusType == GestureStatus.Running)
-            column.Width = new GridLength(Math.Clamp(_splitStart - e.TotalX, 240, Math.Max(240, Width - 450)));
+        {
+            var width = Math.Clamp(_splitStart - e.TotalX, 240, Math.Max(240, Width - 450));
+            QueueResize(() =>
+            {
+                column.Width = new GridLength(width);
+                // A changed column width alone did not lay the grid out again.
+                ((IView)Root).InvalidateMeasure();
+            });
+        }
+    }
+
+    private Action? _resize;
+    private bool _resizeQueued;
+
+    // A drag reports far more often than the window can lay out both panes' lists again; each relayout waits for the
+    // next frame and takes only the latest width, so the edge follows the pointer instead of trailing it in steps.
+    private void QueueResize(Action resize)
+    {
+        _resize = resize;
+        if (_resizeQueued)
+            return;
+        _resizeQueued = true;
+        Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(16), FlushResize);
+    }
+
+    private void FlushResize()
+    {
+        _resizeQueued = false;
+        _resize?.Invoke();
+        _resize = null;
     }
 }

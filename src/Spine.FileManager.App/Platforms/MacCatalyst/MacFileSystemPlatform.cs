@@ -48,6 +48,9 @@ public sealed class MacFileSystemPlatform : DefaultFileSystemPlatform
     public override bool CanWatch => true;
 
     // Network volumes have no Trash; a delete there is permanent and the app asks first.
+    /// <summary>The start disk's Trash; macOS lets an app read it only with Full Disk Access.</summary>
+    public override string? TrashFolder => $"{UserHome()}/.Trash";
+
     public override bool CanTrash(string path) => Flag(NSUrl.FromFilename(path), NSUrl.VolumeIsLocalKey) != false;
 
     public override Task MoveToTrashAsync(string path, CancellationToken cancellationToken)
