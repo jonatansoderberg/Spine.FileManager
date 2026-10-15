@@ -1542,7 +1542,18 @@ public partial class ExplorerPageViewModel : ViewModelBase
     public int ViewIndex
     {
         get => IsIcons ? 1 : 0;
-        set => IsIcons = value == 1;
+        set => PickView(value == 1);
+    }
+
+    // The user's choice is the folder's from now on; a folder opened later shows in its own.
+    private void PickView(bool icons)
+    {
+        // The segmented control also writes back the value it was given; only a change is a choice.
+        if (icons == IsIcons)
+            return;
+        IsIcons = icons;
+        if (Current is { } folder && !IsHome)
+            FolderViews.Set(folder, icons);
     }
 
     /// <summary>Columns of the icon grid, from the list's width.</summary>
@@ -1777,7 +1788,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void ShowAs(string view) => IsIcons = view == "Icons";
+    private void ShowAs(string view) => PickView(view == "Icons");
 
     [RelayCommand]
     private void SortBy(string column)
@@ -2289,6 +2300,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
         // Going anywhere closes the path field, whatever took the app there.
         IsEditingPath = false;
         SortForProvider(location);
+        if (!location.Equals(Current) && FolderViews.Get(location) is { } icons)
+            IsIcons = icons;
         var leftHome = tab.IsHome;
         tab.IsHome = false;
         IsHome = false;

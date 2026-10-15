@@ -53,6 +53,7 @@ Eleven steps toward the concept image, written in `docs/plans/concept-ui.md` bef
 - **List keys:** Home and End select the first and last item as in Windows (Shift extends the selection to it), Page Up and Down scroll by a screen less a row; Delete moves the selection to the Trash and Shift+Delete deletes it permanently, each after its confirmation. On the Mac they come from the list's KeySink; on Windows from Go menu shortcuts, with Delete and Shift+Delete as before.
 - **Icon view scroll bar at the pane's edge:** the wrap grid's spare room is a right content inset of the scroll view on Apple platforms, not the list's margin, which pulled the scroll bar in.
 - **Trash in the sidebar is marked** while it is the folder shown, and the Mac shows it by Finder's name ("Trash", "Papperskorgen") in the tab and breadcrumb instead of ".Trash".
+- **List or icons per folder:** the view picked in a folder is kept for it (Preferences, the 1000 latest), as Finder does; a folder without a choice opens in the view the tab has. Only a change counts as a choice, since the segmented control writes back the value it is given.
 - **Path field closes on Esc and on any folder change:** an app-level Escape key command, taken only while the field is open, so sheets keep their own Esc.
 
 ## Decisions
