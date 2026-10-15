@@ -153,6 +153,21 @@ public sealed class DeviceService
             strings["Link.Confirm.Accept"], strings["Link.Confirm.Decline"]);
     }
 
+    // Files from a linked device wait for a yes, unless the user turned asking off for that device (its menu).
+    private async Task<bool> AskToReceive(IncomingTransfer transfer)
+    {
+        var strings = IPlatformApplication.Current!.Services.GetRequiredService<ISpineStrings>();
+        if (Application.Current?.Windows.FirstOrDefault()?.Page is not { } page)
+            return false;
+        var request = transfer.Request;
+        var name = Trust.Find(transfer.NodeId)?.DisplayName ?? transfer.NodeId;
+        var items = strings.Get(request.Files == 1 ? "Explorer.Items.one" : "Explorer.Items.other", $"{request.Files}");
+        var names = string.Join(", ", request.Names.Take(3)) + (request.Names.Count > 3 ? ", …" : "");
+        return await page.DisplayAlertAsync(strings.Get("Transfer.Ask.Title", name, items),
+            strings.Get("Transfer.Ask.Message", names, Explorer.ByteSize.Format(request.Bytes, System.Globalization.CultureInfo.CurrentCulture)),
+            strings["Transfer.Ask.Accept"], strings["Transfer.Ask.Decline"]);
+    }
+
     public async Task<LinkNode> GetNodeAsync()
     {
         if (_node is not null)
@@ -186,6 +201,9 @@ public sealed class DeviceService
                 };
                 node.Paired += trusted => Paired?.Invoke(trusted);
                 node.Confirm = joined => MainThread.InvokeOnMainThreadAsync(() => AskToLink(joined));
+                node.AcceptTransfer = transfer => Trust.Find(transfer.NodeId) is { AskBeforeReceiving: false }
+                    ? Task.FromResult(true)
+                    : MainThread.InvokeOnMainThreadAsync(() => AskToReceive(transfer));
                 _node = node;
                 _ = KeepMappedAsync(node);
             }

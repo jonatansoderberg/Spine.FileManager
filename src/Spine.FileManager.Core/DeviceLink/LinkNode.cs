@@ -9,6 +9,21 @@ namespace Spine.FileManager.DeviceLink;
 /// <summary>Where a node listens, sent by each side once a pairing is complete.</summary>
 public sealed record LinkEndpoints(IReadOnlyList<string> Endpoints);
 
+/// <summary>What a transfer brings, sent before any file so the receiver can say yes or no: names at the top level, how many files and bytes.</summary>
+public sealed record TransferRequest(IReadOnlyList<string> Names, int Files, long Bytes);
+
+/// <summary>The receiver's answer to a <see cref="TransferRequest"/>.</summary>
+public sealed record TransferAnswer(bool Accepted);
+
+/// <summary>A transfer coming in, for the receiver to accept: who sends it and what it brings.</summary>
+public sealed record IncomingTransfer(string NodeId, TransferRequest Request);
+
+/// <summary>The receiver said no, or did not answer in time.</summary>
+public sealed class TransferDeclinedException(bool timedOut) : IOException(timedOut ? "The other device did not answer." : "The other device declined.")
+{
+    public bool TimedOut { get; } = timedOut;
+}
+
 /// <summary>A third device's hand-over: another computer's invitation, with proof it scanned this one's code.</summary>
 public sealed record Introduction(string SessionId, string Invitation, byte[] Mac);
 
@@ -35,6 +50,12 @@ public sealed class LinkNode(NodeIdentity identity, TrustStore trust, string nam
     /// every proven device is linked.
     /// </summary>
     public Func<PairedNode, Task<bool>>? Confirm { get; set; }
+
+    /// <summary>
+    /// Asked before files from a trusted node come in: true lets them. Unset, every transfer is let in. No answer within
+    /// <see cref="ConfirmTimeout"/> is a no.
+    /// </summary>
+    public Func<IncomingTransfer, Task<bool>>? AcceptTransfer { get; set; }
 
     private readonly TimeProvider _time = time ?? TimeProvider.System;
     private TcpListener? _listener;
@@ -187,6 +208,12 @@ public sealed class LinkNode(NodeIdentity identity, TrustStore trust, string nam
             var connection = client.GetStream();
             connection.WriteByte(Transfer);
             await using var channel = await SecureChannel.ConnectAsync(connection, identity, nodeId, cancel);
+            var names = paths.Select(p => Path.GetFileName(Path.TrimEndingDirectorySeparator(p))).ToList();
+            await FileTransfer.WriteAsync(channel, new TransferRequest(names, files.Count, total), cancel);
+            // The receiver's user may be asked first; a null answer is the receiver giving up waiting.
+            var answer = await FileTransfer.ReadAsync<TransferAnswer?>(channel, cancel);
+            if (answer is not { Accepted: true })
+                throw new TransferDeclinedException(timedOut: answer is null);
             foreach (var (path, relative) in files)
             {
                 var offer = new FileOffer(Guid.NewGuid().ToString("N"), relative, new FileInfo(path).Length, await FileTransfer.HashAsync(path, cancel));
@@ -278,6 +305,21 @@ public sealed class LinkNode(NodeIdentity identity, TrustStore trust, string nam
         Paired?.Invoke(trust.Find(joined.NodeId)!);
     }
 
+    // True or false as the user answered, null when nobody answered in time.
+    private async Task<bool?> Accepted(IncomingTransfer transfer)
+    {
+        if (AcceptTransfer is not { } ask)
+            return true;
+        try
+        {
+            return await ask(transfer).WaitAsync(ConfirmTimeout);
+        }
+        catch (TimeoutException)
+        {
+            return null;
+        }
+    }
+
     private async Task<bool> Confirmed(PairedNode joined)
     {
         if (Confirm is not { } ask)
@@ -337,6 +379,11 @@ public sealed class LinkNode(NodeIdentity identity, TrustStore trust, string nam
         var (channel, peer) = await SecureChannel.AcceptAsync(stream, identity, id => trust.Find(id) is not null);
         await using (channel)
         {
+            var request = await FileTransfer.ReadAsync<TransferRequest>(channel);
+            var accepted = await Accepted(new IncomingTransfer(peer, request));
+            await FileTransfer.WriteAsync<TransferAnswer?>(channel, accepted is null ? null : new TransferAnswer(accepted.Value));
+            if (accepted is not true)
+                return;
             // Each top-level name gets a free name in the inbox once; its folder's files follow it there.
             var tops = new Dictionary<string, string>();
             FileOffer? current = null;

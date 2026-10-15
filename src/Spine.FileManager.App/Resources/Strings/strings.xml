@@ -176,6 +176,13 @@
   <s key="Devices.Status.ReachesUs">Reaches this device</s>
   <s key="Devices.Status.Offline">Offline</s>
   <s key="Devices.NotAnswering">{0} didn't answer. Is Spine File Manager open on it?</s>
+  <s key="Devices.AskBeforeReceiving">Ask Before Receiving</s>
+  <s key="Devices.Declined">{0} declined the files</s>
+  <s key="Devices.NoAnswer">{0} didn't answer</s>
+  <s key="Transfer.Ask.Title">“{0}” wants to send {1}</s>
+  <s key="Transfer.Ask.Message">{0} ({1})</s>
+  <s key="Transfer.Ask.Accept">Accept</s>
+  <s key="Transfer.Ask.Decline">Decline</s>
   <s key="Link.Title">Link Device</s>
   <s key="Link.Intro">Scan this code with Spine File Manager on the other device, or open the link there.</s>
   <s key="Link.Keep">Trust the other device for</s>

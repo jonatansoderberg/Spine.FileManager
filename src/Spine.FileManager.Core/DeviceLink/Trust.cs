@@ -15,6 +15,9 @@ public sealed record TrustedNode(string NodeId, byte[] PublicKey, string SourceN
     /// <summary>Where the node last listened (host:port), until discovery finds it again.</summary>
     public IReadOnlyList<string> Endpoints { get; init; } = [];
 
+    /// <summary>Whether files it sends wait for a yes here before they come; on unless the user turns it off for this node.</summary>
+    public bool AskBeforeReceiving { get; init; } = true;
+
     public string DisplayName => LocalAlias ?? SourceName;
 }
 
@@ -34,7 +37,11 @@ public sealed class TrustStore(string path)
 
     public TrustedNode Trust(PairedNode node, TrustLifetime lifetime, DateTimeOffset now)
     {
-        var trusted = new TrustedNode(node.NodeId, node.PublicKey, node.Name, Find(node.NodeId)?.LocalAlias, lifetime, now) { Endpoints = Find(node.NodeId)?.Endpoints ?? [] };
+        var trusted = new TrustedNode(node.NodeId, node.PublicKey, node.Name, Find(node.NodeId)?.LocalAlias, lifetime, now)
+        {
+            Endpoints = Find(node.NodeId)?.Endpoints ?? [],
+            AskBeforeReceiving = Find(node.NodeId)?.AskBeforeReceiving ?? true,
+        };
         Nodes[node.NodeId] = trusted;
         Save();
         return trusted;
@@ -45,6 +52,15 @@ public sealed class TrustStore(string path)
         if (Find(nodeId) is { } node)
         {
             Nodes[nodeId] = node with { LocalAlias = string.IsNullOrWhiteSpace(alias) ? null : alias.Trim() };
+            Save();
+        }
+    }
+
+    public void SetAskBeforeReceiving(string nodeId, bool ask)
+    {
+        if (Find(nodeId) is { } node && node.AskBeforeReceiving != ask)
+        {
+            Nodes[nodeId] = node with { AskBeforeReceiving = ask };
             Save();
         }
     }
