@@ -51,6 +51,7 @@ Eleven steps toward the concept image, written in `docs/plans/concept-ui.md` bef
 - **Icon view names and the status bar** follow the size setting too; the status bar has a line above it and a tinted background, so it reads as its own strip.
 - **Icon names wrap to two lines** as in Finder (UIKit only middle-truncates a single line, so the cut is at the end), in a two-line row that follows the size setting. **Sort chevron:** only the sorted column shows one, in a 22 pt square (the glyph fills only its middle half).
 - **List keys:** Home and End scroll to the top and bottom, Page Up and Down by a screen less a row (the selection stays, as in Finder); Delete moves the selection to the Trash and Shift+Delete deletes it permanently, each after its confirmation. On the Mac they come from the list's KeySink; on Windows from Go menu shortcuts, with Delete and Shift+Delete as before.
+- **Icon view scroll bar at the pane's edge:** the wrap grid's spare room is a right content inset of the scroll view on Apple platforms, not the list's margin, which pulled the scroll bar in.
 - **Path field closes on Esc and on any folder change:** an app-level Escape key command, taken only while the field is open, so sheets keep their own Esc.
 
 ## Decisions
