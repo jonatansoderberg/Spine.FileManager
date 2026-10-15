@@ -224,6 +224,11 @@
 
             <!-- The trash closes This Device, as in Finder's Dock and Explorer's desktop. -->
             <Border Grid.Row="6" Padding="8,0" Margin="8,1" HeightRequest="{DynamicResource SidebarItemHeight}" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent">
+                <Border.Triggers>
+                    <DataTrigger TargetType="Border" Binding="{Binding IsTrashCurrent}" Value="True">
+                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SelectionLight}, Dark={StaticResource SelectionDark}}" />
+                    </DataTrigger>
+                </Border.Triggers>
                 <Border.GestureRecognizers>
                     <TapGestureRecognizer Command="{Binding OpenTrashCommand}" />
                 </Border.GestureRecognizers>
