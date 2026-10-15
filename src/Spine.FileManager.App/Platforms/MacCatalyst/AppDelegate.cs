@@ -15,6 +15,7 @@ public class AppDelegate : MauiUIApplicationDelegate
 	{
 		NSUserDefaults.StandardUserDefaults.SetBool(false, "NSQuitAlwaysKeepsWindows");
 		WindowMaterial.Start();
+		WindowAppearance.Start();
 		return base.FinishedLaunching(application, launchOptions);
 	}
 
