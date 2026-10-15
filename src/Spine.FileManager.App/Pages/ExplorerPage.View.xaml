@@ -687,16 +687,17 @@
                                 <TapGestureRecognizer Buttons="Secondary" Command="{Binding RowSecondaryTapCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
                             </Grid.GestureRecognizers>
                             <Image Source="{Binding Icon}" WidthRequest="{DynamicResource GridIconSize}" HeightRequest="{DynamicResource GridIconSize}" Margin="0,4" />
-                            <Label Grid.Row="1" Text="{Binding Name}" FontSize="12" HorizontalTextAlignment="Center" MaxLines="2" LineBreakMode="MiddleTruncation" />
+                            <Label Grid.Row="1" Text="{Binding Name}" FontSize="{DynamicResource SidebarFontSize}" HorizontalTextAlignment="Center" MaxLines="2" LineBreakMode="MiddleTruncation" />
                         </Grid>
                     </DataTemplate>
                 </FileListView.ItemTemplate>
             </FileListView>
 
-            <Grid Grid.Row="4" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" Padding="16,4">
+            <Grid Grid.Row="4" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" Padding="16,7" BackgroundColor="{AppThemeBinding Light=#F7F8FA, Dark=#26272A}">
+                <BoxView Grid.ColumnSpan="2" HeightRequest="1" VerticalOptions="Start" Margin="-16,-7,-16,0" Color="{AppThemeBinding Light=#E3E5E8, Dark=#34363A}" />
                 <HorizontalStackLayout Spacing="16">
-                    <Label Text="{Binding Status}" FontSize="12" Opacity="0.6" VerticalTextAlignment="Center" />
-                    <Label Text="{Binding DeviceActivity}" FontSize="12" Opacity="0.6" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
+                    <Label Text="{Binding Status}" FontSize="{DynamicResource SidebarFontSize}" TextColor="{AppThemeBinding Light=#5F6670, Dark=#9DA3AB}" VerticalTextAlignment="Center" />
+                    <Label Text="{Binding DeviceActivity}" FontSize="{DynamicResource SidebarFontSize}" TextColor="{AppThemeBinding Light=#5F6670, Dark=#9DA3AB}" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
                 </HorizontalStackLayout>
                 <ActivityIndicator Grid.Column="1" IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}" HeightRequest="14" WidthRequest="14" />
             </Grid>

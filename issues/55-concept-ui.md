@@ -48,6 +48,7 @@ Eleven steps toward the concept image, written in `docs/plans/concept-ui.md` bef
   - The sidebar's lists are as tall as their rows, so only the sidebar scrolls.
   - The search field has no native border or focus ring of another shape.
 - **Tab titles and column headers** use the sidebar's font size, so they follow the Small/Medium/Large setting with the rest of the window.
+- **Icon view names and the status bar** follow the size setting too; the status bar has a line above it and a tinted background, so it reads as its own strip.
 - **Path field closes on Esc and on any folder change:** an app-level Escape key command, taken only while the field is open, so sheets keep their own Esc.
 
 ## Decisions
