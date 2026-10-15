@@ -47,7 +47,15 @@ public static class FileIcons
         return style == SystemStyle && !HasSystemIcons || style is not (SpineStyle or SystemStyle) && _theme is null ? SpineStyle : style;
     }
 
-    private static readonly Dictionary<string, ImageSource> Photos = [];
+    // Bytes rather than an ImageSource: MAUI cancels a source's load when the same source starts loading again, so
+    // one source shared by the cells that ask at once showed in none of them.
+    private static readonly Dictionary<string, byte[]> Photos = [];
+
+    private static ImageSource Picture(byte[] bytes) => ImageSource.FromStream(() => new MemoryStream(bytes));
+
+    // A stream source of its own for each view that shows it, for the same reason (the system's icon of a kind is
+    // shared by every row of that kind); file and resource sources are safe to share.
+    private static ImageSource Fresh(ImageSource source) => source is StreamImageSource stream ? new StreamImageSource { Stream = stream.Stream } : source;
     private static readonly Dictionary<string, List<Action>> Waiting = [];
 
     /// <summary>
@@ -71,7 +79,7 @@ public static class FileIcons
         lock (Photos)
         {
             if (Photos.TryGetValue(id, out var cached))
-                return cached;
+                return Picture(cached);
             if (Waiting.TryGetValue(id, out var waiting))
             {
                 if (ready is not null)
@@ -82,10 +90,10 @@ public static class FileIcons
         }
         _ = Task.Run(async () =>
         {
-            ImageSource? picture = null;
+            byte[]? picture = null;
             try
             {
-                picture = await PhotoLibraryProvider.ThumbnailAsync(item.Location, 64);
+                picture = await PhotoLibraryProvider.ThumbnailBytesAsync(item.Location, 64);
             }
             catch (Exception e)
             {
@@ -115,7 +123,7 @@ public static class FileIcons
         var key = item.IsPackage ? item.Location.ItemId : item.IsFolder ? "/folder" : extension;
         lock (Cache)
             if (Cache.TryGetValue(key, out var cached))
-                return cached;
+                return Fresh(cached);
         if (item.IsPackage)
             return SystemIcon(item, key) ?? Spine(false, extension);
         if (Style == SystemStyle)

@@ -134,6 +134,9 @@ public sealed partial class BreadcrumbSegment(StorageLocation location, string n
     public double Width { get; set; }
 }
 
+/// <summary>One line of the preview's facts: a label and its value.</summary>
+public sealed record PreviewFact(string Label, string Value);
+
 /// <summary>A disk on Home's overview: how full it is, worded for its card.</summary>
 public sealed class DiskRow(Disk disk, string kind, string free, string used)
 {
@@ -1071,7 +1074,6 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     [ObservableProperty] public partial ImageSource? PreviewImage { get; private set; }
     [ObservableProperty] public partial string? PreviewTitle { get; private set; }
-    [ObservableProperty] public partial string? PreviewDetails { get; private set; }
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasPreviewText))] public partial string? PreviewText { get; private set; }
 
     public bool HasPreviewText => PreviewText is not null;
@@ -1103,32 +1105,50 @@ public partial class ExplorerPageViewModel : ViewModelBase
             TogglePreview();
     }
 
-    // The pane follows the selection: one item shows its picture, text and facts; several, or none, show nothing.
+    // The pane follows the selection, as in the concept image: one item shows its picture, name, kind and size, Open
+    // and Open With, its facts and quick actions; several show how many and how much; none shows a hint.
     private void UpdatePreview()
     {
         _preview?.Cancel();
-        if (!ShowsPreview || SelectedItems.ToList() is not [var item])
+        PreviewFacts.Clear();
+        PreviewText = null;
+        var selected = ShowsPreview ? SelectedItems.ToList() : [];
+        _previewItems = selected;
+        var culture = System.Globalization.CultureInfo.CurrentCulture;
+        if (selected.Count == 0)
         {
             PreviewImage = null;
             PreviewTitle = null;
-            PreviewDetails = null;
-            PreviewText = null;
+            PreviewSummary = null;
+            PreviewLocation = null;
             return;
         }
+        BuildPreviewMenus(selected);
+        if (selected.Count > 1)
+        {
+            PreviewTitle = _strings.Get("Explorer.Items", selected.Count);
+            var bytes = selected.Sum(i => i.Size ?? 0);
+            PreviewSummary = bytes > 0 ? ByteSize.Format(bytes, culture) : null;
+            PreviewImage = "file.png";
+            PreviewLocation = null;
+            return;
+        }
+        var item = selected[0];
         var cancel = _preview = new CancellationTokenSource();
-        var culture = System.Globalization.CultureInfo.CurrentCulture;
+        var kind = new ItemRow(item, new RowFormat(_strings)).Kind;
         PreviewTitle = item.DisplayName;
-        var facts = new List<string> { new ItemRow(item, new RowFormat(_strings)).Kind };
-        if (item.Size is { } size)
-            facts.Add(ByteSize.Format(size, culture));
-        if (item.Modified is { } modified)
-            facts.Add(_strings.Get("Preview.Modified", modified.ToLocalTime().ToString("g", culture)));
+        PreviewSummary = item.Size is { } size ? $"{kind} · {ByteSize.Format(size, culture)}" : kind;
         if (item.Created is { } created)
-            facts.Add(_strings.Get("Preview.Created", created.ToLocalTime().ToString("g", culture)));
-        PreviewDetails = string.Join("\n", facts);
-        PreviewImage = item.IsPackage ? FileIcons.For(item) : item.IsFolder ? "folder.png" : "file.png";
-        PreviewText = null;
-        // The picture and the text come separately: a slow thumbnail must not hold the text back.
+            PreviewFacts.Add(new(_strings["Preview.Label.Created"], created.ToLocalTime().ToString("g", culture)));
+        if (item.Modified is { } modified)
+            PreviewFacts.Add(new(_strings["Preview.Label.Modified"], modified.ToLocalTime().ToString("g", culture)));
+        if (item.Size is { } bytesOf)
+            PreviewFacts.Add(new(_strings["Preview.Label.Size"], _strings.Get("Preview.Bytes", ByteSize.Format(bytesOf, culture), bytesOf.ToString("N0", culture))));
+        PreviewFacts.Add(new(_strings["Preview.Label.Kind"], kind));
+        var parent = _providers[item.Location].GetParent(item.Location);
+        PreviewLocation = parent?.DisplayPath;
+        PreviewImage = item.IsPackage ? FileIcons.For(item) : item.IsFolder ? "folder.png" : FileIcons.For(item);
+        // The picture, its size and the text come separately: a slow thumbnail must not hold the rest back.
         _ = Task.Run(async () =>
         {
             await Task.Delay(120, cancel.Token);
@@ -1137,8 +1157,16 @@ public partial class ExplorerPageViewModel : ViewModelBase
                 : item.Location.Provider == PhotoLibraryProvider.ProviderId ? await PhotoLibraryProvider.ThumbnailAsync(item.Location, 512)
 #endif
                 : null;
-            if (picture is not null && !cancel.IsCancellationRequested)
-                MainThread.BeginInvokeOnMainThread(() => { if (!cancel.IsCancellationRequested) PreviewImage = picture; });
+            var dimensions = Icons.FileKinds.Of(item.Extension.ToLowerInvariant()) is Icons.FileKinds.Image or Icons.FileKinds.Video ? Dimensions(item) : null;
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                if (cancel.IsCancellationRequested)
+                    return;
+                if (picture is not null)
+                    PreviewImage = picture;
+                if (dimensions is { } d)
+                    PreviewFacts.Insert(PreviewFacts.Count, new(_strings["Preview.Label.Dimensions"], $"{d.Width} × {d.Height}"));
+            });
         }, cancel.Token);
         if (!item.IsFolder && (TextExtensions.Contains(item.Extension) || item.Extension.Length == 0))
             _ = Task.Run(async () =>
@@ -1146,6 +1174,105 @@ public partial class ExplorerPageViewModel : ViewModelBase
                 if (await ReadText(item, cancel.Token) is { } text)
                     MainThread.BeginInvokeOnMainThread(() => { if (!cancel.IsCancellationRequested) PreviewText = text; });
             }, cancel.Token);
+    }
+
+    // A picture's pixel size: from the file's header, or from the photo library's record.
+    private static (int Width, int Height)? Dimensions(StorageItem item)
+    {
+#if IOS || MACCATALYST
+        if (item.Location.Provider == PhotoLibraryProvider.ProviderId)
+            return PhotoLibraryProvider.Dimensions(item.Location);
+        if (item.Location.NativePath is { } path
+            && ImageIO.CGImageSource.FromUrl(Foundation.NSUrl.FromFilename(path))?.GetProperties(0) is { PixelWidth: { } width, PixelHeight: { } height })
+            return (width, height);
+#endif
+        return null;
+    }
+
+    private List<StorageItem> _previewItems = [];
+
+    private IEnumerable<string> PreviewPaths => _previewItems.Select(i => i.Location.NativePath).OfType<string>();
+
+    private void BuildPreviewMenus(List<StorageItem> selected)
+    {
+        var openWith = new MenuItems();
+        if (Workspace.CanOpenWith && selected is [{ IsBrowsable: false, Location.NativePath: { } path }])
+            foreach (var app in Workspace.AppsFor(path))
+                openWith.Add(new MenuAction(app.IsDefault ? _strings.Get("Preview.DefaultApp", app.Name) : app.Name, null, OpenWithAppCommand) { CommandParameter = app });
+        PreviewOpenWith = openWith;
+        HasOpenWith = openWith.Count > 0;
+
+        var sendTo = new MenuItems();
+        foreach (var device in Devices)
+            sendTo.Add(new MenuAction(device.Name, device.Glyph, SendPreviewToCommand) { CommandParameter = device });
+        if (sendTo.Count == 0)
+            sendTo.Add(new MenuAction(_strings["Devices.Link"], null, LinkDeviceCommand));
+        PreviewSendTo = sendTo;
+
+        PreviewMore =
+        [
+            new MenuAction(_strings[OperatingSystem.IsWindows() ? "Preview.ShowInExplorer" : "Preview.ShowInFinder"], null, PreviewRevealCommand),
+            new MenuAction(_strings["Menu.AddFavorite"], "Star.svg", AddFavoriteCommand),
+            new MenuAction(_strings["Menu.Rename"], "Edit.svg", RenameCommand),
+            new MenuAction(_strings["Menu.Delete"], "Delete.svg", DeleteCommand) { IsDestructive = true },
+        ];
+    }
+
+    public ObservableCollection<PreviewFact> PreviewFacts { get; } = [];
+
+    [ObservableProperty] public partial string? PreviewSummary { get; private set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPreviewLocation))]
+    public partial string? PreviewLocation { get; private set; }
+
+    public bool HasPreviewLocation => PreviewLocation is not null;
+
+    [ObservableProperty] public partial MenuItems PreviewOpenWith { get; private set; } = [];
+    [ObservableProperty] public partial bool HasOpenWith { get; private set; }
+    [ObservableProperty] public partial MenuItems PreviewSendTo { get; private set; } = [];
+    [ObservableProperty] public partial MenuItems PreviewMore { get; private set; } = [];
+
+    [RelayCommand]
+    private void OpenWithApp(OpenWithApp app)
+    {
+        foreach (var path in PreviewPaths)
+            Workspace.OpenWith(path, app.Path);
+    }
+
+    [RelayCommand]
+    private async Task PreviewShare()
+    {
+        if (PreviewPaths.ToList() is { Count: > 0 } paths)
+            await Share.Default.RequestAsync(new ShareMultipleFilesRequest { Title = PreviewTitle, Files = [.. paths.Select(p => new ShareFile(p))] });
+    }
+
+    [RelayCommand]
+    private Task PreviewCopyPath() => Clipboard.Default.SetTextAsync(string.Join("\n", PreviewPaths));
+
+    [RelayCommand]
+    private Task SendPreviewTo(DeviceRow device) => SendToDevice(device, [.. PreviewPaths]);
+
+    [RelayCommand]
+    private void PreviewReveal()
+    {
+        if (PreviewPaths.FirstOrDefault() is { } path)
+            Workspace.Reveal(path);
+    }
+
+    /// <summary>The location link: the folder the item is in, with the item selected (a search result's folder).</summary>
+    [RelayCommand]
+    private async Task ShowPreviewLocation()
+    {
+        if (_previewItems is not [var item] || _providers[item.Location].GetParent(item.Location) is not { } parent)
+            return;
+        if (!parent.Equals(Current) || _found is not null)
+        {
+            StopSearch();
+            Filter = "";
+            await Navigate(parent);
+        }
+        SelectWhere(i => i.Location.Equals(item.Location));
     }
 
     // The first 32 KB as text, unless it holds a NUL byte (then it is not text).
@@ -1730,6 +1857,27 @@ public partial class ExplorerPageViewModel : ViewModelBase
     /// <summary>Home's place in a tab's history, so Back and Forward pass through it as in a browser.</summary>
     private static readonly StorageLocation HomeLocation = new(new StorageProviderId("home"), "", "Home");
 
+    private ItemSort? _sortBeforePhotos;
+
+    // The photo library opens newest first, as Photos does; the tab gets its own sort back when it leaves.
+    private void SortForProvider(StorageLocation location)
+    {
+#if IOS || MACCATALYST
+        var intoPhotos = location.Provider == PhotoLibraryProvider.ProviderId;
+        var wasPhotos = Current?.Provider == PhotoLibraryProvider.ProviderId && !IsHome;
+        if (intoPhotos && !wasPhotos)
+        {
+            _sortBeforePhotos = Sort;
+            Sort = new ItemSort(SortColumn.Modified, Descending: true);
+        }
+        else if (!intoPhotos && wasPhotos && _sortBeforePhotos is { } before)
+        {
+            Sort = before;
+            _sortBeforePhotos = null;
+        }
+#endif
+    }
+
     private static RecentLocations? Recent => IPlatformApplication.Current?.Services.GetService<RecentLocations>();
 
     /// <summary>The active tab shows Home: the disks, linked devices and recent folders instead of a folder.</summary>
@@ -1964,6 +2112,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
         // A tab switch always rebuilds the bar and the watcher, even onto the same folder.
         var changedFolder = !location.Equals(Current) || cached is not null || keep is { Count: > 0 } && !keepSelection;
         var tab = _tabs.Active;
+        SortForProvider(location);
         var leftHome = tab.IsHome;
         tab.IsHome = false;
         IsHome = false;

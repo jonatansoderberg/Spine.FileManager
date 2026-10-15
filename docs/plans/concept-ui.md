@@ -1,7 +1,7 @@
 # The explorer after the concept image
 
 **Roadmap issue:** [#55](https://github.com/jonatansoderberg/Spine.FileManager/issues/55)
-**Last updated:** 2026-10-15 — steps 3, 4 and 8 done; 1, 2 and 5 in progress.
+**Last updated:** 2026-10-15 — steps 3, 4 and 8 done; 1, 2, 5 and 6 in progress.
 
 The concept image (October 2026, from Jonatan) shows the desktop explorer in light mode, a Home page, a split view, the iPhone and the iPad. This plan takes the app there step by step. Each step is one PR, with the image as the reference and a screenshot in light and in dark mode before it merges.
 
@@ -31,7 +31,7 @@ The concept image (October 2026, from Jonatan) shows the desktop explorer in lig
 | 3 | **Sidebar** | The app's name on top, Home, This Device, Network and Backups (placeholders until their providers), coloured folder icons for favorites, device icons with an online dot, Link Device as a button, Settings at the bottom; sections as in the image. | Done 2026-10-15 without the app name (Jonatan's choice); Network and Backups dimmed until built; the online dot waits for discovery (#39). ✅ |
 | 4 | **Tabs** | Edge-like tabs: icon, raised active tab, + button, close on hover; still in the title bar's row (no scroll view there, see #46). Windows tab shortcuts: Ctrl+T/W, Ctrl+Shift+T reopens a closed tab, Ctrl+Tab, Ctrl+1–8 and Ctrl+9 for the last (⌘⌥ on the Mac, where ⌘1/⌘2 pick the view), Ctrl+Enter and Ctrl-double-click open a folder in a new tab. | ✅ |
 | 5 | **Command bar and breadcrumb** | A second row: New, Cut, Copy, Paste, Duplicate, Rename, Delete (red); the view switch with a columns view; breadcrumb in a capsule with drop-downs on its separators; Refresh and Search beside it. Done: the two rows, the capsule taking all the room left, segments folding from the root end into « as in Windows' address bar, search folding out of a magnifier. The command bar as in the image: a framed + New with its label, the clipboard and rename in one framed group, Delete in red, glyphs about 18 points. Left: a columns view. | 🔄 |
-| 6 | **Preview pane** | Large picture, kind · size, Open with Open With, the facts (dimensions from the image, location as a link), quick actions Share, Copy Path, Send to Device, More; closable. | ⬜ |
+| 6 | **Preview pane** | Large picture, kind · size, Open with Open With, the facts (dimensions from the image, location as a link), quick actions Share, Copy Path, Send to Device, More; closable. | Built 2026-10-15 (#62 branch): picture, name, kind · size, Open and Open With (NSWorkspace), facts with dimensions and the location as a link, Share, Copy Path, Send to Device, More (Show in Finder, Add to Favorites, Rename, Delete), × to close. Not yet tried by hand. 🔄 |
 | 7 | **Operation bar and status** | The active operation with source → target, progress, speed, time left, pause and cancel at the bottom of the window; item count, selection and its size on the right. | ⬜ |
 | 8 | **Home** | A start page: Favorites and Other Devices as cards, Recent files, Transfers, Backups, search for files and devices. New tabs open on Home. | Done 2026-10-15 with what Jonatan picked: disk cards (capacity, free space as Finder counts it, % used, red from 90 %), Other Devices, Recent Locations; new tabs and a first start open Home; Home is in the tab history. ✅ |
 | 9 | **Split view** | Dual Pane as in the image: a pane's own tabs and breadcrumb, one shared operation bar, a draggable divider (done). | ⬜ |
