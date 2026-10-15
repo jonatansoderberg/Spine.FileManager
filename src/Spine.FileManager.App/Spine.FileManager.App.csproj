@@ -30,7 +30,7 @@
 		<EmbeddedResource Include="Resources\Tray\tray.svg" />
 		<!-- Glyphs Spine's set lacks, drawn in its style (50×50, 2-point stroke in currentColor). -->
 		<EmbeddedResource Include="Resources\Glyphs\*.svg" />
-		<!-- Icons in menus also come from Spine's set (Star, Edit, Copy, Trashcan, Unpin). -->
+		<!-- Icons in menus also come from Spine's set (Star, Edit, Copy, Delete, Unpin). -->
 		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#2F6FEB" BaseSize="128,128" />
 		<!-- English is the neutral document, Swedish strings.sv.xml (ISpineStrings). WithCulture="false" keeps the
 		     .sv. files out of a satellite assembly, where Spine does not look. -->
