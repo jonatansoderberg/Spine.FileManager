@@ -286,6 +286,8 @@
   <s key="Settings.ItemSize.Large">Stor</s>
   <s key="Commands.New">Ny</s>
   <s key="Places.Cloud">Moln</s>
+  <s key="Places.Add">Lägg till plats…</s>
+  <s key="Places.Add.Hint">Välj På min iPhone eller iCloud Drive för att se allt där, eller valfri mapp som appen Filer visar.</s>
   <s key="Places.Hide">Dölj i sidomenyn</s>
   <s key="Settings.Hidden">Dolda i sidomenyn</s>
   <s key="Settings.Hidden.Show">Visa</s>

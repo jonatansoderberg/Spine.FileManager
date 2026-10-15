@@ -43,6 +43,11 @@
 	</array>
 	<key>XSAppIconAssets</key>
 	<string>Assets.xcassets/appicon.appiconset</string>
+	<!-- The app's Documents in the Files app (On My iPhone › Spine File Manager), opened in place by other apps. -->
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Show the photo library as files, and copy photos out of it.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

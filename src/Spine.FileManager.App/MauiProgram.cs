@@ -73,10 +73,15 @@ public static class MauiProgram
             new MacFileSystemPlatform()
 #elif WINDOWS
             new WindowsFileSystemPlatform()
+#elif IOS
+            new IosFileSystemPlatform()
 #else
             new DefaultFileSystemPlatform()
 #endif
         );
+#if IOS
+        FolderGrants.Load();
+#endif
         builder.Services.AddSingleton<IStorageProvider, FileSystemStorageProvider>();
 #if IOS || MACCATALYST
         builder.Services.AddSingleton<IStorageProvider, Services.PhotoLibraryProvider>();

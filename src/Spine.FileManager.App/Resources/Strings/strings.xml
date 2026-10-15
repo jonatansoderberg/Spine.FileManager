@@ -286,6 +286,8 @@
   <s key="Settings.ItemSize.Large">Large</s>
   <s key="Commands.New">New</s>
   <s key="Places.Cloud">Cloud</s>
+  <s key="Places.Add">Add Location…</s>
+  <s key="Places.Add.Hint">Pick On My iPhone or iCloud Drive to see everything in it, or any folder the Files app shows.</s>
   <s key="Places.Hide">Hide from Sidebar</s>
   <s key="Settings.Hidden">Hidden from the sidebar</s>
   <s key="Settings.Hidden.Show">Show</s>
