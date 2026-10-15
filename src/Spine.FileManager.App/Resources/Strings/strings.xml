@@ -243,4 +243,8 @@
   <s key="Settings.ItemSize.Medium">Medium</s>
   <s key="Settings.ItemSize.Large">Large</s>
   <s key="Commands.New">New</s>
+  <s key="Places.Cloud">Cloud</s>
+  <s key="Places.Hide">Hide from Sidebar</s>
+  <s key="Settings.Hidden">Hidden from the sidebar</s>
+  <s key="Settings.Hidden.Show">Show</s>
 </strings>

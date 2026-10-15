@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using Plugin.Maui.Spine.Common;
 
 namespace Spine.FileManager.Pages;
@@ -13,6 +14,19 @@ public partial class SettingsPageViewModel(ISpineStrings strings, IThemeService 
     private static readonly AppTheme[] Appearances = [AppTheme.Unspecified, AppTheme.Light, AppTheme.Dark];
 
     /// <summary>Small, medium or large rows, icons and text in the lists and the sidebar.</summary>
+    /// <summary>Places hidden from the sidebar, each with Show to bring it back.</summary>
+    public ObservableCollection<HiddenPlace> HiddenPlaces { get; } = new(Services.HiddenPlaces.Items);
+
+    public bool HasHiddenPlaces => HiddenPlaces.Count > 0;
+
+    [RelayCommand]
+    private void ShowPlace(HiddenPlace place)
+    {
+        Services.HiddenPlaces.Show(place);
+        HiddenPlaces.Remove(place);
+        OnPropertyChanged(nameof(HasHiddenPlaces));
+    }
+
     [ObservableProperty]
     public partial int ItemSizeIndex { get; set; } = (int)ItemSizes.Current;
 

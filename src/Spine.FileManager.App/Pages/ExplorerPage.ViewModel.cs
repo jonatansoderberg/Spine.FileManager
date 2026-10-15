@@ -237,17 +237,50 @@ public partial class ExplorerPageViewModel : ViewModelBase
         _strings.Changed += (_, _) => Rebuild(keepSelection: true);
         FileIcons.Changed += () => MainThread.BeginInvokeOnMainThread(() => Rebuild(keepSelection: true));
         FileIcons.Refreshed += () => MainThread.BeginInvokeOnMainThread(() => Rebuild(keepSelection: true));
+        HiddenPlaces.Changed += () => MainThread.BeginInvokeOnMainThread(ShowPlaces);
         // A list measures its first row once: a new size needs its rows again, the sidebar's lists new heights.
         ItemSizes.Changed += () =>
         {
             Rebuild(keepSelection: true);
             PlacesHeight = Places.Count * SidebarRowHeight;
+            CloudHeight = CloudPlaces.Count * SidebarRowHeight;
             FavoritesHeight = Favorites.Count * SidebarRowHeight;
             DevicesHeight = Devices.Count * SidebarRowHeight;
         };
     }
 
+    /// <summary>This Device: known folders and disks the user has not hidden.</summary>
     public ObservableCollection<PlaceRow> Places { get; } = [];
+
+    /// <summary>The Cloud section: iCloud Drive and the providers in ~/Library/CloudStorage (OneDrive, Google Drive …).</summary>
+    public ObservableCollection<PlaceRow> CloudPlaces { get; } = [];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCloud))]
+    public partial double CloudHeight { get; private set; }
+
+    public bool HasCloud => CloudHeight > 0;
+
+    private readonly List<PlaceRow> _allPlaces = [];
+
+    [ObservableProperty]
+    public partial MenuItems PlaceMenu { get; private set; } = [];
+
+    private void ShowPlaces()
+    {
+        Places.Clear();
+        CloudPlaces.Clear();
+        foreach (var place in _allPlaces.Where(p => !HiddenPlaces.Contains(p.Root.Location)))
+        {
+            place.IsCurrent = !IsHome && place.Root.Location.Equals(Current);
+            (place.Root.Kind == StorageRootKind.Cloud ? CloudPlaces : Places).Add(place);
+        }
+        PlacesHeight = Places.Count * SidebarRowHeight;
+        CloudHeight = CloudPlaces.Count * SidebarRowHeight;
+    }
+
+    [RelayCommand]
+    private void HidePlace(PlaceRow place) => HiddenPlaces.Hide(place.Root.Location, place.Name);
 
     private readonly DeviceService _devices;
 
@@ -661,6 +694,11 @@ public partial class ExplorerPageViewModel : ViewModelBase
         [
             new MenuAction(strings["Devices.Rename"], "Edit.svg", RenameDeviceCommand),
             new MenuAction(strings["Devices.Forget"], "Trashcan.svg", ForgetDeviceCommand) { IsDestructive = true },
+        ];
+        PlaceMenu =
+        [
+            new MenuAction(strings["Menu.Open"], null, OpenPlaceCommand),
+            new MenuAction(strings["Places.Hide"], "EyeOff.svg", HidePlaceCommand),
         ];
         FavoriteMenu =
         [
@@ -1280,7 +1318,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     public override async Task OnAppearingAsync(NavigationDirection navigationDirection)
     {
-        if (Places.Count > 0)
+        if (_allPlaces.Count > 0)
             return;
         var session = IPlatformApplication.Current!.Services.GetRequiredService<SessionTracker>();
         if (_startTabs is null && !IsSecondary && await session.RestoreAsync() is { Count: > 0 } windows)
@@ -1311,17 +1349,17 @@ public partial class ExplorerPageViewModel : ViewModelBase
         await LoadFavorites();
         foreach (var provider in _providers.All)
             foreach (var root in await provider.GetRootsAsync())
-                Places.Add(new(root));
+                _allPlaces.Add(new(root));
         // This Device ends with the disks, as in the concept image, unless the provider already lists one.
         foreach (var disk in await Task.Run(ListDisks))
-            if (!Places.Any(p => p.Root.Location.Equals(disk.Location)))
-                Places.Add(new(new StorageRoot(disk.Location, disk.Name, disk.Kind switch
+            if (!_allPlaces.Any(p => p.Root.Location.Equals(disk.Location)))
+                _allPlaces.Add(new(new StorageRoot(disk.Location, disk.Name, disk.Kind switch
                 {
                     DiskKind.Network => StorageRootKind.NetworkVolume,
                     DiskKind.External => StorageRootKind.RemovableVolume,
                     _ => StorageRootKind.Volume,
                 })));
-        PlacesHeight = Places.Count * SidebarRowHeight;
+        ShowPlaces();
         LoadDevices();
         if (!IsSecondary)
             _devices.StartIfLinked();
@@ -1697,7 +1735,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
         Filter = "";
         CanGoBack = tab.History.CanGoBack;
         CanGoForward = tab.History.CanGoForward;
-        foreach (var place in Places)
+        foreach (var place in _allPlaces)
             place.IsCurrent = false;
         foreach (var favorite in Favorites)
             favorite.IsCurrent = false;
@@ -1890,14 +1928,14 @@ public partial class ExplorerPageViewModel : ViewModelBase
         if (string.IsNullOrEmpty(tab.Title) || !location.Equals(Current) || leftHome)
             tab.Title = TabTitle(location);
         if (changedFolder || leftHome)
-            Recent?.Add(location, Places.FirstOrDefault(p => p.Root.Location.Equals(location))?.Name ?? TabTitle(location), DateTimeOffset.Now);
+            Recent?.Add(location, _allPlaces.FirstOrDefault(p => p.Root.Location.Equals(location))?.Name ?? TabTitle(location), DateTimeOffset.Now);
 
         Current = location;
         if (changedFolder)
             _ = BuildBreadcrumb(provider, location);
         CanGoBack = _history.CanGoBack;
         CanGoForward = _history.CanGoForward;
-        foreach (var place in Places)
+        foreach (var place in _allPlaces)
             place.IsCurrent = place.Root.Location.Equals(location);
         foreach (var favorite in Favorites)
             favorite.IsCurrent = favorite.Favorite.Location.Equals(location);
