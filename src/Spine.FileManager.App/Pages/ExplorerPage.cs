@@ -38,6 +38,7 @@ public partial class ExplorerPage
             if (BindingContext is not ExplorerPageViewModel vm)
                 return;
             vm.HostPage = () => Window?.Page;
+            TabBar.SizeChanged += (_, _) => vm.TabBarWidth = TabBar.Width;
 #if MACCATALYST
             // Spine measures the title bar for its page; a window of its own has it as the window's safe area. Neither
             // is known when the page loads, so it is read again once they are.

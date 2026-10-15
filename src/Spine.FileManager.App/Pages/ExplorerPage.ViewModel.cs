@@ -316,6 +316,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
             tab.IsActive = tab == _tabs.Active;
             Tabs.Add(tab);
         }
+        OnPropertyChanged(nameof(TabWidth));
     }
 
     [RelayCommand]
@@ -693,17 +694,24 @@ public partial class ExplorerPageViewModel : ViewModelBase
     public bool ShowsSidebar => IsWide && !IsSecondary;
 
     /// <summary>
-    /// The window's title bar on the Mac, which the explorer reaches into without a title: macOS keeps the clicks there
-    /// (they move the window) and draws its own bar over the area on hover, so the tabs sit just below it, and the tab
-    /// bar's colour reaches up through it as one bar. The sidebar starts below the traffic lights. Elsewhere 0.
+    /// The window's title bar on the Mac, which the explorer reaches into without a title: the tab bar is as tall as it,
+    /// and the sidebar starts below the traffic lights. Elsewhere 0, and the tab bar keeps its own height.
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(TabBarHeight), nameof(TabBarPadding), nameof(SidebarPadding))]
     public partial double TitleBarHeight { get; set; }
 
-    public double TabBarHeight => TitleBarHeight + 32;
+    public double TabBarHeight => Math.Max(32, TitleBarHeight);
 
-    public Thickness TabBarPadding => new(8, TitleBarHeight + 4, 8, 0);
+    public Thickness TabBarPadding => new(TitleBarHeight > 0 && !ShowsSidebar && !IsSecondary ? 80 : 8, (TabBarHeight - 28) / 2, 8, 0);
+
+    /// <summary>The tab bar's width, from the page: tabs share it, each at most 180 and at least 70 wide.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TabWidth))]
+    public partial double TabBarWidth { get; set; }
+
+    public double TabWidth => Tabs.Count == 0 || TabBarWidth <= 0 ? 180
+        : Math.Clamp((TabBarWidth - TabBarPadding.Left - TabBarPadding.Right) / Tabs.Count - 2, 70, 180);
 
     public Thickness SidebarPadding => new(0, TitleBarHeight, 0, 0);
 

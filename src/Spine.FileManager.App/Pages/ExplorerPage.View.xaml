@@ -203,17 +203,17 @@
                 </BoxView.Triggers>
             </BoxView>
             <!-- Tabs, always at least one: a click shows the tab, × closes it, a drag moves it within the bar, to
-                 another window or, let go outside the app's windows, to a window of its own. A fixed height: measured
-                 while still empty, a horizontal ScrollView keeps that height when the tabs arrive. -->
-            <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never" HeightRequest="{Binding TabBarHeight}"
-                        BackgroundColor="{AppThemeBinding Light=#E9EAEE, Dark=#16171A}">
-                <ScrollView.GestureRecognizers>
+                 another window or, let go outside the app's windows, to a window of its own. Tabs narrow as they grow
+                 in number, as in a browser, rather than scroll: on the Mac a scroll view under the title bar makes
+                 macOS treat the area as its own, drawing its bar over the tabs and taking their clicks. -->
+            <Grid x:Name="TabBar" HeightRequest="{Binding TabBarHeight}" BackgroundColor="{AppThemeBinding Light=#E9EAEE, Dark=#16171A}">
+                <Grid.GestureRecognizers>
                     <DropGestureRecognizer DragOver="OnTabDragOver" DragLeave="OnTabDragLeave" Drop="OnTabDrop" />
-                </ScrollView.GestureRecognizers>
+                </Grid.GestureRecognizers>
                 <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Tabs}" Padding="{Binding TabBarPadding}" Spacing="2">
                     <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="ExplorerTab">
-                            <Grid ColumnDefinitions="*,Auto" WidthRequest="180" HeightRequest="28" Padding="10,0,2,0"
+                            <Grid ColumnDefinitions="*,Auto" WidthRequest="{Binding TabWidth, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" HeightRequest="28" Padding="10,0,2,0"
                                   BackgroundColor="Transparent"
                                   ContextMenu.Items="{Binding TabMenu, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" ContextMenu.CommandParameter="{Binding .}">
                                 <Grid.Triggers>
@@ -224,9 +224,11 @@
                                 <Grid.GestureRecognizers>
                                     <DragGestureRecognizer DragStarting="OnTabDragStarting" DropCompleted="OnTabDropCompleted" />
                                     <DropGestureRecognizer DragOver="OnTabDragOver" DragLeave="OnTabDragLeave" Drop="OnTabDrop" />
-                                    <TapGestureRecognizer Command="{Binding SelectTabCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
                                 </Grid.GestureRecognizers>
-                                <Label Text="{Binding Title}" FontSize="12" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
+                                <Label Text="{Binding Title}" FontSize="12" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" InputTransparent="True" />
+                                <!-- A button takes the click, so a tab answers like the other controls (keyboard, accessibility). -->
+                                <Button BackgroundColor="Transparent" Padding="0" MinimumHeightRequest="0" MinimumWidthRequest="0" SemanticProperties.Description="{Binding Title}"
+                                        Command="{Binding SelectTabCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
                                 <Button Grid.Column="1" Text="×" FontSize="14" Padding="6,0" HeightRequest="24" MinimumWidthRequest="0" BackgroundColor="Transparent"
                                         TextColor="{AppThemeBinding Light=#555, Dark=#BBB}" SemanticProperties.Description="{String Menu.CloseTab}"
                                         Command="{Binding CloseTabCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
@@ -234,7 +236,7 @@
                         </DataTemplate>
                     </BindableLayout.ItemTemplate>
                 </HorizontalStackLayout>
-            </ScrollView>
+            </Grid>
 
             <!-- Toolbar: history, up, refresh, the breadcrumb, view and hidden files. -->
             <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="2" Padding="8,6">
