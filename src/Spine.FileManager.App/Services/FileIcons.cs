@@ -66,6 +66,10 @@ public static class FileIcons
         return source;
     }
 
+    /// <summary>Spine's picture for the item as a file in the app bundle, for native code (a drag's preview).</summary>
+    public static string BundleName(StorageItem item) =>
+        item.IsBrowsable ? "folder.png" : $"type_{FileKinds.Of(item.Extension.ToLowerInvariant())}.png";
+
     private static ImageSource Spine(bool isFolder, string extension) =>
         isFolder ? "folder.png" : $"type_{FileKinds.Of(extension)}.png";
 

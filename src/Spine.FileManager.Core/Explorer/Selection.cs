@@ -53,6 +53,20 @@ public sealed class Selection
         Anchor = first >= 0 ? first : null;
     }
 
+    /// <summary>The <paramref name="indices"/> a selection rectangle covers in a grid, on top of <paramref name="kept"/>.</summary>
+    public void Box(IEnumerable<int> indices, IReadOnlyCollection<int> kept)
+    {
+        _selected.Clear();
+        _selected.UnionWith(kept);
+        var first = (int?)null;
+        foreach (var index in indices)
+        {
+            _selected.Add(index);
+            first ??= index;
+        }
+        Anchor = first;
+    }
+
     public void SelectAll(int count)
     {
         _selected.Clear();

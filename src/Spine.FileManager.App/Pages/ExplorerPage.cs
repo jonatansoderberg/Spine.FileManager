@@ -77,11 +77,8 @@ public partial class ExplorerPage
 #endif
             // Name, Date modified, Size and Kind need about 560 points; a narrower pane shows Name and Size.
             List.SizeChanged += (_, _) => vm.HasColumns = List.Width >= 560;
-            List.Scrolled += (_, e) =>
-            {
-                _listOffset = e.VerticalOffset;
-                UpdateBox();
-            };
+            List.Scrolled += OnListScrolled;
+            Icons.Scrolled += OnListScrolled;
             // Focused once the field has folded out.
             vm.FilterRequested += () => Dispatcher.Dispatch(() => FilterField.Focus());
             Keys.Pressed += vm.OnListKey;
@@ -246,7 +243,23 @@ public partial class ExplorerPage
         }
         var items = vm.DragItems(row);
 #if IOS || MACCATALYST
-        if (items.Where(i => i.NativePath is not null).Select(i => new UIKit.UIDragItem(new Foundation.NSItemProvider(Foundation.NSUrl.CreateFileUrl(i.NativePath!, null)))).ToArray() is { Length: > 0 } files)
+        // Each file drags as its icon; several stack, with their count, as Finder's do. The file pressed shows the
+        // icon its row shows (the system's or a theme's), the others Spine's picture for their kind.
+        var shown = ((sender as Layout) ?? ((View)sender).Parent as Layout)?.OfType<Image>().FirstOrDefault()?.Handler?.PlatformView as UIKit.UIImageView;
+        var byLocation = vm.Rows.ToDictionary(r => r.Item.Location, r => r.Item);
+        if (items.Where(i => i.NativePath is not null).Select(location =>
+            {
+                var drag = new UIKit.UIDragItem(new Foundation.NSItemProvider(Foundation.NSUrl.CreateFileUrl(location.NativePath!, null)));
+                var icon = location.Equals(row.Item.Location) ? shown?.Image
+                    : byLocation.TryGetValue(location, out var item) ? UIKit.UIImage.FromBundle(FileIcons.BundleName(item)) : null;
+                if (icon is not null)
+                    drag.PreviewProvider = () => new UIKit.UIDragPreview(new UIKit.UIImageView(icon)
+                    {
+                        Frame = new CoreGraphics.CGRect(0, 0, 56, 56),
+                        ContentMode = UIKit.UIViewContentMode.ScaleAspectFit,
+                    });
+                return drag;
+            }).ToArray() is { Length: > 0 } files)
             e.PlatformArgs?.SetDragItems(files);
 #endif
         FileDrag.Start(vm, items);
@@ -402,7 +415,7 @@ public partial class ExplorerPage
 
     // A click in the list gives it the keyboard (arrows, Return, Space, typing); a click in a text field takes it back.
     private Point? _pressed;
-    private Point? _namePressed;
+    private Point? _itemPressed;
     private double _listOffset;
     private bool _boxing;
     private Point _boxStart;
@@ -411,25 +424,29 @@ public partial class ExplorerPage
     private IReadOnlyCollection<int> _boxKept = [];
     private IDispatcherTimer? _autoScroll;
 
+    // The list shown: the details list or the icon grid.
+    private Controls.FileListView Shown => (BindingContext as ExplorerPageViewModel)?.IsIcons == true ? Icons : List;
+
     private void OnListPressed(object? sender, PointerEventArgs e)
     {
         Keys.Activate();
-        _pressed = e.GetPosition(List);
+        _pressed = e.GetPosition(Shown);
     }
 
-    private void OnNamePressed(object? sender, PointerEventArgs e) => _namePressed = e.GetPosition(List);
+    // A press on what drags files: a row's name or icon, a whole cell of the icon grid.
+    private void OnItemPressed(object? sender, PointerEventArgs e) => _itemPressed = e.GetPosition(Shown);
 
-    // As in Finder and Explorer, a drag from a name or icon moves the files and a drag from anywhere else in the list
-    // draws a selection rectangle. It keeps its start in the list's content, so it stretches as the list scrolls: by
-    // the wheel, or on its own while the pointer is near the top or bottom edge.
+    // As in Finder and Explorer, a drag from a file moves it and a drag from anywhere else in the list draws a
+    // selection rectangle. It keeps its start in the list's content, so it stretches as the list scrolls: by the
+    // wheel, or on its own while the pointer is near the top or bottom edge.
     private void OnListPanned(object? sender, PanUpdatedEventArgs e)
     {
-        if (BindingContext is not ExplorerPageViewModel vm)
+        if (BindingContext is not ExplorerPageViewModel vm || sender != Shown)
             return;
         switch (e.StatusType)
         {
             case GestureStatus.Started:
-                if (_pressed is not { } start || _namePressed is { } name && start.Distance(name) < 4)
+                if (_pressed is not { } start || _itemPressed is { } item && start.Distance(item) < 4)
                     return;
                 _boxing = true;
                 _boxPress = start;
@@ -447,11 +464,19 @@ public partial class ExplorerPage
                 break;
             case GestureStatus.Completed or GestureStatus.Canceled:
                 _boxing = false;
-                _namePressed = null;
+                _itemPressed = null;
                 _autoScroll?.Stop();
                 Marquee.IsVisible = false;
                 break;
         }
+    }
+
+    private void OnListScrolled(object? sender, ItemsViewScrolledEventArgs e)
+    {
+        if (sender != Shown)
+            return;
+        _listOffset = e.VerticalOffset;
+        UpdateBox();
     }
 
     // The pointer in the list's frame now: where the press was, moved by the drag.
@@ -461,19 +486,35 @@ public partial class ExplorerPage
     {
         if (!_boxing || BindingContext is not ExplorerPageViewModel vm)
             return;
+        var list = Shown;
         var pointer = BoxPointer;
         var left = Math.Max(0, Math.Min(_boxStart.X, pointer.X));
-        var right = Math.Min(List.Width, Math.Max(_boxStart.X, pointer.X));
+        var right = Math.Min(list.Width, Math.Max(_boxStart.X, pointer.X));
         var top = Math.Min(_boxStart.Y, pointer.Y + _listOffset);
         var bottom = Math.Max(_boxStart.Y, pointer.Y + _listOffset);
-        // Drawn in the list's visible part only.
-        var shownTop = Math.Clamp(top - _listOffset, 0, List.Height);
-        var shownBottom = Math.Clamp(bottom - _listOffset, 0, List.Height);
-        Marquee.TranslationX = left;
-        Marquee.TranslationY = shownTop;
+        // Drawn over the list's visible part only; the rectangle sits in the rows both lists share.
+        var shownTop = Math.Clamp(top - _listOffset, 0, list.Height);
+        var shownBottom = Math.Clamp(bottom - _listOffset, 0, list.Height);
+        Marquee.TranslationX = list.Frame.X - Marquee.Frame.X + left;
+        Marquee.TranslationY = list.Frame.Y - Marquee.Frame.Y + shownTop;
         Marquee.WidthRequest = Math.Max(0, right - left);
         Marquee.HeightRequest = Math.Max(0, shownBottom - shownTop);
-        vm.SelectRows((int)Math.Floor(Math.Max(0, top) / ItemSizes.RowHeight), (int)Math.Floor(bottom / ItemSizes.RowHeight), _boxKept);
+        if (ItemsIn(list, new Rect(left, top, right - left, bottom - top)) is { } items)
+            vm.SelectItems(items, _boxKept);
+        else
+            vm.SelectRows((int)Math.Floor(Math.Max(0, top) / ItemSizes.RowHeight), (int)Math.Floor(bottom / ItemSizes.RowHeight), _boxKept);
+    }
+
+    // The cells the list's own layout puts inside the rectangle (in content coordinates), in the grid as in the list;
+    // null where the layout cannot be asked, and the rows are counted from the row height instead.
+    private static IReadOnlyList<int>? ItemsIn(Controls.FileListView list, Rect content)
+    {
+#if IOS || MACCATALYST
+        if (FindScrollView(list.Handler?.PlatformView as UIKit.UIView) is UIKit.UICollectionView view
+            && view.CollectionViewLayout.LayoutAttributesForElementsInRect(new CoreGraphics.CGRect(content.X, content.Y - view.AdjustedContentInset.Top, content.Width, Math.Max(1, content.Height))) is { } cells)
+            return [.. cells.Where(c => c.RepresentedElementCategory == UIKit.UICollectionElementCategory.Cell).Select(c => (int)c.IndexPath.Item)];
+#endif
+        return null;
     }
 
     private IDispatcherTimer CreateAutoScroll()
@@ -484,7 +525,8 @@ public partial class ExplorerPage
         {
             const double edge = 24;
             var y = BoxPointer.Y;
-            var step = y < edge ? -(edge - y) : y > List.Height - edge ? y - (List.Height - edge) : 0;
+            var height = Shown.Height;
+            var step = y < edge ? -(edge - y) : y > height - edge ? y - (height - edge) : 0;
             if (step != 0)
                 ScrollListBy(Math.Clamp(step / 2, -24, 24));
         };
@@ -494,7 +536,7 @@ public partial class ExplorerPage
     private void ScrollListBy(double dy)
     {
 #if IOS || MACCATALYST
-        if (FindScrollView(List.Handler?.PlatformView as UIKit.UIView) is { } scroll)
+        if (FindScrollView(Shown.Handler?.PlatformView as UIKit.UIView) is { } scroll)
         {
             var max = Math.Max(0, scroll.ContentSize.Height + scroll.AdjustedContentInset.Bottom - scroll.Bounds.Height);
             var y = Math.Clamp(scroll.ContentOffset.Y + dy, 0, max);
