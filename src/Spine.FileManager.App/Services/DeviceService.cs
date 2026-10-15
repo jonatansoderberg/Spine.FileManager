@@ -4,6 +4,12 @@ using Spine.FileManager.DeviceLink;
 
 namespace Spine.FileManager.Services;
 
+/// <summary>How a linked device can be reached now. Only the local network for now; the link ladder adds more ways.</summary>
+public enum LinkState { Checking, LocalNetwork, Offline }
+
+/// <summary>A device's reachability: how, at which address, and when it last answered.</summary>
+public sealed record LinkStatus(LinkState State, string? Endpoint = null, DateTimeOffset? LastSeen = null);
+
 /// <summary>
 /// This installation among Other Devices (plan §19–21): its node identity, the devices it trusts and the node that
 /// listens for them. The node starts when it is first needed, so a Mac that links nothing never opens a port.
@@ -24,6 +30,70 @@ public sealed class DeviceService
 
     /// <summary>A device paired through this one's invitation.</summary>
     public event Action<TrustedNode>? Paired;
+
+    /// <summary>A file is arriving: the sending device's node id, the file's name, bytes so far and its size.</summary>
+    public event Action<string, string, long, long>? Receiving;
+
+    /// <summary>A device's <see cref="LinkStatus"/> changed: its node id.</summary>
+    public event Action<string>? StatusChanged;
+
+    private readonly Dictionary<string, LinkStatus> _status = [];
+    private CancellationTokenSource? _watching;
+
+    public LinkStatus StatusOf(string nodeId)
+    {
+        lock (_status)
+            return _status.GetValueOrDefault(nodeId) ?? new LinkStatus(LinkState.Checking);
+    }
+
+    private void SetStatus(string nodeId, LinkStatus status)
+    {
+        lock (_status)
+        {
+            if (_status.GetValueOrDefault(nodeId) is { } old && old.State == status.State && old.Endpoint == status.Endpoint)
+            {
+                _status[nodeId] = status;
+                return;
+            }
+            _status[nodeId] = status;
+        }
+        StatusChanged?.Invoke(nodeId);
+    }
+
+    /// <summary>A device answered: a transfer to or from it got through.</summary>
+    public void Seen(string nodeId, string? endpoint = null) =>
+        SetStatus(nodeId, new LinkStatus(LinkState.LocalNetwork, endpoint ?? StatusOf(nodeId).Endpoint, DateTimeOffset.Now));
+
+    /// <summary>
+    /// Checks every linked device now and then every <paramref name="every"/> while the app runs: a connection to its
+    /// last address, opened and closed. A device that answered keeps its state until a check fails.
+    /// </summary>
+    public void WatchStatus(TimeSpan every)
+    {
+        if (_watching is not null || Trust.All.Count == 0)
+            return;
+        var cancel = _watching = new CancellationTokenSource();
+        Trust.Changed += () => _ = CheckAllAsync(cancel.Token);
+        _ = Task.Run(async () =>
+        {
+            using var timer = new PeriodicTimer(every);
+            do
+                await CheckAllAsync(cancel.Token);
+            while (await timer.WaitForNextTickAsync(cancel.Token));
+        });
+    }
+
+    public async Task CheckAllAsync(CancellationToken cancel = default)
+    {
+        var node = await GetNodeAsync();
+        await Task.WhenAll(Trust.All.Select(async device =>
+        {
+            var endpoint = await node.ProbeAsync(device.NodeId, cancel);
+            SetStatus(device.NodeId, endpoint is null
+                ? new LinkStatus(LinkState.Offline, null, StatusOf(device.NodeId).LastSeen)
+                : new LinkStatus(LinkState.LocalNetwork, endpoint, DateTimeOffset.Now));
+        }));
+    }
 
     /// <summary>Where received files go: Downloads on a computer, as with AirDrop; on a phone the app's documents, which the Files app shows.</summary>
     public static string Inbox => DeviceInfo.Idiom == DeviceIdiom.Desktop
@@ -70,7 +140,12 @@ public sealed class DeviceService
                 {
                     node.Start();
                 }
-                node.Received += (from, path) => Received?.Invoke(Trust.Find(from)?.DisplayName ?? from, path);
+                node.Received += (from, path) =>
+                {
+                    Seen(from);
+                    Received?.Invoke(Trust.Find(from)?.DisplayName ?? from, path);
+                };
+                node.Receiving += (from, name, received, size) => Receiving?.Invoke(from, name, received, size);
                 node.Paired += trusted => Paired?.Invoke(trusted);
                 node.Confirm = joined => MainThread.InvokeOnMainThreadAsync(() => AskToLink(joined));
                 _node = node;
@@ -86,12 +161,25 @@ public sealed class DeviceService
     /// <summary>Starts listening at launch when some device is already linked, so it can send files here.</summary>
     public void StartIfLinked()
     {
-        if (Trust.All.Count > 0)
-            _ = GetNodeAsync();
+        if (Trust.All.Count == 0)
+            return;
+        _ = GetNodeAsync();
+        WatchStatus(TimeSpan.FromSeconds(30));
     }
 
-    public async Task SendAsync(string nodeId, IReadOnlyList<string> paths, Action<long, long> progress) =>
-        await (await GetNodeAsync()).SendAsync(nodeId, paths, progress);
+    public async Task SendAsync(string nodeId, IReadOnlyList<string> paths, Action<long, long> progress)
+    {
+        try
+        {
+            await (await GetNodeAsync()).SendAsync(nodeId, paths, progress);
+            Seen(nodeId);
+        }
+        catch (Exception e) when (e is IOException or SocketException)
+        {
+            SetStatus(nodeId, new LinkStatus(LinkState.Offline, null, StatusOf(nodeId).LastSeen));
+            throw;
+        }
+    }
 
     // The private key goes to the platform's secure storage (Keychain, Keystore, DPAPI). Where that is not available
     // to the app (an unsigned Mac build has no keychain access group), a file only the user can read keeps it.

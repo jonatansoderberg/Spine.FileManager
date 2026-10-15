@@ -169,6 +169,11 @@
   <s key="Devices.Lifetime.QuickTransfer">En överföring</s>
   <s key="Devices.Lifetime.Session">Den här sessionen</s>
   <s key="Devices.Lifetime.Remember">Ihågkommen</s>
+  <s key="Devices.Receiving">Tar emot {0} från {1} — {2} %</s>
+  <s key="Devices.Status.Checking">Söker…</s>
+  <s key="Devices.Status.LocalNetwork">Lokalt nätverk</s>
+  <s key="Devices.Status.Offline">Offline</s>
+  <s key="Devices.NotAnswering">{0} svarade inte. Är Spine File Manager öppen där?</s>
   <s key="Link.Title">Länka enhet</s>
   <s key="Link.Intro">Skanna koden med Spine File Manager på den andra enheten, eller öppna länken där.</s>
   <s key="Link.Keep">Lita på den andra enheten</s>

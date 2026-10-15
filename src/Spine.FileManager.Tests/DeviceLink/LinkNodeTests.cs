@@ -125,6 +125,24 @@ public sealed class LinkNodeTests : IDisposable
     }
 
     [Fact]
+    public async Task A_linked_device_answers_a_probe_until_it_stops_and_reports_receiving_progress()
+    {
+        var computer = Node("computer");
+        var phone = Node("phone");
+        await Link(computer, phone);
+        var progress = new List<(string Name, long Received, long Size)>();
+        computer.Receiving += (from, name, received, size) => { lock (progress) progress.Add((name, received, size)); };
+
+        Assert.NotNull(await phone.ProbeAsync(computer.Identity.NodeId));
+        await phone.SendAsync(computer.Identity.NodeId, [_temp.File("send/notes.txt", "twelve bytes")]);
+        computer.Dispose();
+
+        Assert.Null(await phone.ProbeAsync(computer.Identity.NodeId));
+        Assert.Null(await phone.ProbeAsync("not-linked"));
+        Assert.Equal(("notes.txt", 12L, 12L), progress[^1]);
+    }
+
+    [Fact]
     public async Task A_device_trusted_for_one_transfer_is_forgotten_after_it()
     {
         var computer = Node("computer");

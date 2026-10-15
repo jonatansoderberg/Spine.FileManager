@@ -23,6 +23,10 @@ Jonatan asked to link computer to computer, and to confirm on the computer when 
 - **Tests:** a declined link leaves no trust; a phone links two computers with each one's lifetime; an introduction without the receiving computer's secret is refused.
 - **Link Device starts with a choice:** show this device's code, join another device's (a phone scans at once; a computer starts with the link entered and offers Scan with Camera when it has one), or, on a phone, link two computers. a back chevron, a header page action in the leading slot, returns to the choice; a code is only offered while it is shown. The choices are buttons, so they answer to the keyboard and accessibility.
 - **Addresses read when used:** a node's endpoints are the machine's addresses at the moment a code is shown or a link is made, not at start. The Mac moved from 192.168.68.x to 192.168.86.x while the app ran, and its codes kept the old address, so the phone could not reach it.
+- **Connection status on Other Devices:** a dot on each device's glyph in the sidebar and on Home (green on the local network, grey offline, amber while checked) and a line "Local network · Remembered". The Mac checks each device every 30 seconds by opening and closing a connection (`LinkNode.ProbeAsync`), and at once after a link or a transfer.
+- **Transfer progress:** the device's row shows the percentage and its Home card a progress bar, while sending and, through the new `LinkNode.Receiving` event, while receiving; the status bar says which file and how far.
+- **Addresses:** a phone's mobile-data addresses (pdp_ip, 192.0.0.x) are no longer offered, duplicates are dropped, and a connection tries every address at once instead of three seconds each in turn.
+- **A device that does not answer** says so in words: "iPhone didn't answer. Is Spine File Manager open on it?" (iOS stops an app listening in the background).
 
 ## Decisions
 - The receiving computer (B) does not ask: its user showed its code to be scanned, the same consent a phone's join has. The computer it joins (A) asks, as for any device.

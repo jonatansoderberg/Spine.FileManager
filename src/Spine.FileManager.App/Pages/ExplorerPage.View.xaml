@@ -51,6 +51,16 @@
         </Style>
         <!-- The chevron glyph fills only the middle half of its square and its stroke is thin, so the square is large and
              pulled in by its margin to keep the header's height. -->
+        <!-- A linked device's reachability: green on the local network, grey offline, amber while it is checked. -->
+        <Style x:Key="StatusDot" TargetType="BoxView">
+            <Setter Property="WidthRequest" Value="8" />
+            <Setter Property="HeightRequest" Value="8" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Color" Value="#E0A030" />
+            <Setter Property="HorizontalOptions" Value="End" />
+            <Setter Property="VerticalOptions" Value="End" />
+            <Setter Property="InputTransparent" Value="True" />
+        </Style>
         <Style x:Key="SortChevron" TargetType="ImageButton">
             <Setter Property="WidthRequest" Value="22" />
             <Setter Property="HeightRequest" Value="22" />
@@ -250,7 +260,7 @@
                     <DataTemplate x:DataType="DeviceRow">
                         <Border Padding="8,0" Margin="8,1" HeightRequest="{DynamicResource SidebarItemHeight}" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent"
                               ContextMenu.Items="{Binding DeviceMenu, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" ContextMenu.CommandParameter="{Binding .}"
-                              ToolTipProperties.Text="{Binding Lifetime}">
+                              ToolTipProperties.Text="{Binding StatusLine}">
                             <Border.Triggers>
                                 <DataTrigger TargetType="Border" Binding="{Binding IsDropTarget}" Value="True">
                                     <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#B7CCF7, Dark=#35589A}" />
@@ -259,9 +269,19 @@
                             <Border.GestureRecognizers>
                                 <DropGestureRecognizer DragOver="OnFileDragOver" DragLeave="OnFileDragLeave" Drop="OnFileDrop" />
                             </Border.GestureRecognizers>
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                                <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="{Binding Glyph}" />
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                <Grid VerticalOptions="Center">
+                                    <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="{Binding Glyph}" />
+                                    <BoxView Style="{StaticResource StatusDot}" Margin="0,0,-2,3">
+                                        <BoxView.Triggers>
+                                            <DataTrigger TargetType="BoxView" Binding="{Binding IsOnline}" Value="True"><Setter Property="Color" Value="#34C759" /></DataTrigger>
+                                            <DataTrigger TargetType="BoxView" Binding="{Binding IsOffline}" Value="True"><Setter Property="Color" Value="#A0A5AD" /></DataTrigger>
+                                        </BoxView.Triggers>
+                                    </BoxView>
+                                </Grid>
                                 <Label Grid.Column="1" Text="{Binding Name}" FontSize="{DynamicResource SidebarFontSize}" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
+                                <Label Grid.Column="2" Text="{Binding ProgressText}" IsVisible="{Binding IsTransferring}" FontSize="12" VerticalTextAlignment="Center"
+                                       TextColor="{AppThemeBinding Light=#2F6FEB, Dark=#7FA6F5}" />
                             </Grid>
                         </Border>
                     </DataTemplate>
@@ -876,12 +896,22 @@
                                     <Border.GestureRecognizers>
                                         <DropGestureRecognizer DragOver="OnFileDragOver" DragLeave="OnFileDragLeave" Drop="OnFileDrop" />
                                     </Border.GestureRecognizers>
-                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                        <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="{Binding Glyph}" WidthRequest="34" HeightRequest="34" />
+                                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="10">
+                                        <Grid VerticalOptions="Center">
+                                            <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="{Binding Glyph}" WidthRequest="34" HeightRequest="34" />
+                                            <BoxView Style="{StaticResource StatusDot}" WidthRequest="10" HeightRequest="10" CornerRadius="5">
+                                                <BoxView.Triggers>
+                                                    <DataTrigger TargetType="BoxView" Binding="{Binding IsOnline}" Value="True"><Setter Property="Color" Value="#34C759" /></DataTrigger>
+                                                    <DataTrigger TargetType="BoxView" Binding="{Binding IsOffline}" Value="True"><Setter Property="Color" Value="#A0A5AD" /></DataTrigger>
+                                                </BoxView.Triggers>
+                                            </BoxView>
+                                        </Grid>
                                         <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
                                             <Label Text="{Binding Name}" FontSize="14" FontAttributes="Bold" LineBreakMode="TailTruncation" />
-                                            <Label Text="{Binding Lifetime}" FontSize="12" Opacity="0.6" LineBreakMode="TailTruncation" />
+                                            <Label Text="{Binding StatusLine}" FontSize="12" Opacity="0.6" LineBreakMode="TailTruncation" />
                                         </VerticalStackLayout>
+                                        <ProgressBar Grid.Row="1" Grid.ColumnSpan="2" Progress="{Binding Progress, TargetNullValue=0}" IsVisible="{Binding IsTransferring}" Margin="0,8,0,0"
+                                                     ProgressColor="{AppThemeBinding Light=#2F6FEB, Dark=#7FA6F5}" />
                                     </Grid>
                                 </Border>
                             </DataTemplate>
