@@ -146,7 +146,7 @@
             <Setter Property="TextColor" Value="{AppThemeBinding Light=#1B1B1B, Dark=#E8E8E8}" />
         </Style>
         <Style x:Key="ColumnHeader" TargetType="Label">
-            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontSize" Value="{DynamicResource SidebarFontSize}" />
             <Setter Property="TextColor" Value="{AppThemeBinding Light=#5F6670, Dark=#9DA3AB}" />
             <Setter Property="VerticalTextAlignment" Value="Center" />
             <Setter Property="Padding" Value="8,0" />
@@ -348,7 +348,7 @@
                                             <ImageButton SvgImageSource.Svg="House.svg" SvgImageSource.EnableSvg="True" SvgImageSource.LightTintColor="#2F6FEB" SvgImageSource.DarkTintColor="#7FA6F5"
                                                          WidthRequest="26" HeightRequest="26" Margin="-5" Padding="0" BackgroundColor="Transparent" IsVisible="{Binding IsHome}" />
                                         </Grid>
-                                        <Label Grid.Column="1" Text="{Binding Title}" FontSize="12" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" InputTransparent="True" />
+                                        <Label Grid.Column="1" Text="{Binding Title}" FontSize="{DynamicResource SidebarFontSize}" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" InputTransparent="True" />
                                         <!-- A button takes the click, so a tab answers like the other controls (keyboard, accessibility). -->
                                         <Button Grid.ColumnSpan="3" BackgroundColor="Transparent" Padding="0" MinimumHeightRequest="0" MinimumWidthRequest="0" SemanticProperties.Description="{Binding Title}"
                                                 Command="{Binding SelectTabCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />

@@ -47,6 +47,7 @@ Eleven steps toward the concept image, written in `docs/plans/concept-ui.md` bef
   - The Dual Pane divider is a grip like the sidebar's: the old one took no drags.
   - The sidebar's lists are as tall as their rows, so only the sidebar scrolls.
   - The search field has no native border or focus ring of another shape.
+- **Tab titles and column headers** use the sidebar's font size, so they follow the Small/Medium/Large setting with the rest of the window.
 - **Path field closes on Esc and on any folder change:** an app-level Escape key command, taken only while the field is open, so sheets keep their own Esc.
 
 ## Decisions
