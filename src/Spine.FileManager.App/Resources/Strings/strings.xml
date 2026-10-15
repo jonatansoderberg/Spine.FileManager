@@ -61,7 +61,7 @@
   <s key="FirstRun.Title">Access to your files</s>
   <s key="FirstRun.Intro">macOS protects some folders and asks once before an app may open them.</s>
   <s key="FirstRun.Folders">Choose Continue and allow access to your Desktop, Documents, Downloads and cloud folders when macOS asks. You can change it later in System Settings › Privacy &amp; Security.</s>
-  <s key="FirstRun.FullDiskAccess">Or give Spine File Manager Full Disk Access once, and macOS will not ask again.</s>
+  <s key="FirstRun.FullDiskAccess">Or give Spine File Manager Full Disk Access once, and macOS will not ask again. It also lets the app show what is in the Trash.</s>
   <s key="FirstRun.OpenSettings">Open Full Disk Access settings</s>
   <s key="FirstRun.Continue">Continue</s>
   <s key="Explorer.Subfolders">Subfolders</s>
@@ -222,4 +222,20 @@
   <s key="Explorer.Network.Soon">Shared folders (coming)</s>
   <s key="Explorer.Backups">Backups</s>
   <s key="Explorer.Backups.Soon">Backups (coming)</s>
+  <s key="Trash.Title">Trash</s>
+  <s key="Trash.Title.Windows">Recycle Bin</s>
+  <s key="Trash.IsEmpty">Empty</s>
+  <s key="Trash.Summary.one">1 item · {1}</s>
+  <s key="Trash.Summary.other">{0} items · {1}</s>
+  <s key="Trash.NeedsAccess">Needs Full Disk Access to show what is in it</s>
+  <s key="Trash.OpenSettings">Open Settings</s>
+  <s key="Trash.EmptyButton">Empty…</s>
+  <s key="Trash.Confirm.Title">Empty the trash?</s>
+  <s key="Trash.Confirm.Message.one">1 item, {1}, will be deleted for good. This cannot be undone.</s>
+  <s key="Trash.Confirm.Message.other">{0} items, {1}, will be deleted for good. This cannot be undone.</s>
+  <s key="Trash.Confirm.Accept">Empty</s>
+  <s key="Trash.Emptying">Emptying…</s>
+  <s key="Trash.Failed">Some items could not be deleted: {0}</s>
+  <s key="Trash.Access.Title">Show the Trash?</s>
+  <s key="Trash.Access.Message">macOS lets apps look in the Trash only with Full Disk Access. Open System Settings and turn it on for Spine File Manager?</s>
 </strings>

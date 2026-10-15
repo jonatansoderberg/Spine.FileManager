@@ -72,6 +72,27 @@ public sealed class WindowsFileSystemPlatform : DefaultFileSystemPlatform
         return Task.CompletedTask;
     }
 
+    // The Recycle Bin of every drive together, as Explorer counts it; it is no folder the explorer can list.
+    public override Task<TrashContents?> MeasureTrashAsync(CancellationToken cancellationToken)
+    {
+        var info = new SHQUERYRBINFO { cbSize = Marshal.SizeOf<SHQUERYRBINFO>() };
+        return Task.FromResult(SHQueryRecycleBin(null, ref info) == 0 ? new TrashContents((int)info.i64NumItems, info.i64Size) : null);
+    }
+
+    // The app has asked already; the shell neither asks again nor shows its own progress.
+    public override Task<IReadOnlyList<string>> EmptyTrashAsync(IProgress<double>? progress, CancellationToken cancellationToken) => Task.Run(() =>
+    {
+        var result = SHEmptyRecycleBin(0, null, SHERB_NOCONFIRMATION | SHERB_NOPROGRESSUI | SHERB_NOSOUND);
+        // S_OK, or E_UNEXPECTED when it was empty already.
+        if (result != 0 && result != unchecked((int)0x8000FFFF))
+            throw new IOException($"Could not empty the Recycle Bin (error 0x{result:X8}).");
+        progress?.Report(1);
+        return (IReadOnlyList<string>)[];
+    }, cancellationToken);
+
+    public override void ShowTrash() =>
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", "shell:RecycleBinFolder") { UseShellExecute = true });
+
     // A drive root shows its label, as Explorer does: "Data (D:)".
     public override string? FolderDisplayName(string path, string name)
     {
@@ -120,6 +141,22 @@ public sealed class WindowsFileSystemPlatform : DefaultFileSystemPlatform
 
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     static extern int SHFileOperation(ref SHFILEOPSTRUCT operation);
+
+    const uint SHERB_NOCONFIRMATION = 0x1, SHERB_NOPROGRESSUI = 0x2, SHERB_NOSOUND = 0x4;
+
+    [StructLayout(LayoutKind.Sequential, Pack = 4)]
+    struct SHQUERYRBINFO
+    {
+        public int cbSize;
+        public long i64Size;
+        public long i64NumItems;
+    }
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    static extern int SHQueryRecycleBin(string? rootPath, ref SHQUERYRBINFO info);
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    static extern int SHEmptyRecycleBin(nint window, string? rootPath, uint flags);
 
     [DllImport("shell32.dll")]
     static extern int SHGetKnownFolderPath([MarshalAs(UnmanagedType.LPStruct)] Guid id, uint flags, nint token, out nint path);

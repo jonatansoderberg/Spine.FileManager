@@ -61,7 +61,7 @@
   <s key="FirstRun.Title">Åtkomst till dina filer</s>
   <s key="FirstRun.Intro">macOS skyddar vissa mappar och frågar en gång innan en app får öppna dem.</s>
   <s key="FirstRun.Folders">Välj Fortsätt och tillåt åtkomst till Skrivbord, Dokument, Hämtade filer och molnmappar när macOS frågar. Du kan ändra det senare i Systeminställningar › Integritet och säkerhet.</s>
-  <s key="FirstRun.FullDiskAccess">Eller ge Spine File Manager full skivåtkomst en gång, så frågar macOS inte igen.</s>
+  <s key="FirstRun.FullDiskAccess">Eller ge Spine File Manager Fullständig skivåtkomst en gång, så frågar macOS inte igen. Då kan appen också visa vad som ligger i papperskorgen.</s>
   <s key="FirstRun.OpenSettings">Öppna inställningar för full skivåtkomst</s>
   <s key="FirstRun.Continue">Fortsätt</s>
   <s key="Explorer.Subfolders">Undermappar</s>
@@ -222,4 +222,20 @@
   <s key="Explorer.Network.Soon">Delade mappar (kommer)</s>
   <s key="Explorer.Backups">Backup</s>
   <s key="Explorer.Backups.Soon">Säkerhetskopior (kommer)</s>
+  <s key="Trash.Title">Papperskorg</s>
+  <s key="Trash.Title.Windows">Papperskorgen</s>
+  <s key="Trash.IsEmpty">Tom</s>
+  <s key="Trash.Summary.one">1 objekt · {1}</s>
+  <s key="Trash.Summary.other">{0} objekt · {1}</s>
+  <s key="Trash.NeedsAccess">Kräver Fullständig skivåtkomst för att visa innehållet</s>
+  <s key="Trash.OpenSettings">Öppna inställningar</s>
+  <s key="Trash.EmptyButton">Töm…</s>
+  <s key="Trash.Confirm.Title">Tömma papperskorgen?</s>
+  <s key="Trash.Confirm.Message.one">1 objekt, {1}, raderas för gott. Det går inte att ångra.</s>
+  <s key="Trash.Confirm.Message.other">{0} objekt, {1}, raderas för gott. Det går inte att ångra.</s>
+  <s key="Trash.Confirm.Accept">Töm</s>
+  <s key="Trash.Emptying">Tömmer…</s>
+  <s key="Trash.Failed">Några objekt gick inte att radera: {0}</s>
+  <s key="Trash.Access.Title">Visa papperskorgen?</s>
+  <s key="Trash.Access.Message">macOS låter appar se i papperskorgen bara med Fullständig skivåtkomst. Öppna Systeminställningar och slå på den för Spine File Manager?</s>
 </strings>

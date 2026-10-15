@@ -4,6 +4,7 @@ using Spine.FileManager.Controls;
 using Spine.FileManager.Explorer;
 using Spine.FileManager.Favorites;
 using Spine.FileManager.Operations;
+using Spine.FileManager.Storage.FileSystem;
 using Spine.FileManager.Workspaces;
 using MenuAction = Plugin.Maui.Spine.Core.MenuAction;
 using MenuItems = Plugin.Maui.Spine.Core.MenuItems;
@@ -1322,6 +1323,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
         // Presented from the root page's first appearance the sheet never showed; after the first folder it does.
         if (FirstRunPageViewModel.IsNeeded && !IsSecondary)
             MainThread.BeginInvokeOnMainThread(async () => await _navigation.ShowAsync<FirstRunPage>());
+        else if (!IsSecondary)
+            await AskTrashAccessOnce();
     }
 
     [RelayCommand]
@@ -1705,6 +1708,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
             RecentRows.Add(new RecentRow(recent, When(recent.At)));
         OnPropertyChanged(nameof(HasNoRecent));
         OnPropertyChanged(nameof(HasNoDevices));
+        await RefreshTrash();
     }
 
     private string When(DateTimeOffset at)
@@ -1740,6 +1744,109 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     [RelayCommand]
     private Task OpenDisk(DiskRow disk) => Navigate(disk.Disk.Location);
+
+    private static IFileSystemPlatform Platform => IPlatformApplication.Current!.Services.GetRequiredService<IFileSystemPlatform>();
+
+    public string TrashName => _strings[OperatingSystem.IsWindows() ? "Trash.Title.Windows" : "Trash.Title"];
+
+    /// <summary>How many items and how much the trash holds, that it is empty, or that the app may not look.</summary>
+    [ObservableProperty]
+    public partial string TrashSummary { get; private set; } = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanEmptyTrash))]
+    public partial bool TrashNeedsAccess { get; private set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanEmptyTrash))]
+    public partial TrashContents? Trash { get; private set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanEmptyTrash))]
+    public partial bool IsEmptyingTrash { get; private set; }
+
+    [ObservableProperty]
+    public partial double TrashProgress { get; private set; }
+
+    public bool CanEmptyTrash => Trash is { Items: > 0 } && !IsEmptyingTrash;
+
+    private async Task RefreshTrash()
+    {
+        Trash = await Platform.MeasureTrashAsync(CancellationToken.None);
+        TrashNeedsAccess = Trash is null && Platform.TrashFolder is not null;
+        TrashSummary = Trash switch
+        {
+            null => TrashNeedsAccess ? _strings["Trash.NeedsAccess"] : "",
+            { Items: 0 } => _strings["Trash.IsEmpty"],
+            var t => _strings.Get("Trash.Summary", t.Items, ByteSize.Format(t.Bytes, System.Globalization.CultureInfo.CurrentCulture)),
+        };
+    }
+
+    /// <summary>The Mac's Trash in the explorer, once the app may read it; elsewhere the system's own Recycle Bin.</summary>
+    [RelayCommand]
+    private async Task OpenTrash()
+    {
+        if (Platform.TrashFolder is not { } folder)
+        {
+            Platform.ShowTrash();
+            return;
+        }
+        if (await Platform.MeasureTrashAsync(CancellationToken.None) is null)
+        {
+            await AskTrashAccess();
+            return;
+        }
+        await Target.OpenLocationCommand.ExecuteAsync(Storage.FileSystem.FileSystemStorageProvider.Location(folder));
+    }
+
+    [RelayCommand]
+    private async Task EmptyTrash()
+    {
+        await RefreshTrash();
+        if (Trash is not { Items: > 0 } trash)
+            return;
+        var size = ByteSize.Format(trash.Bytes, System.Globalization.CultureInfo.CurrentCulture);
+        if (!await Confirm(_strings["Trash.Confirm.Title"], _strings.Get("Trash.Confirm.Message", trash.Items, size), _strings["Trash.Confirm.Accept"]))
+            return;
+        IsEmptyingTrash = true;
+        TrashProgress = 0;
+        TrashSummary = _strings["Trash.Emptying"];
+        try
+        {
+            var failed = await Platform.EmptyTrashAsync(new Progress<double>(p => TrashProgress = p), CancellationToken.None);
+            if (failed.Count > 0)
+                Error = _strings.Get("Trash.Failed", string.Join(", ", failed.Take(5)));
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            Error = e.Message;
+        }
+        finally
+        {
+            IsEmptyingTrash = false;
+            await RefreshTrash();
+        }
+    }
+
+    [RelayCommand]
+    private Task OpenFullDiskAccess() =>
+        Launcher.Default.OpenAsync("x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles");
+
+    private async Task AskTrashAccess()
+    {
+        if (await Confirm(_strings["Trash.Access.Title"], _strings["Trash.Access.Message"], _strings["Trash.OpenSettings"]))
+            await OpenFullDiskAccess();
+    }
+
+    // Asked once, at start, when the Mac's Trash cannot be read (the first-run sheet offers it to new users).
+    private async Task AskTrashAccessOnce()
+    {
+        const string asked = "trash.accessAsked";
+        if (Platform.TrashFolder is null || Preferences.Get(asked, false) || await Platform.MeasureTrashAsync(CancellationToken.None) is not null)
+            return;
+        Preferences.Set(asked, true);
+        await AskTrashAccess();
+    }
 
     private async Task Navigate(StorageLocation location)
     {

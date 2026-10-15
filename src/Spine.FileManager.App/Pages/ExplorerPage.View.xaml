@@ -124,7 +124,7 @@
               BackgroundColor="{AppThemeBinding Light=#F3F4F6, Dark=#1E1F22}">
             <!-- Everything but Settings scrolls when the window is lower than the sidebar. -->
             <ScrollView VerticalScrollBarVisibility="Never">
-            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
             <Border Padding="8,0" Margin="8,10,8,1" HeightRequest="30" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent">
                 <Border.Triggers>
                     <DataTrigger TargetType="Border" Binding="{Binding IsHome}" Value="True">
@@ -187,9 +187,20 @@
                 </CollectionView.ItemTemplate>
             </CollectionView>
 
+            <!-- The trash closes This Device, as in Finder's Dock and Explorer's desktop. -->
+            <Border Grid.Row="6" Padding="8,0" Margin="8,1" HeightRequest="30" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding OpenTrashCommand}" />
+                </Border.GestureRecognizers>
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                    <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="Trashcan.svg" />
+                    <Label Grid.Column="1" Text="{Binding TrashName}" FontSize="13" VerticalTextAlignment="Center" />
+                </Grid>
+            </Border>
+
             <!-- Other Devices: linked devices; files dropped on one are sent there. -->
-            <Label Grid.Row="6" Text="{String Devices.Title}" Style="{StaticResource SidebarSection}" />
-            <CollectionView Grid.Row="7" ItemsSource="{Binding Devices}" SelectionMode="None" HeightRequest="{Binding DevicesHeight}" VerticalScrollBarVisibility="Never">
+            <Label Grid.Row="7" Text="{String Devices.Title}" Style="{StaticResource SidebarSection}" />
+            <CollectionView Grid.Row="8" ItemsSource="{Binding Devices}" SelectionMode="None" HeightRequest="{Binding DevicesHeight}" VerticalScrollBarVisibility="Never">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="DeviceRow">
                         <Border Padding="8,0" Margin="8,1" HeightRequest="30" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent"
@@ -211,17 +222,17 @@
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>
-            <Button Grid.Row="8" Text="{String Devices.Link}" Command="{Binding LinkDeviceCommand}" FontSize="12" Padding="12,0" HeightRequest="26" CornerRadius="13"
+            <Button Grid.Row="9" Text="{String Devices.Link}" Command="{Binding LinkDeviceCommand}" FontSize="12" Padding="12,0" HeightRequest="26" CornerRadius="13"
                     Margin="16,6,16,0" HorizontalOptions="Start" BackgroundColor="{AppThemeBinding Light=#E4ECFD, Dark=#25324D}" TextColor="{AppThemeBinding Light=#2F6FEB, Dark=#9BB9F7}" />
 
             <!-- Not built yet: shown dimmed so the sidebar has the concept image's sections. -->
-            <Label Grid.Row="9" Text="{String Explorer.Network}" Style="{StaticResource SidebarSection}" />
-            <Grid Grid.Row="10" ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="16,0" HeightRequest="30" Margin="0,1" Opacity="0.4">
+            <Label Grid.Row="10" Text="{String Explorer.Network}" Style="{StaticResource SidebarSection}" />
+            <Grid Grid.Row="11" ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="16,0" HeightRequest="30" Margin="0,1" Opacity="0.4">
                 <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="Globe.svg" />
                 <Label Grid.Column="1" Text="{String Explorer.Network.Soon}" FontSize="13" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
             </Grid>
-            <Label Grid.Row="11" Text="{String Explorer.Backups}" Style="{StaticResource SidebarSection}" />
-            <Grid Grid.Row="12" ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="16,0" HeightRequest="30" Margin="0,1,0,8" Opacity="0.4">
+            <Label Grid.Row="12" Text="{String Explorer.Backups}" Style="{StaticResource SidebarSection}" />
+            <Grid Grid.Row="13" ColumnDefinitions="Auto,*" ColumnSpacing="8" Padding="16,0" HeightRequest="30" Margin="0,1,0,8" Opacity="0.4">
                 <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="Clock.svg" />
                 <Label Grid.Column="1" Text="{String Explorer.Backups.Soon}" FontSize="13" VerticalTextAlignment="Center" LineBreakMode="TailTruncation" />
             </Grid>
@@ -635,6 +646,28 @@
                             </DataTemplate>
                         </BindableLayout.ItemTemplate>
                     </FlexLayout>
+
+                    <Border Style="{StaticResource HomeCard}" WidthRequest="270" HorizontalOptions="Start">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding OpenTrashCommand}" />
+                        </Border.GestureRecognizers>
+                        <VerticalStackLayout Spacing="8">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="Trashcan.svg" WidthRequest="40" HeightRequest="40" />
+                                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                    <Label Text="{Binding TrashName}" FontSize="14" FontAttributes="Bold" />
+                                    <Label Text="{Binding TrashSummary}" FontSize="12" Opacity="0.6" />
+                                </VerticalStackLayout>
+                            </Grid>
+                            <ProgressBar Progress="{Binding TrashProgress}" IsVisible="{Binding IsEmptyingTrash}" />
+                            <HorizontalStackLayout Spacing="8">
+                                <Button Text="{String Trash.EmptyButton}" Command="{Binding EmptyTrashCommand}" IsEnabled="{Binding CanEmptyTrash}" FontSize="12" Padding="12,0" HeightRequest="28" CornerRadius="14"
+                                        BackgroundColor="{AppThemeBinding Light=#FCE8E6, Dark=#4A2522}" TextColor="{AppThemeBinding Light=#C5221F, Dark=#F28B82}" />
+                                <Button Text="{String Trash.OpenSettings}" Command="{Binding OpenFullDiskAccessCommand}" IsVisible="{Binding TrashNeedsAccess}" FontSize="12" Padding="12,0" HeightRequest="28" CornerRadius="14"
+                                        BackgroundColor="{AppThemeBinding Light=#E4ECFD, Dark=#25324D}" TextColor="{AppThemeBinding Light=#2F6FEB, Dark=#9BB9F7}" />
+                            </HorizontalStackLayout>
+                        </VerticalStackLayout>
+                    </Border>
 
                     <Label Text="{String Devices.Title}" Style="{StaticResource HomeSection}" />
                     <Label Text="{String Home.NoDevices}" FontSize="13" Opacity="0.6" IsVisible="{Binding HasNoDevices}" Margin="0,0,0,8" />
