@@ -30,10 +30,13 @@ public partial class ExplorerPage
             {
                 vm.IsWide = Width >= 640;
                 var paneWidth = vm.IsSplit ? Root.ColumnDefinitions[3].Width.Value : 0;
-                vm.GridSpan = Math.Max(2, (int)((Width - (vm.ShowsSidebar ? vm.SidebarWidth : 0) - paneWidth) / ItemSizes.GridCellWidth));
+                // From the grid's own width when it is shown: the preview and the second pane take room from it too.
+                var room = Icons.Width > 0 ? Icons.Width : Width - (vm.ShowsSidebar ? vm.SidebarWidth : 0) - paneWidth;
+                vm.GridSpan = Math.Max(1, (int)(room / ItemSizes.GridCellWidth));
             }
         }
         SizeChanged += (_, _) => Fit();
+        Icons.SizeChanged += (_, _) => Fit();
         ItemSizes.Changed += () =>
         {
             Fit();

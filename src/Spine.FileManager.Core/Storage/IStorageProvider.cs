@@ -17,6 +17,15 @@ public interface IDeletesTogether
 }
 
 /// <summary>
+/// A provider that keeps the last listing of a slow folder (the photo library, whose first answer can take seconds),
+/// so the explorer shows it at once while the live listing is read.
+/// </summary>
+public interface ICachesListings
+{
+    IReadOnlyList<StorageItem>? CachedListing(StorageLocation folder);
+}
+
+/// <summary>
 /// One kind of storage — the local file system, an Android document tree, the photo library, another device. Every
 /// call is asynchronous and cancellable and fails with <see cref="StorageException"/>.
 /// </summary>
