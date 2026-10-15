@@ -58,8 +58,8 @@
   <s key="Menu.PreviousItem">Previous Item</s>
   <s key="Menu.ExtendDown">Extend Selection Down</s>
   <s key="Menu.ExtendUp">Extend Selection Up</s>
-  <s key="Menu.ScrollTop">Scroll to Top</s>
-  <s key="Menu.ScrollBottom">Scroll to Bottom</s>
+  <s key="Menu.FirstItem">First Item</s>
+  <s key="Menu.LastItem">Last Item</s>
   <s key="Menu.PageUp">Page Up</s>
   <s key="Menu.PageDown">Page Down</s>
   <s key="FirstRun.Title">Access to your files</s>

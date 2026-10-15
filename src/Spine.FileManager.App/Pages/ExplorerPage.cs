@@ -600,25 +600,15 @@ public partial class ExplorerPage
         {
             // A page is what shows under the header, less a row so the edge row stays in sight.
             var page = Math.Max(ItemSizes.RowHeight, scroll.Bounds.Height - scroll.AdjustedContentInset.Top - scroll.AdjustedContentInset.Bottom - ItemSizes.RowHeight);
-            ScrollListBy(key switch
-            {
-                ListKey.Home => double.NegativeInfinity,
-                ListKey.End => double.PositiveInfinity,
-                ListKey.PageUp => -page,
-                _ => page,
-            });
+            ScrollListBy(key == ListKey.PageUp ? -page : page);
         }
 #else
-        if (BindingContext is not ExplorerPageViewModel { Rows.Count: > 0 } vm)
+        if (BindingContext is not ExplorerPageViewModel { Rows.Count: > 0 })
             return;
-        var (index, position) = key switch
-        {
-            ListKey.Home => (0, ScrollToPosition.Start),
-            ListKey.End => (vm.Rows.Count - 1, ScrollToPosition.End),
-            ListKey.PageUp => (_firstVisible, ScrollToPosition.End),
-            _ => (_lastVisible, ScrollToPosition.Start),
-        };
-        Shown.ScrollTo(index, position: position, animate: false);
+        if (key == ListKey.PageUp)
+            Shown.ScrollTo(_firstVisible, position: ScrollToPosition.End, animate: false);
+        else
+            Shown.ScrollTo(_lastVisible, position: ScrollToPosition.Start, animate: false);
 #endif
     }
 
