@@ -6,12 +6,17 @@ namespace Spine.FileManager.Services;
 /// </summary>
 public static class Thumbnails
 {
-    public static Task<ImageSource?> GetAsync(string path, int size) => GetAsync(path, size, icon: false);
+    public static async Task<ImageSource?> GetAsync(string path, int size) => Source(await GetBytesAsync(path, size, icon: false));
 
     /// <summary>The icon the system shows for the file (Finder's, Explorer's), rather than a picture of its content.</summary>
-    public static Task<ImageSource?> GetIconAsync(string path, int size) => GetAsync(path, size, icon: true);
+    public static async Task<ImageSource?> GetIconAsync(string path, int size) => Source(await GetBytesAsync(path, size, icon: true));
 
-    private static async Task<ImageSource?> GetAsync(string path, int size, bool icon)
+    /// <summary>The picture as PNG bytes, for a cache that hands each view a source of its own.</summary>
+    public static Task<byte[]?> GetBytesAsync(string path, int size) => GetBytesAsync(path, size, icon: false);
+
+    private static ImageSource? Source(byte[]? bytes) => bytes is null ? null : ImageSource.FromStream(() => new MemoryStream(bytes));
+
+    private static async Task<byte[]?> GetBytesAsync(string path, int size, bool icon)
     {
 #if MACCATALYST || IOS
         // Scale 2 rather than UIScreen's: this runs off the UI thread, where UIKit may not be asked.
@@ -24,10 +29,7 @@ public static class Thumbnails
                 System.Diagnostics.Debug.WriteLine($"[Thumbnails] {path}: {error.LocalizedDescription}");
             done.TrySetResult(thumbnail?.UIImage);
         });
-        if (await done.Task.WaitAsync(TimeSpan.FromSeconds(5)) is not { } image || image.AsPNG() is not { } png)
-            return null;
-        var bytes = png.ToArray();
-        return ImageSource.FromStream(() => new MemoryStream(bytes));
+        return await done.Task.WaitAsync(TimeSpan.FromSeconds(5)) is { } image ? image.AsPNG()?.ToArray() : null;
 #elif WINDOWS
         try
         {
@@ -40,7 +42,7 @@ public static class Thumbnails
             using var stream = thumbnail.AsStreamForRead();
             var bytes = new byte[thumbnail.Size];
             await stream.ReadExactlyAsync(bytes);
-            return ImageSource.FromStream(() => new MemoryStream(bytes));
+            return bytes;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException)
         {
