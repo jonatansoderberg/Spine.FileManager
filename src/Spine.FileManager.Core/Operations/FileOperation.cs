@@ -2,7 +2,8 @@ using Spine.FileManager.Storage;
 
 namespace Spine.FileManager.Operations;
 
-public enum OperationKind { Copy, Move }
+/// <summary>Copy or move between places, or send to a linked device (its target's item id is the device's node id).</summary>
+public enum OperationKind { Copy, Move, Send }
 
 /// <summary>
 /// Where an operation is. <see cref="Interrupted"/> is one the app found unfinished in its journal at start: it was

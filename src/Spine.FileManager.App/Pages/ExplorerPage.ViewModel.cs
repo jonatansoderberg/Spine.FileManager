@@ -428,39 +428,37 @@ public partial class ExplorerPageViewModel : ViewModelBase
     }
 
     /// <summary>Sends files and folders to a linked device; the status bar shows how far it has come.</summary>
-    public async Task SendToDevice(DeviceRow row, IReadOnlyList<string> paths)
+    public Task SendToDevice(DeviceRow row, IReadOnlyList<string> paths)
     {
-        if (paths.Count == 0)
+        // A send is an operation like a copy: journaled, shown in the Operation Center, paused and resumed there, and
+        // taken up again by itself when the device is back within reach.
+        if (paths.Count > 0)
+            _operations.Enqueue(OperationKind.Send, paths.Select(FileSystemStorageProvider.Location), Services.DeviceService.Location(row.Node));
+        return Task.CompletedTask;
+    }
+
+    // A send's progress on its device's row and in the status bar; how it ended, in words.
+    private void ShowSend(FileOperation operation)
+    {
+        var row = Devices.FirstOrDefault(d => d.Node.NodeId == operation.Target.ItemId);
+        var name = row?.Name ?? operation.Target.DisplayPath;
+        if (!operation.IsFinished && operation.State != OperationState.Interrupted)
+        {
+            if (row is not null)
+                row.Progress = operation.Progress.Fraction;
+            DeviceActivity = operation.State == OperationState.Paused
+                ? _strings.Get("Devices.SendPaused", name)
+                : _strings.Get("Devices.Sending", name, (int)(operation.Progress.Fraction * 100));
             return;
-        var name = row.Name;
-        try
-        {
-            DeviceActivity = _strings.Get("Devices.Sending", name, 0);
-            row.Progress = 0;
-            await _devices.SendAsync(row.Node.NodeId, paths, (sent, total) => MainThread.BeginInvokeOnMainThread(() =>
-            {
-                row.Progress = total > 0 ? (double)sent / total : 1;
-                DeviceActivity = _strings.Get("Devices.Sending", name, total > 0 ? sent * 100 / total : 100);
-            }));
-            DeviceActivity = _strings.Get("Devices.Sent", name);
         }
-        catch (DeviceLink.TransferDeclinedException declined)
-        {
-            DeviceActivity = _strings.Get(declined.TimedOut ? "Devices.NoAnswer" : "Devices.Declined", name);
-        }
-        catch (DeviceLink.LinkNode.UnreachableException)
-        {
-            // A phone receives only while the app is open there; iOS stops it listening in the background.
-            DeviceActivity = _strings.Get("Devices.NotAnswering", name);
-        }
-        catch (Exception e) when (e is IOException or System.Net.Sockets.SocketException or Transfer.ChannelException)
-        {
-            DeviceActivity = _strings.Get("Devices.SendFailed", name, e.Message);
-        }
-        finally
-        {
+        if (row is not null)
             row.Progress = null;
-        }
+        DeviceActivity = operation.State switch
+        {
+            OperationState.Completed => _strings.Get("Devices.Sent", name),
+            _ when operation.Errors.Count > 0 => operation.Errors[0].Message,
+            _ => "",
+        };
     }
 
     public ObservableCollection<FavoriteRow> Favorites { get; } = [];
@@ -2062,6 +2060,11 @@ public partial class ExplorerPageViewModel : ViewModelBase
     {
         UpdateInterrupted();
         OnPropertyChanged(nameof(HasInterrupted));
+        if (operation.Kind == OperationKind.Send)
+        {
+            ShowSend(operation);
+            return;
+        }
         if (!operation.IsFinished)
         {
             _activeOperation = operation;

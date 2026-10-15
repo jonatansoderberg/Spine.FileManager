@@ -207,6 +207,32 @@ public sealed class LinkNodeTests : IDisposable
     }
 
     [Fact]
+    public async Task A_transfer_sent_again_under_its_id_goes_on_from_the_pieces_that_arrived()
+    {
+        var computer = Node("computer");
+        var phone = Node("phone");
+        await Link(computer, phone);
+        var path = Path.Combine(_temp.Path, "send", "video.mov");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        var bytes = new byte[12 * 1024 * 1024];
+        new Random(7).NextBytes(bytes);
+        File.WriteAllBytes(path, bytes);
+
+        using (var cut = new CancellationTokenSource())
+            await Assert.ThrowsAnyAsync<Exception>(() => phone.SendAsync(computer.Identity.NodeId, [path], (done, _) =>
+            {
+                if (done > 5 * 1024 * 1024)
+                    cut.Cancel();
+            }, cut.Token, transferId: "transfer-1"));
+
+        var first = -1L;
+        await phone.SendAsync(computer.Identity.NodeId, [path], (done, _) => { if (first < 0) first = done; }, transferId: "transfer-1");
+
+        Assert.True(first >= 4 * 1024 * 1024, $"the second attempt began at {first} bytes");
+        Assert.Equal(bytes, File.ReadAllBytes(Path.Combine(_temp.Path, "computer", "inbox", "video.mov")));
+    }
+
+    [Fact]
     public async Task A_device_trusted_for_one_transfer_is_forgotten_after_it()
     {
         var computer = Node("computer");

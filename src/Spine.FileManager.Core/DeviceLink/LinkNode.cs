@@ -10,8 +10,11 @@ namespace Spine.FileManager.DeviceLink;
 /// <summary>Where a node listens, sent by each side once a pairing is complete.</summary>
 public sealed record LinkEndpoints(IReadOnlyList<string> Endpoints);
 
-/// <summary>What a transfer brings, sent before any file so the receiver can say yes or no: names at the top level, how many files and bytes.</summary>
-public sealed record TransferRequest(IReadOnlyList<string> Names, int Files, long Bytes);
+/// <summary>
+/// What a transfer brings, sent before any file so the receiver can say yes or no: names at the top level, how many
+/// files and bytes, and the transfer's id, the same when it is resumed, so a yes holds for it.
+/// </summary>
+public sealed record TransferRequest(IReadOnlyList<string> Names, int Files, long Bytes, string? TransferId = null);
 
 /// <summary>The receiver's answer to a <see cref="TransferRequest"/>.</summary>
 public sealed record TransferAnswer(bool Accepted);
@@ -20,7 +23,8 @@ public sealed record TransferAnswer(bool Accepted);
 public sealed record IncomingTransfer(string NodeId, TransferRequest Request);
 
 /// <summary>The receiver said no, or did not answer in time.</summary>
-public sealed class TransferDeclinedException(bool timedOut) : IOException(timedOut ? "The other device did not answer." : "The other device declined.")
+public sealed class TransferDeclinedException(bool timedOut, string? message = null)
+    : IOException(message ?? (timedOut ? "The other device did not answer." : "The other device declined."))
 {
     public bool TimedOut { get; } = timedOut;
 }
@@ -222,7 +226,7 @@ public sealed class LinkNode(NodeIdentity identity, TrustStore trust, string nam
                 connection.WriteByte(Transfer);
             await using var channel = await SecureChannel.ConnectAsync(connection, identity, nodeId, cancel);
             var names = paths.Select(p => Path.GetFileName(Path.TrimEndingDirectorySeparator(p))).ToList();
-            await FileTransfer.WriteAsync(channel, new TransferRequest(names, files.Count, total), cancel);
+            await FileTransfer.WriteAsync(channel, new TransferRequest(names, files.Count, total, transferId), cancel);
             // The receiver's user may be asked first; a null answer is the receiver giving up waiting.
             var answer = await FileTransfer.ReadAsync<TransferAnswer?>(channel, cancel);
             if (answer is not { Accepted: true })

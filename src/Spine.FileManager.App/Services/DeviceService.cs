@@ -19,6 +19,29 @@ public sealed record LinkStatus(LinkState State, string? Endpoint = null, DateTi
 /// </summary>
 public sealed class DeviceService
 {
+    private readonly Operations.OperationQueue _queue;
+    private readonly ISpineStrings _strings;
+    private readonly HashSet<string> _accepted = [];
+
+    /// <summary>The queue runs sends to devices through this service, so they are journaled, pausable and resumable.</summary>
+    public DeviceService(Operations.OperationQueue queue, ISpineStrings strings)
+    {
+        _queue = queue;
+        _strings = strings;
+        queue.Sender = SendOperationAsync;
+        // A device back within reach takes up what was cut off on its way there.
+        StatusChanged += nodeId =>
+        {
+            if (StatusOf(nodeId).State is not (LinkState.LocalNetwork or LinkState.ViaRouter or LinkState.ReachesUs))
+                return;
+            foreach (var operation in queue.Operations.Where(o => o.Kind == Operations.OperationKind.Send && o.Target.ItemId == nodeId
+                && o.State is Operations.OperationState.Interrupted or Operations.OperationState.Failed))
+                queue.Resume(operation);
+        };
+    }
+
+    /// <summary>Where sends go: a device as the target of a <see cref="Operations.OperationKind.Send"/>, its node id as item id.</summary>
+    public static Storage.StorageLocation Location(TrustedNode node) => new(new Storage.StorageProviderId("device"), node.NodeId, node.DisplayName);
     /// <summary>Where the node listens, when the port is free; a fixed port lets a device find it again after a restart.</summary>
     public const int Port = 47821;
 
@@ -258,9 +281,19 @@ public sealed class DeviceService
                 node.Paired += trusted => Paired?.Invoke(trusted);
                 node.Confirm = joined => MainThread.InvokeOnMainThreadAsync(() => AskToLink(joined));
                 StartTracker(node);
-                node.AcceptTransfer = transfer => Trust.Find(transfer.NodeId) is { AskBeforeReceiving: false }
-                    ? Task.FromResult(true)
-                    : MainThread.InvokeOnMainThreadAsync(() => AskToReceive(transfer));
+                // A yes holds for the transfer: when it is resumed after a cut it is not asked about again.
+                node.AcceptTransfer = async transfer =>
+                {
+                    var key = $"{transfer.NodeId}/{transfer.Request.TransferId}";
+                    lock (_accepted)
+                        if (transfer.Request.TransferId is not null && _accepted.Contains(key))
+                            return true;
+                    var yes = Trust.Find(transfer.NodeId) is { AskBeforeReceiving: false } || await MainThread.InvokeOnMainThreadAsync(() => AskToReceive(transfer));
+                    if (yes)
+                        lock (_accepted)
+                            _accepted.Add(key);
+                    return yes;
+                };
                 _node = node;
                 _ = KeepMappedAsync(node);
             }
@@ -325,14 +358,36 @@ public sealed class DeviceService
         }
     }
 
-    public async Task SendAsync(string nodeId, IReadOnlyList<string> paths, Action<long, long> progress)
+    // The queue's sender: an operation's files to its device, under the operation's id, so a resume goes on from the
+    // pieces the device has. Failures carry words the Operation Center can show.
+    private async Task SendOperationAsync(Operations.FileOperation operation, Action<long, long> progress, Func<CancellationToken, Task> checkpoint, CancellationToken cancel)
+    {
+        var nodeId = operation.Target.ItemId;
+        var name = Trust.Find(nodeId)?.DisplayName ?? operation.Target.DisplayPath;
+        var paths = operation.Sources.Select(s => s.NativePath).OfType<string>().ToList();
+        try
+        {
+            await SendAsync(nodeId, paths, progress, operation.Id.ToString("N"), checkpoint, cancel);
+        }
+        catch (TransferDeclinedException declined)
+        {
+            throw new TransferDeclinedException(declined.TimedOut, _strings.Get(declined.TimedOut ? "Devices.NoAnswer" : "Devices.Declined", name));
+        }
+        catch (LinkNode.UnreachableException)
+        {
+            throw new IOException(_strings.Get("Devices.NotAnswering", name));
+        }
+    }
+
+    public async Task SendAsync(string nodeId, IReadOnlyList<string> paths, Action<long, long> progress, string? transferId = null,
+        Func<CancellationToken, Task>? checkpoint = null, CancellationToken cancel = default)
     {
         var node = await GetNodeAsync();
         try
         {
             try
             {
-                await node.SendAsync(nodeId, paths, progress);
+                await node.SendAsync(nodeId, paths, progress, cancel, transferId: transferId, checkpoint: checkpoint);
             }
             catch (LinkNode.UnreachableException) when (_tracker is { IsConnected: true } tracker)
             {
@@ -342,11 +397,11 @@ public sealed class DeviceService
                 await tracker.CallAsync(nodeId, node.Endpoints, TrackerProtocol.Send);
                 if (await callback is not { } over)
                     throw;
-                await node.SendAsync(nodeId, paths, progress, over: over);
+                await node.SendAsync(nodeId, paths, progress, cancel, over, transferId, checkpoint);
             }
             Seen(nodeId);
         }
-        catch (Exception e) when (e is IOException or SocketException)
+        catch (Exception e) when (e is IOException or SocketException && e is not TransferDeclinedException)
         {
             SetStatus(nodeId, new LinkStatus(LinkState.Offline, null, StatusOf(nodeId).LastSeen));
             throw;

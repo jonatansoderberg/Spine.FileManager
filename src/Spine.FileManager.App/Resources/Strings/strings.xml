@@ -177,6 +177,8 @@
   <s key="Devices.Status.Offline">Offline</s>
   <s key="Devices.Status.OfflineSeen">Offline · seen {0}</s>
   <s key="Devices.NotAnswering">{0} didn't answer. Is Spine File Manager open on it?</s>
+  <s key="Devices.SendPaused">Sending to {0} — paused</s>
+  <s key="Operations.SendTitle">Send {0} to {1}</s>
   <s key="Devices.AskBeforeReceiving">Ask Before Receiving</s>
   <s key="Devices.Declined">{0} declined the files</s>
   <s key="Devices.NoAnswer">{0} didn't answer</s>

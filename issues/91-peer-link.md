@@ -38,6 +38,15 @@ The plan is [docs/plans/peer-link.md](../docs/plans/peer-link.md); the owner app
 - **Settings:** "Linked devices" shows the tracker's state (connected, or why not, with its address), this device's local addresses and the router's port with its method.
 - **The phone:** a tap opens a folder or file (a long press gives the menu); Settings sit on Home after the places, as there is no sidebar.
 
+**Step 4 — pieces and resume:**
+- **Pieces:** an offer carries the piece size (1 MB, doubled until a file has at most 4096 pieces) and each piece's SHA-256 with the whole file's. The receiver answers with the pieces it needs, checks each as it arrives and asks again for damaged ones, up to three rounds; the whole file's SHA-256 is checked before it gets its name.
+- **Staging:** a file being received waits in `.spine-incoming` beside the received files under its offer's id, so a new connection or a restart finds it whatever name the file ends up with.
+- **Stable ids:** each file's id is a hash of the transfer id and its path. A send is a `Send` operation in the queue (target: the device, item id its node id) and its id is the transfer id, so a resume goes on from the pieces the device has.
+- **The queue:** `OperationQueue.Sender` (set by `DeviceService`) runs sends; pause waits between pieces; a declined send is cancelled with its reason; a cut one fails, and is resumed by itself when its device is back within reach. The Operation Center shows "Send 3 items to iPhone" with pause, continue, cancel and retry.
+- **Asking once:** the transfer request carries the transfer id, and a yes holds for it while the app runs, so a resume is not asked about again.
+- **Two races in the queue, found by the flaky test:** a test read a list while the queue's thread still added to it, and the queue journaled an operation a last time after it counted as finished, so one removed in that moment came back after a restart. The test now waits for both reports; the queue no longer saves an operation it no longer holds.
+- Tests: a damaged piece is fetched alone, a cut transfer resumes from its pieces (raw and through `LinkNode` with the same transfer id), a send waits while paused, a declined send is cancelled and a cut one fails. 141 tests pass.
+
 **Verified 2026-10-16:** with the phone on 5G, the Mac sent a file to it over the return path; the phone asked first and both sides showed progress. A tap on Received crashed the phone at first: iOS fires the secondary-button tap recognizer on an ordinary tap, after the first tap had already opened the folder; the secondary tap is now ignored on touch screens.
 
 **Verified 2026-10-15:** the phone on 5G showed the Mac as "Via routern", the Mac showed the phone as "Reaches this device", and a file sent from the phone over 5G arrived in the Mac's Downloads.
