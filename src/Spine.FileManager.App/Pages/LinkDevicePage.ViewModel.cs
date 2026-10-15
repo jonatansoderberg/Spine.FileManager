@@ -96,6 +96,53 @@ public partial class LinkDevicePageViewModel(ISpineStrings strings, INavigationS
             await JoinWith(code.Value);
     }
 
+    /// <summary>
+    /// The phone between two computers: it scans one computer's code, then the other's, and hands the first to the
+    /// second, which links with it. The phone itself is linked to neither.
+    /// </summary>
+    [RelayCommand]
+    private async Task LinkTwoComputers()
+    {
+        if (await ScanInvitation() is not { } first)
+            return;
+        Status = strings.Get("Link.ScanSecond", first.Name);
+        await Task.Delay(800);
+        if (await ScanInvitation() is not { } second)
+            return;
+        if (second.NodeId == first.NodeId)
+        {
+            Status = strings["Link.SameComputer"];
+            return;
+        }
+        try
+        {
+            Status = strings.Get("Link.Introducing", first.Name, second.Name);
+            await LinkNode.IntroduceAsync(to: second, introduced: first);
+            Status = strings.Get("Link.Introduced", first.Name, second.Name);
+        }
+        catch (Exception e) when (e is PairingException or IOException or System.Net.Sockets.SocketException)
+        {
+            Status = strings.Get("Link.Failed", e.Message);
+        }
+    }
+
+    private async Task<PairingInvitation?> ScanInvitation()
+    {
+        var scan = await navigation.NavigateToWithResultAsync<BarcodeScannerPage, BarcodeScanOptions, BarcodeScanResult>(
+            new BarcodeScanOptions { Formats = Plugin.Maui.Spine.Barcodes.BarcodeFormat.QrCode });
+        if (scan is not { IsSuccess: true, Value: { } code })
+            return null;
+        try
+        {
+            return PairingInvitation.Parse(code.Value);
+        }
+        catch (FormatException e)
+        {
+            Status = strings.Get("Link.Failed", e.Message);
+            return null;
+        }
+    }
+
     private async Task JoinWith(string text)
     {
         if (_node is null || text.Length == 0)

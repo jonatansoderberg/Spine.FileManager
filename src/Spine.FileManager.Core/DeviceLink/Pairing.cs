@@ -91,6 +91,9 @@ public static class Pairing
         }
     }
 
+    /// <summary>Proof that whoever hands over <paramref name="invitation"/> knows the receiving computer's code.</summary>
+    public static byte[] IntroductionMac(byte[] secret, string invitation) => Mac(secret, "introduce", Frame("spinefm-introduce-v1", invitation));
+
     private static byte[] Mac(byte[] secret, string role, byte[] transcript) =>
         HMACSHA256.HashData(secret, (byte[])[.. Encoding.UTF8.GetBytes(role), .. transcript]);
 

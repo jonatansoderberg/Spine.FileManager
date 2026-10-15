@@ -271,4 +271,15 @@
   <s key="Preview.Label.Kind">Typ</s>
   <s key="Preview.Label.Dimensions">Mått</s>
   <s key="Preview.Label.Location">Plats</s>
+  <s key="Link.Confirm.Title">Länka med ”{0}”?</s>
+  <s key="Link.Confirm.Message">”{0}” har den här datorns kod och vill länka. Länkade enheter kan skicka filer till varandra.</s>
+  <s key="Link.Confirm.Accept">Länka</s>
+  <s key="Link.Confirm.Decline">Länka inte</s>
+  <s key="Link.TwoComputers">Länka två datorer</s>
+  <s key="Link.TwoComputers.Hint">Skanna den ena datorns kod och sedan den andras. Datorerna länkas med varandra, inte med den här telefonen.</s>
+  <s key="Link.TwoComputers.Start">Skanna två datorer</s>
+  <s key="Link.ScanSecond">Skanna nu den andra datorns kod (inte ”{0}”).</s>
+  <s key="Link.SameComputer">Det var samma dator två gånger. Skanna den andra datorns kod.</s>
+  <s key="Link.Introducing">Länkar ”{0}” och ”{1}” …</s>
+  <s key="Link.Introduced">”{0}” och ”{1}” är länkade.</s>
 </strings>

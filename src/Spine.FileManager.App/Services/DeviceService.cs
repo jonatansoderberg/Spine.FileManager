@@ -1,4 +1,5 @@
 using System.Net.Sockets;
+using Plugin.Maui.Spine.Common;
 using Spine.FileManager.DeviceLink;
 
 namespace Spine.FileManager.Services;
@@ -40,6 +41,17 @@ public sealed class DeviceService
         DeviceInfo.Name;
 #endif
 
+    // Every link is the user's choice: a device that scanned this one's code, or a computer a phone introduced, waits
+    // for a yes here before either side keeps it.
+    private static async Task<bool> AskToLink(PairedNode joined)
+    {
+        var strings = IPlatformApplication.Current!.Services.GetRequiredService<ISpineStrings>();
+        if (Application.Current?.Windows.FirstOrDefault()?.Page is not { } page)
+            return false;
+        return await page.DisplayAlertAsync(strings.Get("Link.Confirm.Title", joined.Name), strings.Get("Link.Confirm.Message", joined.Name),
+            strings["Link.Confirm.Accept"], strings["Link.Confirm.Decline"]);
+    }
+
     public async Task<LinkNode> GetNodeAsync()
     {
         if (_node is not null)
@@ -60,6 +72,7 @@ public sealed class DeviceService
                 }
                 node.Received += (from, path) => Received?.Invoke(Trust.Find(from)?.DisplayName ?? from, path);
                 node.Paired += trusted => Paired?.Invoke(trusted);
+                node.Confirm = joined => MainThread.InvokeOnMainThreadAsync(() => AskToLink(joined));
                 _node = node;
             }
             return _node;

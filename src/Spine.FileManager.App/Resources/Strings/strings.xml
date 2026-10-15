@@ -271,4 +271,15 @@
   <s key="Preview.Label.Kind">Kind</s>
   <s key="Preview.Label.Dimensions">Dimensions</s>
   <s key="Preview.Label.Location">Location</s>
+  <s key="Link.Confirm.Title">Link with “{0}”?</s>
+  <s key="Link.Confirm.Message">“{0}” has this computer's code and wants to link. Linked devices can send files to each other.</s>
+  <s key="Link.Confirm.Accept">Link</s>
+  <s key="Link.Confirm.Decline">Don't Link</s>
+  <s key="Link.TwoComputers">Link two computers</s>
+  <s key="Link.TwoComputers.Hint">Scan one computer's code, then the other's. The computers link with each other, not with this phone.</s>
+  <s key="Link.TwoComputers.Start">Scan Two Computers</s>
+  <s key="Link.ScanSecond">Now scan the other computer's code (not “{0}”).</s>
+  <s key="Link.SameComputer">That was the same computer twice. Scan the other computer's code.</s>
+  <s key="Link.Introducing">Linking “{0}” and “{1}”…</s>
+  <s key="Link.Introduced">“{0}” and “{1}” are linked.</s>
 </strings>

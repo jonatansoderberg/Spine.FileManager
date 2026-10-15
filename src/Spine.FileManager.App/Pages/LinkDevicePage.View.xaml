@@ -25,6 +25,11 @@
                 <Button Grid.Column="1" Text="{String Link.Join}" Command="{Binding JoinCommand}" />
             </Grid>
             <Button Text="{String Link.Scan}" Command="{Binding ScanCommand}" IsVisible="{Binding CanScan}" HorizontalOptions="Start" />
+
+            <!-- A phone links two computers: it scans both codes and they link with each other. -->
+            <Label Text="{String Link.TwoComputers}" FontSize="15" FontAttributes="Bold" Margin="0,12,0,0" IsVisible="{Binding CanScan}" />
+            <Label Text="{String Link.TwoComputers.Hint}" FontSize="13" Opacity="0.7" IsVisible="{Binding CanScan}" />
+            <Button Text="{String Link.TwoComputers.Start}" Command="{Binding LinkTwoComputersCommand}" IsVisible="{Binding CanScan}" HorizontalOptions="Start" />
         </VerticalStackLayout>
     </ScrollView>
 

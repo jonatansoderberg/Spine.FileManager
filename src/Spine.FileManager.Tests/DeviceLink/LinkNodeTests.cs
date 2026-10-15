@@ -51,6 +51,58 @@ public sealed class LinkNodeTests : IDisposable
     }
 
     [Fact]
+    public async Task A_computer_that_turns_the_link_down_is_trusted_by_neither_side()
+    {
+        var computer = Node("computer");
+        var phone = Node("phone");
+        PairedNode? asked = null;
+        computer.Confirm = joined =>
+        {
+            asked = joined;
+            return Task.FromResult(false);
+        };
+
+        await Assert.ThrowsAsync<PairingException>(() => phone.JoinAsync(computer.Invite(TrustLifetime.Remember), TrustLifetime.Remember).WaitAsync(TimeSpan.FromSeconds(10)));
+
+        Assert.Equal("phone", asked?.Name);
+        Assert.Empty(computer.Trust.All);
+        Assert.Empty(phone.Trust.All);
+    }
+
+    [Fact]
+    public async Task A_phone_that_scanned_both_codes_links_two_computers_without_linking_itself()
+    {
+        var first = Node("first");
+        var second = Node("second");
+        var askedFirst = new TaskCompletionSource<string>();
+        first.Confirm = joined =>
+        {
+            askedFirst.TrySetResult(joined.Name);
+            return Task.FromResult(true);
+        };
+
+        await LinkNode.IntroduceAsync(to: second.Invite(TrustLifetime.Remember), introduced: first.Invite(TrustLifetime.Session)).WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.Equal("second", await askedFirst.Task.WaitAsync(TimeSpan.FromSeconds(10)));
+        Assert.Equal(TrustLifetime.Session, first.Trust.Find(second.Identity.NodeId)?.Lifetime);
+        Assert.Equal(TrustLifetime.Remember, second.Trust.Find(first.Identity.NodeId)?.Lifetime);
+        Assert.Equal(first.Endpoints, second.Trust.Find(first.Identity.NodeId)?.Endpoints);
+    }
+
+    [Fact]
+    public async Task An_introduction_without_the_receiving_computers_code_is_refused()
+    {
+        var first = Node("first");
+        var second = Node("second");
+        var guessed = second.Invite(TrustLifetime.Remember) with { Secret = new byte[PairingInvitation.SecretLength] };
+
+        await Assert.ThrowsAsync<PairingException>(() => LinkNode.IntroduceAsync(guessed, first.Invite(TrustLifetime.Remember)).WaitAsync(TimeSpan.FromSeconds(10)));
+
+        Assert.Empty(first.Trust.All);
+        Assert.Empty(second.Trust.All);
+    }
+
+    [Fact]
     public async Task Files_and_folders_arrive_in_the_inbox_and_a_second_copy_gets_a_free_name()
     {
         var computer = Node("computer");
