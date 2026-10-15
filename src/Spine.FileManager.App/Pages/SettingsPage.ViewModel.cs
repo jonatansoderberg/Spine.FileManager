@@ -12,6 +12,12 @@ public partial class SettingsPageViewModel(ISpineStrings strings, IThemeService 
 {
     private static readonly AppTheme[] Appearances = [AppTheme.Unspecified, AppTheme.Light, AppTheme.Dark];
 
+    /// <summary>Small, medium or large rows, icons and text in the lists and the sidebar.</summary>
+    [ObservableProperty]
+    public partial int ItemSizeIndex { get; set; } = (int)ItemSizes.Current;
+
+    partial void OnItemSizeIndexChanged(int value) => ItemSizes.Use((ItemSize)Math.Clamp(value, 0, 2));
+
     [ObservableProperty]
     public partial int AppearanceIndex { get; set; } = Math.Max(0, Array.IndexOf(Appearances, theme.Current));
 

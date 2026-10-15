@@ -1,7 +1,7 @@
 # The explorer after the concept image
 
 **Roadmap issue:** [#55](https://github.com/jonatansoderberg/Spine.FileManager/issues/55)
-**Last updated:** 2026-10-15 — steps 3, 4 and 8 done; 1 and 5 in progress.
+**Last updated:** 2026-10-15 — steps 3, 4 and 8 done; 1, 2 and 5 in progress.
 
 The concept image (October 2026, from Jonatan) shows the desktop explorer in light mode, a Home page, a split view, the iPhone and the iPad. This plan takes the app there step by step. Each step is one PR, with the image as the reference and a screenshot in light and in dark mode before it merges.
 
@@ -27,10 +27,10 @@ The concept image (October 2026, from Jonatan) shows the desktop explorer in lig
 | # | Step | What | Status |
 |---|---|---|---|
 | 1 | **Settings and appearance** | *Settings* at the bottom of the sidebar opens a sheet: Appearance (Match System / Light / Dark as a segmented control), window material on/off, icon style, where received files go. The View menu keeps its entries. | 🔄 |
-| 2 | **Colours and type** | One palette for light and dark (Spine theme tokens): background, sidebar, surfaces, separators, the selection's light blue, the accent; type sizes for sidebar, list, headers and preview. Light mode checked against the image. | ⬜ |
+| 2 | **Colours and type** | One palette for light and dark (Spine theme tokens): background, sidebar, surfaces, separators, the selection's light blue, the accent; type sizes for sidebar, list, headers and preview. Light mode checked against the image. | Started: Settings › Size of files and folders (Small / Medium / Large) sets row height, icons and text in the lists and the sidebar, through app resources every window follows. 🔄 |
 | 3 | **Sidebar** | The app's name on top, Home, This Device, Network and Backups (placeholders until their providers), coloured folder icons for favorites, device icons with an online dot, Link Device as a button, Settings at the bottom; sections as in the image. | Done 2026-10-15 without the app name (Jonatan's choice); Network and Backups dimmed until built; the online dot waits for discovery (#39). ✅ |
 | 4 | **Tabs** | Edge-like tabs: icon, raised active tab, + button, close on hover; still in the title bar's row (no scroll view there, see #46). Windows tab shortcuts: Ctrl+T/W, Ctrl+Shift+T reopens a closed tab, Ctrl+Tab, Ctrl+1–8 and Ctrl+9 for the last (⌘⌥ on the Mac, where ⌘1/⌘2 pick the view), Ctrl+Enter and Ctrl-double-click open a folder in a new tab. | ✅ |
-| 5 | **Command bar and breadcrumb** | A second row: New, Cut, Copy, Paste, Duplicate, Rename, Delete (red); the view switch with a columns view; breadcrumb in a capsule with drop-downs on its separators; Refresh and Search beside it. Done: the two rows, the capsule taking all the room left, segments folding from the root end into « as in Windows' address bar, search folding out of a magnifier. Left: a columns view. | 🔄 |
+| 5 | **Command bar and breadcrumb** | A second row: New, Cut, Copy, Paste, Duplicate, Rename, Delete (red); the view switch with a columns view; breadcrumb in a capsule with drop-downs on its separators; Refresh and Search beside it. Done: the two rows, the capsule taking all the room left, segments folding from the root end into « as in Windows' address bar, search folding out of a magnifier. The command bar as in the image: a framed + New with its label, the clipboard and rename in one framed group, Delete in red, glyphs about 18 points. Left: a columns view. | 🔄 |
 | 6 | **Preview pane** | Large picture, kind · size, Open with Open With, the facts (dimensions from the image, location as a link), quick actions Share, Copy Path, Send to Device, More; closable. | ⬜ |
 | 7 | **Operation bar and status** | The active operation with source → target, progress, speed, time left, pause and cancel at the bottom of the window; item count, selection and its size on the right. | ⬜ |
 | 8 | **Home** | A start page: Favorites and Other Devices as cards, Recent files, Transfers, Backups, search for files and devices. New tabs open on Home. | Done 2026-10-15 with what Jonatan picked: disk cards (capacity, free space as Finder counts it, % used, red from 90 %), Other Devices, Recent Locations; new tabs and a first start open Home; Home is in the tab history. ✅ |

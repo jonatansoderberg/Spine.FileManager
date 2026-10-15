@@ -238,4 +238,9 @@
   <s key="Trash.Failed">Some items could not be deleted: {0}</s>
   <s key="Trash.Access.Title">Show the Trash?</s>
   <s key="Trash.Access.Message">macOS lets apps look in the Trash only with Full Disk Access. Open System Settings and turn it on for Spine File Manager?</s>
+  <s key="Settings.ItemSize">Size of files and folders</s>
+  <s key="Settings.ItemSize.Small">Small</s>
+  <s key="Settings.ItemSize.Medium">Medium</s>
+  <s key="Settings.ItemSize.Large">Large</s>
+  <s key="Commands.New">New</s>
 </strings>

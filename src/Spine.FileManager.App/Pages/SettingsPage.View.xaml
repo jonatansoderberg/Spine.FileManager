@@ -15,6 +15,13 @@
                 <Segment Title="{String Menu.Appearance.Dark}" />
             </SegmentedControl>
 
+            <Label Text="{String Settings.ItemSize}" FontSize="13" FontAttributes="Bold" Margin="0,12,0,0" />
+            <SegmentedControl SelectedIndex="{Binding ItemSizeIndex}">
+                <Segment Title="{String Settings.ItemSize.Small}" />
+                <Segment Title="{String Settings.ItemSize.Medium}" />
+                <Segment Title="{String Settings.ItemSize.Large}" />
+            </SegmentedControl>
+
             <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasWindowMaterial}" Margin="0,8,0,0">
                 <VerticalStackLayout>
                     <Label Text="{String Settings.Material}" FontSize="14" />

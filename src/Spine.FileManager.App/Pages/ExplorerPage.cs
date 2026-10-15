@@ -24,13 +24,24 @@ public partial class ExplorerPage
             Pane.SetAppThemeColor(BackgroundColorProperty, Colors.White, Color.FromArgb("#1E1E1E"));
         }
 #endif
-        SizeChanged += (_, _) =>
+        void Fit()
         {
             if (BindingContext is ExplorerPageViewModel vm)
             {
                 vm.IsWide = Width >= 640;
                 var paneWidth = vm.IsSplit ? Root.ColumnDefinitions[3].Width.Value : 0;
-                vm.GridSpan = Math.Max(2, (int)((Width - (vm.ShowsSidebar ? vm.SidebarWidth : 0) - paneWidth) / 104));
+                vm.GridSpan = Math.Max(2, (int)((Width - (vm.ShowsSidebar ? vm.SidebarWidth : 0) - paneWidth) / ItemSizes.GridCellWidth));
+            }
+        }
+        SizeChanged += (_, _) => Fit();
+        ItemSizes.Changed += () =>
+        {
+            Fit();
+            // The lists keep the size they measured their first row at; switching the strategy measures again.
+            foreach (var list in new[] { List, Icons })
+            {
+                list.ItemSizingStrategy = ItemSizingStrategy.MeasureAllItems;
+                Dispatcher.Dispatch(() => list.ItemSizingStrategy = ItemSizingStrategy.MeasureFirstItem);
             }
         };
         Loaded += (_, _) =>
@@ -390,9 +401,6 @@ public partial class ExplorerPage
     }
 
     // A click in the list gives it the keyboard (arrows, Return, Space, typing); a click in a text field takes it back.
-    /// <summary>A row of the details list; the selection rectangle finds rows by it.</summary>
-    public const double RowHeight = 28;
-
     private Point? _pressed;
     private Point? _namePressed;
     private double _listOffset;
@@ -465,7 +473,7 @@ public partial class ExplorerPage
         Marquee.TranslationY = shownTop;
         Marquee.WidthRequest = Math.Max(0, right - left);
         Marquee.HeightRequest = Math.Max(0, shownBottom - shownTop);
-        vm.SelectRows((int)Math.Floor(Math.Max(0, top) / RowHeight), (int)Math.Floor(bottom / RowHeight), _boxKept);
+        vm.SelectRows((int)Math.Floor(Math.Max(0, top) / ItemSizes.RowHeight), (int)Math.Floor(bottom / ItemSizes.RowHeight), _boxKept);
     }
 
     private IDispatcherTimer CreateAutoScroll()

@@ -2,7 +2,11 @@ namespace Spine.FileManager;
 
 public partial class App
 {
-    public App() => InitializeComponent();
+    public App()
+    {
+        InitializeComponent();
+        ItemSizes.Apply();
+    }
 
     // Spine hosts one window. A window beyond it that the system asks for itself — a scene macOS restores from the
     // last run — would get Spine's host page a second time, which MAUI refuses at launch. It gets an empty window that

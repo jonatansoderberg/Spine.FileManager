@@ -237,6 +237,14 @@ public partial class ExplorerPageViewModel : ViewModelBase
         _strings.Changed += (_, _) => Rebuild(keepSelection: true);
         FileIcons.Changed += () => MainThread.BeginInvokeOnMainThread(() => Rebuild(keepSelection: true));
         FileIcons.Refreshed += () => MainThread.BeginInvokeOnMainThread(() => Rebuild(keepSelection: true));
+        // A list measures its first row once: a new size needs its rows again, the sidebar's lists new heights.
+        ItemSizes.Changed += () =>
+        {
+            Rebuild(keepSelection: true);
+            PlacesHeight = Places.Count * SidebarRowHeight;
+            FavoritesHeight = Favorites.Count * SidebarRowHeight;
+            DevicesHeight = Devices.Count * SidebarRowHeight;
+        };
     }
 
     public ObservableCollection<PlaceRow> Places { get; } = [];
@@ -245,8 +253,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     public ObservableCollection<DeviceRow> Devices { get; } = [];
 
-    // A sidebar row is 30 points with a point of margin above and below; a list a point short per row scrolled itself.
-    private const double SidebarRowHeight = 32;
+    // A list a point short per row scrolled itself.
+    private static double SidebarRowHeight => ItemSizes.SidebarRowHeight;
 
     [ObservableProperty]
     public partial double DevicesHeight { get; private set; }
@@ -1293,6 +1301,9 @@ public partial class ExplorerPageViewModel : ViewModelBase
             _tabs.Activate(startTabs[Math.Clamp(_startActive, 0, startTabs.Count - 1)]);
             _startTabs = null;
         }
+        // Restored Home tabs were named before the strings were at hand.
+        foreach (var tab in _tabs.Tabs.Where(t => t.IsHome))
+            tab.Title = _strings["Home.Title"];
         SyncTabs();
         if (!IsSecondary)
             session.Register(this);
@@ -1778,11 +1789,14 @@ public partial class ExplorerPageViewModel : ViewModelBase
         {
             null => TrashNeedsAccess ? _strings["Trash.NeedsAccess"] : "",
             { Items: 0 } => _strings["Trash.IsEmpty"],
-            var t => _strings.Get("Trash.Summary", t.Items, ByteSize.Format(t.Bytes, System.Globalization.CultureInfo.CurrentCulture)),
+            var t => _strings.Get(Plural("Trash.Summary", t.Items), t.Items, ByteSize.Format(t.Bytes, System.Globalization.CultureInfo.CurrentCulture)),
         };
     }
 
     /// <summary>The Mac's Trash in the explorer, once the app may read it; elsewhere the system's own Recycle Bin.</summary>
+    // Spine picks a plural form only when the count is the one argument; with more, the key is chosen here.
+    private static string Plural(string key, int count) => count == 1 ? $"{key}.one" : $"{key}.other";
+
     [RelayCommand]
     private async Task OpenTrash()
     {
@@ -1806,7 +1820,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
         if (Trash is not { Items: > 0 } trash)
             return;
         var size = ByteSize.Format(trash.Bytes, System.Globalization.CultureInfo.CurrentCulture);
-        if (!await Confirm(_strings["Trash.Confirm.Title"], _strings.Get("Trash.Confirm.Message", trash.Items, size), _strings["Trash.Confirm.Accept"]))
+        if (!await Confirm(_strings["Trash.Confirm.Title"], _strings.Get(Plural("Trash.Confirm.Message", trash.Items), trash.Items, size), _strings["Trash.Confirm.Accept"]))
             return;
         IsEmptyingTrash = true;
         TrashProgress = 0;

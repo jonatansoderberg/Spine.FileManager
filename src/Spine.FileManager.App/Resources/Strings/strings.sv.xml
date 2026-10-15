@@ -238,4 +238,9 @@
   <s key="Trash.Failed">Några objekt gick inte att radera: {0}</s>
   <s key="Trash.Access.Title">Visa papperskorgen?</s>
   <s key="Trash.Access.Message">macOS låter appar se i papperskorgen bara med Fullständig skivåtkomst. Öppna Systeminställningar och slå på den för Spine File Manager?</s>
+  <s key="Settings.ItemSize">Storlek på filer och mappar</s>
+  <s key="Settings.ItemSize.Small">Liten</s>
+  <s key="Settings.ItemSize.Medium">Medel</s>
+  <s key="Settings.ItemSize.Large">Stor</s>
+  <s key="Commands.New">Ny</s>
 </strings>
