@@ -18,6 +18,7 @@ The plan is [docs/plans/peer-link.md](../docs/plans/peer-link.md); the owner app
 - `LinkNode.PublicEndpoint` joins `Endpoints`; `ExchangeEndpointsAsync` and the `U` connection swap current endpoints over the mutual-TLS channel.
 - `DeviceService` maps the node's port at start, renews it at half its lifetime (every five minutes without a router), swaps endpoints when it meets a device (at most every five minutes) and takes the port down when the Mac app quits.
 - The status "Via router" for a device that answered at a public address.
+- **Within ten seconds (owner):** devices are checked every 10 seconds and at once when the network changes (Wi-Fi on or off), endpoints are swapped the moment two devices meet and then every two minutes, and a network change maps the router's port again.
 
 ## Decisions
 - **Built in the file manager for now.** Where the link lives (a Spine package, as the plan proposes, or here) is still open with the owner; step 1 is moved together with the rest if the answer is Spine.

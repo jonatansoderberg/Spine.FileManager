@@ -85,6 +85,12 @@ public sealed class DeviceService
             return;
         var cancel = _watching = new CancellationTokenSource();
         Trust.Changed += () => _ = CheckAllAsync(cancel.Token);
+        // Wi-Fi on or off, another network: the addresses and the router's port change, so both are looked at now.
+        Connectivity.Current.ConnectivityChanged += (_, _) =>
+        {
+            _remap?.Cancel();
+            _ = CheckAllAsync(cancel.Token);
+        };
         _ = Task.Run(async () =>
         {
             using var timer = new PeriodicTimer(every);
@@ -99,12 +105,13 @@ public sealed class DeviceService
         var node = await GetNodeAsync();
         await Task.WhenAll(Trust.All.Select(async device =>
         {
+            var wasOnline = StatusOf(device.NodeId).State is LinkState.LocalNetwork or LinkState.ViaRouter;
             var endpoint = await node.ProbeAsync(device.NodeId, cancel);
             SetStatus(device.NodeId, endpoint is null
                 ? new LinkStatus(LinkState.Offline, null, StatusOf(device.NodeId).LastSeen)
                 : new LinkStatus(StateOf(endpoint), endpoint, DateTimeOffset.Now));
-            // Met again: swap current addresses, the router's public one included, at most every few minutes.
-            if (endpoint is not null && (!_swapped.TryGetValue(device.NodeId, out var last) || DateTimeOffset.Now - last > TimeSpan.FromMinutes(5)))
+            // Met: swap current addresses at once, the router's public one included, then every couple of minutes.
+            if (endpoint is not null && (!wasOnline || !_swapped.TryGetValue(device.NodeId, out var last) || DateTimeOffset.Now - last > TimeSpan.FromMinutes(2)))
             {
                 _swapped[device.NodeId] = DateTimeOffset.Now;
                 await node.ExchangeEndpointsAsync(device.NodeId, cancel);
@@ -188,9 +195,20 @@ public sealed class DeviceService
             Mapped = mapped;
             node.PublicEndpoint = mapped?.Public;
             System.Diagnostics.Debug.WriteLine(mapped is null ? "[Link] no router port" : $"[Link] {mapped.Method}: {mapped.Public} for {mapped.Lifetime}");
-            await Task.Delay(mapped is null ? TimeSpan.FromMinutes(5) : mapped.Lifetime / 2);
+            // A network change cuts the wait short (WatchStatus).
+            _remap = new CancellationTokenSource();
+            try
+            {
+                await Task.Delay(mapped is null ? TimeSpan.FromMinutes(5) : mapped.Lifetime / 2, _remap.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(1));
+            }
         }
     }
+
+    private CancellationTokenSource? _remap;
 
     /// <summary>Takes the router's port down when the app quits; the router drops it at the end of its lifetime anyway.</summary>
     public Task UnmapAsync() => Mapped is { } mapped && _node is { } node ? PortMapping.UnmapTcpAsync(mapped, node.Port) : Task.CompletedTask;
@@ -201,7 +219,7 @@ public sealed class DeviceService
         if (Trust.All.Count == 0)
             return;
         _ = GetNodeAsync();
-        WatchStatus(TimeSpan.FromSeconds(30));
+        WatchStatus(TimeSpan.FromSeconds(10));
     }
 
     public async Task SendAsync(string nodeId, IReadOnlyList<string> paths, Action<long, long> progress)

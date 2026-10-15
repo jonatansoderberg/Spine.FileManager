@@ -270,7 +270,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
         _devices.Trust.Changed += () => MainThread.BeginInvokeOnMainThread(() =>
         {
             LoadDevices();
-            _devices.WatchStatus(TimeSpan.FromSeconds(30));
+            _devices.WatchStatus(TimeSpan.FromSeconds(10));
         });
         _devices.StatusChanged += nodeId => MainThread.BeginInvokeOnMainThread(() =>
         {
