@@ -275,44 +275,71 @@
                 </HorizontalStackLayout>
             </Grid>
 
-            <!-- Toolbar: history, up, refresh, the breadcrumb, view and hidden files. -->
-            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="2" Padding="8,6">
+            <!-- Toolbar: history and up, the breadcrumb with all the room left, refresh and search. -->
+            <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto" ColumnSpacing="2" Padding="8,6,8,2">
                 <ImageButton Style="{StaticResource ToolButton}" SvgImageSource.Svg="ChevronLeft.svg" Command="{Binding BackCommand}" IsEnabled="{Binding CanGoBack}"
                              SemanticProperties.Description="{String Explorer.Back}" ToolTipProperties.Text="{String Explorer.Back}" />
                 <ImageButton Grid.Column="1" Style="{StaticResource ToolButton}" SvgImageSource.Svg="ChevronRight.svg" Command="{Binding ForwardCommand}" IsEnabled="{Binding CanGoForward}"
                              SemanticProperties.Description="{String Explorer.Forward}" ToolTipProperties.Text="{String Explorer.Forward}" />
                 <ImageButton Grid.Column="2" Style="{StaticResource ToolButton}" SvgImageSource.Svg="ChevronUp.svg" Command="{Binding UpCommand}" IsEnabled="{Binding CanGoUp}"
                              SemanticProperties.Description="{String Explorer.Up}" ToolTipProperties.Text="{String Explorer.Up}" />
-                <ImageButton Grid.Column="3" Style="{StaticResource ToolButton}" SvgImageSource.Svg="Refresh.svg" Command="{Binding RefreshCommand}"
+                <!-- Breadcrumb in a capsule: a segment opens its folder, the chevron after it lists that folder's
+                     subfolders. As in Windows, segments that do not fit fold from the root end into « before them,
+                     which lists them nearest first; the current folder always shows. -->
+                <Border Grid.Column="3" Margin="6,0" Padding="4,0" HeightRequest="32" StrokeThickness="0" StrokeShape="RoundRectangle 8"
+                        BackgroundColor="{AppThemeBinding Light=#F1F2F4, Dark=#2A2B2E}">
+                    <Grid ColumnDefinitions="Auto,*">
+                        <Button x:Name="CrumbOverflow" Text="«" Style="{StaticResource Crumb}" Padding="6,0" MenuButton.Items="{Binding CollapsedMenu}" IsVisible="{Binding HasCollapsed}"
+                                SemanticProperties.Description="{String Explorer.EarlierFolders}" ToolTipProperties.Text="{String Explorer.EarlierFolders}" />
+                        <Grid x:Name="CrumbArea" Grid.Column="1" IsClippedToBounds="True">
+                            <HorizontalStackLayout x:Name="Crumbs" BindableLayout.ItemsSource="{Binding Segments}" VerticalOptions="Center" HorizontalOptions="Start">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="BreadcrumbSegment">
+                                        <HorizontalStackLayout IsVisible="{Binding IsCollapsed, Converter={StaticResource Not}}" SizeChanged="OnCrumbSizeChanged">
+                                            <HorizontalStackLayout.GestureRecognizers>
+                                                <DropGestureRecognizer DragOver="OnFileDragOver" DragLeave="OnFileDragLeave" Drop="OnFileDrop" />
+                                            </HorizontalStackLayout.GestureRecognizers>
+                                            <Button Text="{Binding Name}" Style="{StaticResource Crumb}"
+                                                    Command="{Binding OpenLocationCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding Location}" />
+                                            <Button Text="›" Style="{StaticResource Crumb}" Padding="4,0" MenuButton.Items="{Binding Children}"
+                                                    SemanticProperties.Description="{String Explorer.Subfolders}" />
+                                        </HorizontalStackLayout>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </HorizontalStackLayout>
+                        </Grid>
+                    </Grid>
+                </Border>
+                <ImageButton Grid.Column="4" Style="{StaticResource ToolButton}" SvgImageSource.Svg="Refresh.svg" Command="{Binding RefreshCommand}"
                              SemanticProperties.Description="{String Explorer.Refresh}" ToolTipProperties.Text="{String Explorer.Refresh}" />
-                <!-- Breadcrumb: a segment opens its folder, the chevron after it lists that folder's subfolders. -->
-                <ScrollView x:Name="BreadcrumbScroll" Grid.Column="4" Orientation="Horizontal" HorizontalScrollBarVisibility="Never" Margin="6,0">
-                    <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Segments}" VerticalOptions="Center">
-                        <BindableLayout.ItemTemplate>
-                            <DataTemplate x:DataType="BreadcrumbSegment">
-                                <HorizontalStackLayout>
-                                    <HorizontalStackLayout.GestureRecognizers>
-                                        <DropGestureRecognizer DragOver="OnFileDragOver" DragLeave="OnFileDragLeave" Drop="OnFileDrop" />
-                                    </HorizontalStackLayout.GestureRecognizers>
-                                    <Button Text="{Binding Name}" Style="{StaticResource Crumb}"
-                                            Command="{Binding OpenLocationCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding Location}" />
-                                    <Button Text="›" Style="{StaticResource Crumb}" Padding="4,0" MenuButton.Items="{Binding Children}"
-                                            SemanticProperties.Description="{String Explorer.Subfolders}" />
-                                </HorizontalStackLayout>
-                            </DataTemplate>
-                        </BindableLayout.ItemTemplate>
-                    </HorizontalStackLayout>
-                </ScrollView>
-                <Entry x:Name="FilterField" Grid.Column="8" Text="{Binding Filter}" Placeholder="{String Explorer.Search}" FontSize="13" WidthRequest="170"
-                       ClearButtonVisibility="WhileEditing" IsVisible="{Binding IsWide}" VerticalOptions="Center" Margin="6,0,0,0"
-                       SemanticProperties.Description="{String Explorer.Filter}" />
-                <!-- Icons only, as in Finder: a segment with a title shows it as text too. -->
-                <SegmentedControl Grid.Column="5" Grid.ColumnSpan="2" SelectedIndex="{Binding ViewIndex}" VerticalOptions="Center" Margin="4,0"
-                                  ToolTipProperties.Text="{String Explorer.View}" SemanticProperties.Description="{String Explorer.View}">
-                    <Segment Svg="List.svg" />
-                    <Segment Svg="Grid.svg" />
-                </SegmentedControl>
-                <ImageButton Grid.Column="7" Style="{StaticResource ToolButton}" Command="{Binding ToggleHiddenCommand}"
+                <!-- Search folds out of its magnifier and folds back when left empty. -->
+                <Grid Grid.Column="5">
+                    <ImageButton Style="{StaticResource ToolButton}" SvgImageSource.Svg="Search.svg" Command="{Binding FindCommand}" IsVisible="{Binding IsSearchOpen, Converter={StaticResource Not}}"
+                                 SemanticProperties.Description="{String Explorer.Search}" ToolTipProperties.Text="{String Explorer.Search}" />
+                    <Entry x:Name="FilterField" Text="{Binding Filter}" Placeholder="{String Explorer.Search}" FontSize="13" WidthRequest="200"
+                           ClearButtonVisibility="WhileEditing" IsVisible="{Binding IsSearchOpen}" VerticalOptions="Center" Margin="4,0,0,0"
+                           Unfocused="OnFilterUnfocused" SemanticProperties.Description="{String Explorer.Filter}" />
+                </Grid>
+            </Grid>
+
+            <!-- Command bar: what can be done with the selection, then the view and hidden files. -->
+            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto" ColumnSpacing="2" Padding="8,0,8,6">
+                <ImageButton Style="{StaticResource ToolButton}" SvgImageSource.Svg="NewFolder.svg" Command="{Binding NewFolderCommand}"
+                             SemanticProperties.Description="{String Menu.NewFolder}" ToolTipProperties.Text="{String Menu.NewFolder}" />
+                <ImageButton Grid.Column="1" Style="{StaticResource ToolButton}" SvgImageSource.Svg="Cut.svg" Command="{Binding CutCommand}" IsEnabled="{Binding HasSelection}"
+                             SemanticProperties.Description="{String Menu.Cut}" ToolTipProperties.Text="{String Menu.Cut}" />
+                <ImageButton Grid.Column="2" Style="{StaticResource ToolButton}" SvgImageSource.Svg="Copy.svg" Command="{Binding CopyCommand}" IsEnabled="{Binding HasSelection}"
+                             SemanticProperties.Description="{String Menu.Copy}" ToolTipProperties.Text="{String Menu.Copy}" />
+                <ImageButton Grid.Column="3" Style="{StaticResource ToolButton}" SvgImageSource.Svg="Paste.svg" Command="{Binding PasteCommand}"
+                             SemanticProperties.Description="{String Menu.Paste}" ToolTipProperties.Text="{String Menu.Paste}" />
+                <ImageButton Grid.Column="4" Style="{StaticResource ToolButton}" SvgImageSource.Svg="Duplicate.svg" Command="{Binding DuplicateCommand}" IsEnabled="{Binding HasSelection}"
+                             SemanticProperties.Description="{String Menu.Duplicate}" ToolTipProperties.Text="{String Menu.Duplicate}" />
+                <ImageButton Grid.Column="5" Style="{StaticResource ToolButton}" SvgImageSource.Svg="Edit.svg" Command="{Binding RenameCommand}" IsEnabled="{Binding HasSelection}"
+                             SemanticProperties.Description="{String Menu.Rename}" ToolTipProperties.Text="{String Menu.Rename}" />
+                <ImageButton Grid.Column="6" Style="{StaticResource ToolButton}" SvgImageSource.Svg="Trashcan.svg" Command="{Binding DeleteCommand}" IsEnabled="{Binding HasSelection}"
+                             SvgImageSource.LightTintColor="#C5221F" SvgImageSource.DarkTintColor="#F28B82"
+                             SemanticProperties.Description="{String Menu.Delete}" ToolTipProperties.Text="{String Menu.Delete}" />
+                <ImageButton Grid.Column="8" Style="{StaticResource ToolButton}" Command="{Binding ToggleHiddenCommand}"
                              SemanticProperties.Description="{String Explorer.ShowHidden}" ToolTipProperties.Text="{String Explorer.ShowHidden}">
                     <ImageButton.Triggers>
                         <DataTrigger TargetType="ImageButton" Binding="{Binding ShowHidden}" Value="True">
@@ -323,6 +350,12 @@
                         </DataTrigger>
                     </ImageButton.Triggers>
                 </ImageButton>
+                <!-- Icons only, as in Finder: a segment with a title shows it as text too. -->
+                <SegmentedControl Grid.Column="9" SelectedIndex="{Binding ViewIndex}" VerticalOptions="Center" Margin="4,0,0,0"
+                                  ToolTipProperties.Text="{String Explorer.View}" SemanticProperties.Description="{String Explorer.View}">
+                    <Segment Svg="List.svg" />
+                    <Segment Svg="Grid.svg" />
+                </SegmentedControl>
             </Grid>
 
             <!-- Search: the field filters the folder shown; here the search reaches into its subfolders. -->

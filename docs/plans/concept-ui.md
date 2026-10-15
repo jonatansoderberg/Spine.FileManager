@@ -1,7 +1,7 @@
 # The explorer after the concept image
 
 **Roadmap issue:** [#55](https://github.com/jonatansoderberg/Spine.FileManager/issues/55)
-**Last updated:** 2026-10-15 — step 4 (tabs) done; steps 1 and 8 in progress.
+**Last updated:** 2026-10-15 — step 4 (tabs) done; steps 1, 5 and 8 in progress.
 
 The concept image (October 2026, from Jonatan) shows the desktop explorer in light mode, a Home page, a split view, the iPhone and the iPad. This plan takes the app there step by step. Each step is one PR, with the image as the reference and a screenshot in light and in dark mode before it merges.
 
@@ -30,7 +30,7 @@ The concept image (October 2026, from Jonatan) shows the desktop explorer in lig
 | 2 | **Colours and type** | One palette for light and dark (Spine theme tokens): background, sidebar, surfaces, separators, the selection's light blue, the accent; type sizes for sidebar, list, headers and preview. Light mode checked against the image. | ⬜ |
 | 3 | **Sidebar** | The app's name on top, Home, This Device, Network and Backups (placeholders until their providers), coloured folder icons for favorites, device icons with an online dot, Link Device as a button, Settings at the bottom; sections as in the image. | ⬜ |
 | 4 | **Tabs** | Edge-like tabs: icon, raised active tab, + button, close on hover; still in the title bar's row (no scroll view there, see #46). Windows tab shortcuts: Ctrl+T/W, Ctrl+Shift+T reopens a closed tab, Ctrl+Tab, Ctrl+1–8 and Ctrl+9 for the last (⌘⌥ on the Mac, where ⌘1/⌘2 pick the view), Ctrl+Enter and Ctrl-double-click open a folder in a new tab. | ✅ |
-| 5 | **Command bar and breadcrumb** | A second row: New, Cut, Copy, Paste, Duplicate, Rename, Delete (red); the view switch with a columns view; breadcrumb in a capsule with drop-downs on its separators; Refresh and Search beside it. | ⬜ |
+| 5 | **Command bar and breadcrumb** | A second row: New, Cut, Copy, Paste, Duplicate, Rename, Delete (red); the view switch with a columns view; breadcrumb in a capsule with drop-downs on its separators; Refresh and Search beside it. Done: the two rows, the capsule taking all the room left, segments folding from the root end into « as in Windows' address bar, search folding out of a magnifier. Left: a columns view. | 🔄 |
 | 6 | **Preview pane** | Large picture, kind · size, Open with Open With, the facts (dimensions from the image, location as a link), quick actions Share, Copy Path, Send to Device, More; closable. | ⬜ |
 | 7 | **Operation bar and status** | The active operation with source → target, progress, speed, time left, pause and cancel at the bottom of the window; item count, selection and its size on the right. | ⬜ |
 | 8 | **Home** | A start page: Favorites and Other Devices as cards, Recent files, Transfers, Backups, search for files and devices. New tabs open on Home. | ⬜ |

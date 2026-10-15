@@ -66,7 +66,8 @@ public partial class ExplorerPage
 #endif
             // Name, Date modified, Size and Kind need about 560 points; a narrower pane shows Name and Size.
             List.SizeChanged += (_, _) => vm.HasColumns = List.Width >= 560;
-            vm.FilterRequested += () => FilterField.Focus();
+            // Focused once the field has folded out.
+            vm.FilterRequested += () => Dispatcher.Dispatch(() => FilterField.Focus());
             Keys.Pressed += vm.OnListKey;
             vm.RevealRequested += index =>
             {
@@ -75,12 +76,8 @@ public partial class ExplorerPage
             };
             if (!vm.IsSecondary)
                 AppMenu.Install(this, vm);
-            // A deep folder's breadcrumb is wider than the bar; keep its end, the current folder, in view as the
-            // segments arrive, their names fill in and the pane is resized.
-            void KeepEnd(object? sender, EventArgs e) => Dispatcher.Dispatch(async () => await BreadcrumbScroll.ScrollToAsync(double.MaxValue, 0, false));
-            BreadcrumbScroll.SizeChanged += KeepEnd;
-            if (BreadcrumbScroll.Content is View crumbs)
-                crumbs.SizeChanged += KeepEnd;
+            CrumbArea.SizeChanged += (_, _) => FitCrumbs();
+            vm.Segments.CollectionChanged += (_, _) => Dispatcher.Dispatch(FitCrumbs);
             vm.PropertyChanged += (_, e) =>
             {
                 if (e.PropertyName == nameof(ExplorerPageViewModel.IsSplit))
@@ -101,6 +98,50 @@ public partial class ExplorerPage
         e.PlatformArgs?.SetItemProvider(new Foundation.NSItemProvider());
 #endif
         TabDrag.Start(vm, tab);
+    }
+
+    private void OnCrumbSizeChanged(object? sender, EventArgs e)
+    {
+        if (sender is View { BindingContext: BreadcrumbSegment segment, Width: > 0 } view && view.IsVisible)
+        {
+            segment.Width = view.Width;
+            FitCrumbs();
+        }
+    }
+
+    private string? _collapsed;
+
+    // As Windows' address bar: the current folder and as many of its parents as fit show, the rest fold from the root
+    // end into « . Widths are those last laid out, so a folded segment still counts with its own width.
+    private void FitCrumbs()
+    {
+        if (BindingContext is not ExplorerPageViewModel vm || CrumbArea.Width <= 0 || vm.Segments.Count == 0)
+            return;
+        var segments = vm.Segments.ToList();
+        if (segments.Any(s => s.Width <= 0))
+            return;
+        var room = CrumbArea.Width + (CrumbOverflow.IsVisible ? CrumbOverflow.Width : 0);
+        var count = 0;
+        if (segments.Sum(s => s.Width) > room)
+        {
+            var budget = room - 30;
+            var used = 0d;
+            var kept = 0;
+            for (var i = segments.Count - 1; i >= 0 && (kept == 0 || used + segments[i].Width <= budget); i--, kept++)
+                used += segments[i].Width;
+            count = segments.Count - kept;
+        }
+        var key = $"{count}|{string.Join('/', segments.Take(count).Select(s => s.Name))}";
+        if (key == _collapsed)
+            return;
+        _collapsed = key;
+        vm.Collapse(count);
+    }
+
+    private void OnFilterUnfocused(object? sender, FocusEventArgs e)
+    {
+        if (BindingContext is ExplorerPageViewModel { IsSearching: false } vm && string.IsNullOrEmpty(vm.Filter))
+            vm.IsSearchOpen = false;
     }
 
     private void OnTabPointerEntered(object? sender, PointerEventArgs e)

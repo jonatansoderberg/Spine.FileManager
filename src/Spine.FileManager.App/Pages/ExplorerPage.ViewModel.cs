@@ -119,6 +119,13 @@ public sealed partial class BreadcrumbSegment(StorageLocation location, string n
 
     /// <summary>Whether <see cref="Children"/> lists hidden folders.</summary>
     public bool ChildrenWithHidden { get; set; }
+
+    /// <summary>Folded into the bar's « because the breadcrumb does not fit.</summary>
+    [ObservableProperty]
+    public partial bool IsCollapsed { get; set; }
+
+    /// <summary>The segment's width as last laid out, kept while it is folded away, for deciding what fits.</summary>
+    public double Width { get; set; }
 }
 
 /// <summary>How a list's rows are worded: the culture and the kind names, shared by every row of one listing.</summary>
@@ -1100,7 +1107,37 @@ public partial class ExplorerPageViewModel : ViewModelBase
     public event Action? FilterRequested;
 
     [RelayCommand]
-    private void Find() => FilterRequested?.Invoke();
+    private void Find()
+    {
+        IsSearchOpen = true;
+        FilterRequested?.Invoke();
+    }
+
+    [ObservableProperty]
+    public partial bool IsSearchOpen { get; set; }
+
+    /// <summary>The segments folded into « , nearest first as in Windows; null when everything fits.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCollapsed))]
+    public partial Plugin.Maui.Spine.Core.MenuItems? CollapsedMenu { get; private set; }
+
+    public bool HasCollapsed => CollapsedMenu is not null;
+
+    /// <summary>Folds the first <paramref name="count"/> segments, those nearest the root, into « .</summary>
+    public void Collapse(int count)
+    {
+        for (var i = 0; i < Segments.Count; i++)
+            Segments[i].IsCollapsed = i < count;
+        if (count == 0)
+        {
+            CollapsedMenu = null;
+            return;
+        }
+        var menu = new Plugin.Maui.Spine.Core.MenuItems();
+        foreach (var segment in Segments.Take(count).Reverse())
+            menu.Add(new Plugin.Maui.Spine.Core.MenuAction(segment.Name, "folder.svg", OpenLocationCommand) { CommandParameter = segment.Location });
+        CollapsedMenu = menu;
+    }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsList), nameof(ViewIndex))]
@@ -1729,6 +1766,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
     {
         for (var i = 0; i < Rows.Count; i++)
             Rows[i].IsSelected = _selection.Contains(i);
+        OnPropertyChanged(nameof(HasSelection));
         UpdateStatus();
         UpdatePreview();
     }
