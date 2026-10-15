@@ -249,4 +249,8 @@
   <s key="Settings.Hidden.Show">Show</s>
   <s key="Explorer.Kind.Application">Application</s>
   <s key="Menu.ShowPackageContents">Show Package Contents</s>
+  <s key="Explorer.Trash.Title">Move to Trash?</s>
+  <s key="Explorer.Trash.Message">{0} will be moved to the Trash. You can undo this or put it back from the Trash.</s>
+  <s key="Explorer.Trash.Confirm">Move to Trash</s>
+  <s key="Settings.ConfirmTrash">Ask before moving to the Trash</s>
 </strings>
