@@ -12,7 +12,7 @@ namespace Spine.FileManager.Services;
 /// final name, so copies into the library go through the queue like any other. Deleting moves to Photos' Recently
 /// Deleted, after the system's own question.
 /// </summary>
-public sealed class PhotoLibraryProvider(ISpineStrings strings) : IStorageProvider, IDeletesTogether
+public sealed class PhotoLibraryProvider(ISpineStrings strings) : IStorageProvider, IDeletesTogether, ICachesListings
 {
     public static readonly StorageProviderId ProviderId = new("photos");
 
@@ -31,8 +31,76 @@ public sealed class PhotoLibraryProvider(ISpineStrings strings) : IStorageProvid
 
     public ValueTask<StorageCapabilities> GetCapabilitiesAsync(StorageLocation location, CancellationToken cancellationToken = default) =>
         ValueTask.FromResult(location.ItemId.Length == 0
-            ? StorageCapabilities.List | StorageCapabilities.Write | StorageCapabilities.Delete | StorageCapabilities.Trash | StorageCapabilities.SystemConfirmsDelete
+            ? StorageCapabilities.List | StorageCapabilities.Write | StorageCapabilities.Delete | StorageCapabilities.Trash | StorageCapabilities.SystemConfirmsDelete | StorageCapabilities.Flat
             : StorageCapabilities.Read | StorageCapabilities.Delete | StorageCapabilities.Trash | StorageCapabilities.SystemConfirmsDelete);
+
+    // ---- The last listing, kept on disk ----
+    // Photos' first answer in a process takes seconds (its daemon connects); the listing as it was last time shows at
+    // once, the names it holds spare asking for them again, and the live listing replaces it when read.
+
+    private sealed record SnapshotEntry(string Id, string Name, DateTimeOffset? Created, bool Hidden);
+
+    private static readonly string SnapshotPath = Path.Combine(Staging, "..", "photo-library-listing.json");
+    private static readonly Lock SnapshotLock = new();
+    private static List<SnapshotEntry>? _snapshot;
+
+    public IReadOnlyList<StorageItem>? CachedListing(StorageLocation folder) =>
+        folder.ItemId.Length == 0 && Snapshot() is { } entries
+            ? [.. entries.Select(e => new StorageItem(Location(e.Id, e.Name), e.Name, StorageItemKind.File) { Created = e.Created, Modified = e.Created, IsHidden = e.Hidden })]
+            : null;
+
+    private static List<SnapshotEntry>? Snapshot()
+    {
+        lock (SnapshotLock)
+        {
+            if (_snapshot is null && File.Exists(SnapshotPath))
+            {
+                try
+                {
+                    _snapshot = System.Text.Json.JsonSerializer.Deserialize<List<SnapshotEntry>>(File.ReadAllBytes(SnapshotPath));
+                }
+                catch (Exception e) when (e is IOException or System.Text.Json.JsonException)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Photos] The saved listing could not be read: {e.Message}");
+                }
+            }
+            return _snapshot;
+        }
+    }
+
+    private static void Remember(List<SnapshotEntry> listed)
+    {
+        lock (SnapshotLock)
+            _snapshot = listed;
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(SnapshotPath)!);
+                File.WriteAllBytes(SnapshotPath, System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(listed));
+            }
+            catch (IOException e)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Photos] The listing could not be saved: {e.Message}");
+            }
+        });
+    }
+
+    /// <summary>
+    /// At launch, for a user who has opened the photo library before: connects to Photos and reads the saved listing
+    /// in the background, so opening it does not wait for either. Asking for the status never prompts.
+    /// </summary>
+    public static void Prewarm()
+    {
+        if (!File.Exists(SnapshotPath))
+            return;
+        _ = Task.Run(() =>
+        {
+            Snapshot();
+            if (PHPhotoLibrary.GetAuthorizationStatus(PHAccessLevel.ReadWrite) is PHAuthorizationStatus.Authorized or PHAuthorizationStatus.Limited)
+                PHAsset.FetchAssets(new PHFetchOptions { FetchLimit = 1 });
+        });
+    }
 
     public StorageLocation? GetParent(StorageLocation location) => location.ItemId.Length == 0 ? null : Root;
 
@@ -64,14 +132,21 @@ public sealed class PhotoLibraryProvider(ISpineStrings strings) : IStorageProvid
                 };
         var options = new PHFetchOptions { SortDescriptors = [new NSSortDescriptor("creationDate", false)] };
         var assets = PHAsset.FetchAssets(options);
+        var known = Snapshot()?.ToDictionary(e => e.Id, e => e.Name) ?? [];
+        var listed = new List<SnapshotEntry>((int)assets.Count);
         for (nint i = 0; i < assets.Count; i++)
         {
             if (i % 256 == 0)
                 cancellationToken.ThrowIfCancellationRequested();
             if (assets[i] is not PHAsset asset)
                 continue;
-            yield return Item(asset, Name(asset));
+            // A photo's original name costs half a millisecond to ask for; the ones listed before are remembered.
+            var name = known.TryGetValue(asset.LocalIdentifier, out var remembered) ? remembered : Name(asset);
+            var item = Item(asset, name);
+            listed.Add(new SnapshotEntry(asset.LocalIdentifier, name, item.Created, item.IsHidden));
+            yield return item;
         }
+        Remember(listed);
     }
 
     public async Task<Stream> OpenReadAsync(StorageLocation file, CancellationToken cancellationToken = default)

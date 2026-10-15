@@ -26,5 +26,8 @@ public enum StorageCapabilities
     /// <summary>The system asks before it deletes (the photo library), so the app does not ask as well.</summary>
     SystemConfirmsDelete = 1 << 13,
 
+    /// <summary>The location holds items but never folders (the photo library): nothing to look for below it.</summary>
+    Flat = 1 << 14,
+
     Modify = Write | CreateFolder | Rename | Delete | NativeCopy | NativeMove | Trash,
 }

@@ -607,7 +607,7 @@
                 </FileListView.ItemsLayout>
                 <FileListView.ItemTemplate>
                     <DataTemplate x:DataType="ItemRow">
-                        <Grid RowDefinitions="Auto,34" WidthRequest="{DynamicResource GridCellWidth}" Padding="4" Opacity="{Binding Dimmed}"
+                        <Grid RowDefinitions="Auto,34" WidthRequest="{DynamicResource GridCellWidth}" HorizontalOptions="Center" Padding="4" Opacity="{Binding Dimmed}"
                               ContextMenu.Items="{Binding RowMenu, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" ContextMenu.CommandParameter="{Binding .}">
                             <Grid.Triggers>
                                 <DataTrigger TargetType="Grid" Binding="{Binding IsSelected}" Value="True">
@@ -650,7 +650,7 @@
                     <VerticalStackLayout Grid.Row="1" Padding="20,0,20,20" Spacing="12">
                         <Label Text="{String Preview.None}" IsVisible="{Binding PreviewTitle, Converter={StaticResource IsNull}}" FontSize="12" Opacity="0.5" HorizontalTextAlignment="Center" Margin="0,40,0,0" />
                         <VerticalStackLayout Spacing="12" IsVisible="{Binding PreviewTitle, Converter={StaticResource HasValue}}">
-                            <Border StrokeThickness="0" StrokeShape="RoundRectangle 10" BackgroundColor="{AppThemeBinding Light=#F4F5F7, Dark=#26272A}" HeightRequest="200">
+                            <Border StrokeThickness="0" StrokeShape="RoundRectangle 10" BackgroundColor="{AppThemeBinding Light=#F4F5F7, Dark=#26272A}" HeightRequest="{Binding PreviewImageHeight}">
                                 <Image Source="{Binding PreviewImage}" Aspect="AspectFit" Margin="8" />
                             </Border>
                             <VerticalStackLayout Spacing="2">

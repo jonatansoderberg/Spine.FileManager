@@ -1408,7 +1408,11 @@ public partial class ExplorerPageViewModel : ViewModelBase
     public partial double SidebarWidth { get; set; } = Preferences.Get(nameof(SidebarWidth), 210.0);
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PreviewImageHeight))]
     public partial double PreviewWidth { get; set; } = Preferences.Get(nameof(PreviewWidth), 300.0);
+
+    /// <summary>The preview's picture grows with the pane: two thirds of its width, within reason.</summary>
+    public double PreviewImageHeight => Math.Clamp(PreviewWidth * 0.66, 160, 900);
 
     [ObservableProperty]
     public partial double ModifiedWidth { get; set; } = Preferences.Get(nameof(ModifiedWidth), 160.0);
@@ -2110,6 +2114,9 @@ public partial class ExplorerPageViewModel : ViewModelBase
         var provider = _providers[location];
         keep ??= keepSelection ? SelectedItems.Select(i => i.Location).ToHashSet() : null;
         // A tab switch always rebuilds the bar and the watcher, even onto the same folder.
+        // A slow place shows its last listing at once while the live one is read.
+        if (cached is null && !location.Equals(Current))
+            cached = (_providers[location] as ICachesListings)?.CachedListing(location)?.ToList();
         var changedFolder = !location.Equals(Current) || cached is not null || keep is { Count: > 0 } && !keepSelection;
         var tab = _tabs.Active;
         SortForProvider(location);
@@ -2150,19 +2157,35 @@ public partial class ExplorerPageViewModel : ViewModelBase
         try
         {
             // Read and sorted off the UI thread; only the finished rows cross over.
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            var shownEarly = cached is not null;
             var (items, rows) = await Task.Run(async () =>
             {
                 var items = new List<StorageItem>();
                 await foreach (var item in provider.EnumerateAsync(location, cancel.Token))
+                {
                     items.Add(item);
+                    // A slow, large folder shows what has come so far rather than nothing; the rest fills in.
+                    if (!shownEarly && items.Count == EarlyRows && clock.ElapsedMilliseconds > 150)
+                    {
+                        shownEarly = true;
+                        var early = BuildRows([.. items]);
+                        MainThread.BeginInvokeOnMainThread(() =>
+                        {
+                            if (tab == _tabs.Active && !cancel.IsCancellationRequested && _found is null)
+                                Show(early, keep);
+                        });
+                    }
+                }
                 return (items, BuildRows(items));
             }, cancel.Token);
             if (tab != _tabs.Active)
                 return;
             _items = items;
             tab.Items = items;
+            // What was selected in the early or cached rows stays selected in the live ones.
             if (_found is null)
-                Show(rows, keep);
+                Show(rows, keep ?? (shownEarly && _selection.Count > 0 ? SelectedItems.Select(i => i.Location).ToHashSet() : null));
         }
         catch (OperationCanceledException)
         {
@@ -2287,6 +2310,9 @@ public partial class ExplorerPageViewModel : ViewModelBase
             Where = Path.GetRelativePath(root, Path.GetDirectoryName(item.Location.DisplayPath) ?? root) is var where && where != "." ? where : null,
         });
     }
+
+    // How many items a slow folder shows before the rest has been read.
+    private const int EarlyRows = 400;
 
     private void Show(ItemRow[] rows, HashSet<StorageLocation>? keep)
     {

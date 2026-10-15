@@ -27,6 +27,9 @@ public static class Breadcrumb
     public static async Task<IReadOnlyList<StorageItem>> SubfoldersAsync(IStorageProvider provider, StorageLocation folder, bool includeHidden, int limit = 500, CancellationToken cancellationToken = default)
     {
         var folders = new List<StorageItem>();
+        // A flat place (the photo library) would be read through a second time for nothing.
+        if ((await provider.GetCapabilitiesAsync(folder, cancellationToken)).HasFlag(StorageCapabilities.Flat))
+            return folders;
         await foreach (var item in provider.EnumerateAsync(folder, cancellationToken))
             if (item.IsBrowsable && (includeHidden || !item.IsHidden))
             {

@@ -6,6 +6,9 @@ public partial class App
     {
         InitializeComponent();
         ItemSizes.Apply();
+#if IOS || MACCATALYST
+        PhotoLibraryProvider.Prewarm();
+#endif
     }
 
     // Spine hosts one window. A window beyond it that the system asks for itself — a scene macOS restores from the
