@@ -192,7 +192,7 @@
   <s key="Link.Choice.Enter.Hint">Klistra in länken som den andra enheten visar, eller skanna koden om datorn har en kamera.</s>
   <s key="Link.JoinIntro">Klistra in länken som den andra enheten visar under koden.</s>
   <s key="Link.TryScan">Skanna med kameran</s>
-  <s key="Link.OtherWays">Andra sätt att länka</s>
+  <s key="Link.Back">Tillbaka</s>
   <s key="Menu.Icons">Ikoner</s>
   <s key="Menu.Icons.Spine">Spine</s>
   <s key="Menu.Icons.System">Systemets</s>
