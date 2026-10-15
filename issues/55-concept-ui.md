@@ -36,6 +36,9 @@ Eleven steps toward the concept image, written in `docs/plans/concept-ui.md` bef
   - The Trash: items and size, Empty behind a confirmation.
   - Other Devices and Recent Locations.
   - New tabs and a first start open Home, and Home is in the tab history, so Back returns to it.
+- **Command bar and sizes** (branch issue/55-toolbar-and-sizes):
+  - The command bar as in the concept image, with glyphs about 18 points instead of 13.
+  - Settings › Size of files and folders, Small / Medium / Large (asked 2026-10-15). It sets row height, file icons and text in the list, the icon grid and the sidebar. The sizes are app resources (`Services/ItemSizes.cs`) the views take as DynamicResource, so every window follows a change. The lists measure their first row again.
 - **Selection rectangle:** in the details list a drag that does not start on a name or icon draws a selection rectangle (Cmd/Ctrl keeps the selection); it follows the wheel and scrolls by itself near the top and bottom edge. Files are dragged only by name or icon.
 - **Fixes on the way:**
   - The Dual Pane divider is a grip like the sidebar's: the old one took no drags.
