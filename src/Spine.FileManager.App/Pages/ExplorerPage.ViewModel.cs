@@ -2057,6 +2057,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
     private void EnterHome(ExplorerTab tab)
     {
         _loading?.Cancel();
+        IsEditingPath = false;
         tab.History.Navigate(HomeLocation);
         tab.IsHome = true;
         tab.Location ??= Current;
@@ -2254,6 +2255,8 @@ public partial class ExplorerPageViewModel : ViewModelBase
             cached = (_providers[location] as ICachesListings)?.CachedListing(location)?.ToList();
         var changedFolder = !location.Equals(Current) || cached is not null || keep is { Count: > 0 } && !keepSelection;
         var tab = _tabs.Active;
+        // Going anywhere closes the path field, whatever took the app there.
+        IsEditingPath = false;
         SortForProvider(location);
         var leftHome = tab.IsHome;
         tab.IsHome = false;

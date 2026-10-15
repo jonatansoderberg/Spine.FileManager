@@ -46,6 +46,8 @@ public class AppDelegate : MauiUIApplicationDelegate
 		"paste:" => AppMenu.Explorer is not null && FileClipboard.HasItems,
 		// A text field being edited takes undo: itself; the explorer's undo comes after it in the responder chain.
 		"undo:" => AppMenu.Explorer is not null && ExplorerPageViewModel.CanUndo,
+		// Escape is taken only while the path field is open; otherwise it goes on to whoever wants it (a sheet).
+		"closePathField:" => AppMenu.Explorer?.IsEditingPath == true,
 		_ => base.CanPerform(action, withSender),
 	};
 
@@ -63,4 +65,11 @@ public class AppDelegate : MauiUIApplicationDelegate
 
 	[Export("paste:")]
 	public void Paste(NSObject? sender) => AppMenu.Explorer?.PasteCommand.Execute(null);
+
+	// A text field has no Escape of its own in MAUI; the app's key command closes the path field, last in the responder chain.
+	public override UIKit.UIKeyCommand[] KeyCommands =>
+		[UIKit.UIKeyCommand.Create(UIKit.UIKeyCommand.Escape, 0, new ObjCRuntime.Selector("closePathField:"))];
+
+	[Export("closePathField:")]
+	public void ClosePathField(NSObject? sender) => AppMenu.Explorer?.CancelPathEdit();
 }
