@@ -1579,6 +1579,15 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     public IReadOnlyCollection<int> SelectedIndices => [.. _selection.Indices];
 
+    /// <summary>Selects the items a selection rectangle covers, in any layout, beside <paramref name="kept"/>.</summary>
+    public void SelectItems(IEnumerable<int> items, IReadOnlyCollection<int> kept)
+    {
+        if (AppMenu.Explorer != this)
+            Focus();
+        _selection.Box(items.Where(i => i < Rows.Count).OrderBy(i => i), kept);
+        ApplySelection();
+    }
+
     /// <summary>Selects the rows a selection rectangle covers, <paramref name="first"/> to <paramref name="last"/>, beside <paramref name="kept"/>.</summary>
     public void SelectRows(int first, int last, IReadOnlyCollection<int> kept)
     {

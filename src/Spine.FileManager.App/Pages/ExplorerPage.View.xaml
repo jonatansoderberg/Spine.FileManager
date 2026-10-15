@@ -553,14 +553,14 @@
                             <Image Source="{Binding Icon}" WidthRequest="{DynamicResource ItemIconSize}" HeightRequest="{DynamicResource ItemIconSize}" VerticalOptions="Center">
                                 <Image.GestureRecognizers>
                                     <DragGestureRecognizer DragStarting="OnRowDragStarting" DropCompleted="OnRowDropCompleted" />
-                                    <PointerGestureRecognizer PointerPressed="OnNamePressed" />
+                                    <PointerGestureRecognizer PointerPressed="OnItemPressed" />
                                 </Image.GestureRecognizers>
                             </Image>
                             <!-- A search result also says which folder it is in. -->
                             <Label Grid.Column="1" Style="{StaticResource Cell}" HorizontalOptions="Start">
                                 <Label.GestureRecognizers>
                                     <DragGestureRecognizer DragStarting="OnRowDragStarting" DropCompleted="OnRowDropCompleted" />
-                                    <PointerGestureRecognizer PointerPressed="OnNamePressed" />
+                                    <PointerGestureRecognizer PointerPressed="OnItemPressed" />
                                 </Label.GestureRecognizers>
                                 <Label.FormattedText>
                                     <FormattedString>
@@ -579,7 +579,7 @@
                     <Label Text="{String Explorer.Empty}" IsVisible="{Binding IsLoading, Converter={StaticResource Not}}" Opacity="0.5" HorizontalTextAlignment="Center" Padding="24" />
                 </FileListView.EmptyView>
             </FileListView>
-            <Border x:Name="Marquee" Grid.Row="3" IsVisible="False" InputTransparent="True" HorizontalOptions="Start" VerticalOptions="Start" ZIndex="2"
+            <Border x:Name="Marquee" Grid.Row="2" Grid.RowSpan="2" IsVisible="False" InputTransparent="True" HorizontalOptions="Start" VerticalOptions="Start" ZIndex="2"
                     StrokeThickness="1" StrokeShape="Rectangle" Stroke="{AppThemeBinding Light=#2F6FEB, Dark=#5B8DEF}"
                     BackgroundColor="{AppThemeBinding Light=#332F6FEB, Dark=#335B8DEF}" />
 
@@ -588,6 +588,7 @@
                           ContextMenu.Items="{Binding BackgroundMenu}">
                 <FileListView.GestureRecognizers>
                     <PointerGestureRecognizer PointerPressed="OnListPressed" />
+                    <PanGestureRecognizer PanUpdated="OnListPanned" />
                 </FileListView.GestureRecognizers>
                 <FileListView.ItemsLayout>
                     <GridItemsLayout Orientation="Vertical" Span="{Binding GridSpan}" VerticalItemSpacing="4" HorizontalItemSpacing="4" />
@@ -606,6 +607,7 @@
                             </Grid.Triggers>
                             <Grid.GestureRecognizers>
                                 <DragGestureRecognizer DragStarting="OnRowDragStarting" DropCompleted="OnRowDropCompleted" />
+                                <PointerGestureRecognizer PointerPressed="OnItemPressed" />
                                 <DropGestureRecognizer DragOver="OnFileDragOver" DragLeave="OnFileDragLeave" Drop="OnFileDrop" />
                                 <TapGestureRecognizer NumberOfTapsRequired="2" Command="{Binding ActivateCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
                                 <TapGestureRecognizer Command="{Binding TapCommand, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" CommandParameter="{Binding .}" />
