@@ -2,6 +2,7 @@
 <SpinePage
     xmlns="http://schemas.microsoft.com/dotnet/maui/global"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:services="clr-namespace:Spine.FileManager.Services"
     x:Class="Spine.FileManager.Pages.SettingsPage"
     x:TypeArguments="SettingsPageViewModel"
     x:DataType="SettingsPageViewModel">
@@ -42,7 +43,7 @@
             <Label Text="{String Settings.Hidden}" FontSize="13" FontAttributes="Bold" Margin="0,12,0,0" IsVisible="{Binding HasHiddenPlaces}" />
             <VerticalStackLayout BindableLayout.ItemsSource="{Binding HiddenPlaces}" IsVisible="{Binding HasHiddenPlaces}">
                 <BindableLayout.ItemTemplate>
-                    <DataTemplate x:DataType="HiddenPlace">
+                    <DataTemplate x:DataType="services:HiddenPlace">
                         <Grid ColumnDefinitions="*,Auto" Padding="0,2">
                             <Label Text="{Binding Name}" FontSize="13" VerticalOptions="Center" LineBreakMode="TailTruncation" />
                             <Button Grid.Column="1" Text="{String Settings.Hidden.Show}" FontSize="12" Padding="10,0" HeightRequest="26"

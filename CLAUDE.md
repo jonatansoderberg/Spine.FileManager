@@ -26,16 +26,16 @@ Built on Plugin.Maui.Spine from nuget.org; every `Plugin.Maui.Spine*` package at
 English and Swedish. Every user-facing text is a key in `src/Spine.FileManager.App/Resources/Strings/strings.xml` (English, the neutral document) **and** `strings.sv.xml` (Swedish) — add both in the same change. `{String Key}` in XAML, `ISpineStrings` in code; plurals as `Key.one` / `Key.other`. Never hard-code UI text. A page's title is set from `ISpineStrings` in `OnAppearingAsync` (`[NavigableRegion(Title = …)]` takes literal text).
 
 ## Build
-On macOS the `dotnet` first in PATH may lack the MAUI workload; use `/usr/local/share/dotnet` (`export PATH="/usr/local/share/dotnet:$PATH" DOTNET_ROOT=/usr/local/share/dotnet`).
+.NET 11 (`global.json`). On macOS use the `dotnet` first in PATH (dotnetup, SDK 11 with the `maui` workload), not `/usr/local/share/dotnet`, which is .NET 10. The Apple targets build with Xcode 27.2 through `XcodeLocation` in `Directory.Build.props`; leave the selected Xcode (`xcode-select`) alone.
 
 ```bash
 dotnet test src/Spine.FileManager.Tests
-dotnet build src/Spine.FileManager.App -f net10.0-maccatalyst
-dotnet build src/Spine.FileManager.App -f net10.0-ios -r iossimulator-arm64 -p:CodesignKey=-
-dotnet build src/Spine.FileManager.App -f net10.0-android
+dotnet build src/Spine.FileManager.App -f net11.0-maccatalyst
+dotnet build src/Spine.FileManager.App -f net11.0-ios -r iossimulator-arm64 -p:CodesignKey=-
+dotnet build src/Spine.FileManager.App -f net11.0-android
 ```
 
-On the Mac, an ad hoc signed build is a new app to macOS each time, so it asks for folder access (Desktop, Documents, Downloads) after every build. Sign with your development certificate and it asks once: `dotnet build … -f net10.0-maccatalyst -p:CodesignKey="Apple Development"`.
+On the Mac, an ad hoc signed build is a new app to macOS each time, so it asks for folder access (Desktop, Documents, Downloads) after every build. Sign with your development certificate and it asks once: `dotnet build … -f net11.0-maccatalyst -p:CodesignKey="Apple Development"`.
 
 ## GitHub issue workflow
 - Branch `issue/<id>-<kebab-case-title>`.
