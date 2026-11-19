@@ -8,13 +8,13 @@ It aims to combine Explorer-like productivity, Finder-like preview, browser-styl
 
 ## Build
 
-Requires the .NET 10 SDK with the MAUI workload (`global.json` pins the version).
+Requires the .NET 11 SDK with the MAUI workload (`global.json` pins the version). On macOS the Apple targets need Xcode 27.2; `Directory.Build.props` points the build at `/Applications/Xcode_27.2.app` when it is there, so the selected Xcode can stay on another version.
 
 ```bash
 dotnet test src/Spine.FileManager.Tests
-dotnet build src/Spine.FileManager.App -f net10.0-maccatalyst
-dotnet build src/Spine.FileManager.App -f net10.0-ios -r iossimulator-arm64 -p:CodesignKey=-
-dotnet build src/Spine.FileManager.App -f net10.0-android
+dotnet build src/Spine.FileManager.App -f net11.0-maccatalyst
+dotnet build src/Spine.FileManager.App -f net11.0-ios -r iossimulator-arm64 -p:CodesignKey=-
+dotnet build src/Spine.FileManager.App -f net11.0-android
 ```
 
 The Windows target builds on Windows.
