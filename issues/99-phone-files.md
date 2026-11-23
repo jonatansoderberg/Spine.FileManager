@@ -2,7 +2,7 @@
 
 **GitHub:** https://github.com/jonatansoderberg/Spine.FileManager/issues/99
 **Branch:** issue/99-phone-files
-**Status:** In Progress
+**Status:** Part 1 merged (2026-11-23): the Files app folder and Add Location (plan items 1 and 3). Photos on the phone (2) and the File Provider extension (4) are still open.
 
 ## Plan
 The owner asked for all four on 2026-10-16, in this order:
