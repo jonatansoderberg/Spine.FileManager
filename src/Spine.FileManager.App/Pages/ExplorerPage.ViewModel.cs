@@ -1276,7 +1276,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(ShowsSearchScope));
         if (SearchSubfolders && !string.IsNullOrWhiteSpace(value))
-            Search();
+            RunSearch();
         else
         {
             StopSearch();
@@ -1304,7 +1304,7 @@ public partial class ExplorerPageViewModel : ViewModelBase
 
     // The subfolders are searched in the background a moment after the typing stops; what is found shows in batches,
     // and a new text, another scope or another folder stops the search.
-    private void Search()
+    private void RunSearch()
     {
         _search?.Cancel();
         if (Current is not { } root)
