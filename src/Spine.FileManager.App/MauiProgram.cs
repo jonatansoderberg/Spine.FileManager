@@ -22,8 +22,8 @@ public static class MauiProgram
                 options.Windows.MinWidth = 480;
                 options.Windows.MinHeight = 360;
                 options.Windows.PersistWindowPosition = true;
-                // Windows 11's Mica behind the window, following light and dark (the Mac's material: WindowMaterial).
-                options.Windows.Backdrop = WindowBackdrop.Mica;
+                // Mica or Acrylic behind the window, the user's choice in Settings: Spine's on Windows, WindowMaterial on the Mac.
+                options.Windows.Backdrop = WindowBackdrops.Current;
                 // A tray icon with the shortcuts (ShortcutHandler). Closing the window keeps the app running in the
                 // background, so other devices can still send files and transfers go on.
                 options.Shortcuts.UseHandler<ShortcutHandler>();

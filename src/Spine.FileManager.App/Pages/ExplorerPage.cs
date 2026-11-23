@@ -20,14 +20,12 @@ public partial class ExplorerPage
     public ExplorerPage()
     {
         InitializeComponent();
-#if MACCATALYST
-        // With the window's material the sidebar shows the desktop through it; the files keep a solid background.
-        if (WindowMaterial.IsOn)
+        // With a backdrop the sidebar shows it; the files keep a solid background.
+        if (WindowBackdrops.IsOn)
         {
-            Sidebar.BackgroundColor = WindowMaterial.HitTestableClear;
+            Sidebar.BackgroundColor = WindowBackdrops.HitTestableClear;
             Pane.SetAppThemeColor(BackgroundColorProperty, Colors.White, Color.FromArgb("#1E1E1E"));
         }
-#endif
         void Fit()
         {
             if (BindingContext is ExplorerPageViewModel vm)

@@ -227,8 +227,11 @@
   <s key="Settings.Title">Settings</s>
   <s key="Settings.Open">Settings…</s>
   <s key="Settings.Appearance">Appearance</s>
-  <s key="Settings.Material">Translucent window</s>
-  <s key="Settings.Material.Note">The desktop shows through the sidebar. Applies to windows opened after the change.</s>
+  <s key="Settings.Backdrop">Window background</s>
+  <s key="Settings.Backdrop.None">Solid</s>
+  <s key="Settings.Backdrop.Mica">Mica</s>
+  <s key="Settings.Backdrop.Acrylic">Acrylic</s>
+  <s key="Settings.Backdrop.Note">Behind the sidebar. Mica is calm and tinted by the desktop, Acrylic shows the desktop blurred. Applies to windows opened after the change.</s>
   <s key="Settings.Link">Linked devices</s>
   <s key="Settings.Link.Tracker">Tracker</s>
   <s key="Settings.Link.Connected">Connected</s>

@@ -7,7 +7,7 @@ public sealed record IconStyleChoice(string Style, string Title);
 
 /// <summary>
 /// Settings, from the sidebar's foot (as in the concept image) or File › Settings: the appearance (the system's, light
-/// or dark, kept by Spine's theme service), the Mac's window material, the file icons and where received files go.
+/// or dark, kept by Spine's theme service), the window's backdrop on the desktops, the file icons and where received files go.
 /// </summary>
 public partial class SettingsPageViewModel(ISpineStrings strings, IThemeService theme, INavigationService navigation, DeviceService devices) : ViewModelBase
 {
@@ -42,13 +42,13 @@ public partial class SettingsPageViewModel(ISpineStrings strings, IThemeService 
 
     partial void OnAppearanceIndexChanged(int value) => theme.Current = Appearances[Math.Clamp(value, 0, 2)];
 
-    public bool HasWindowMaterial => DeviceInfo.Platform == DevicePlatform.MacCatalyst;
+    public bool HasBackdrop => WindowBackdrops.IsDesktop;
 
-    /// <summary>The Mac's translucent window; it applies to the windows opened after the change.</summary>
+    /// <summary>Solid, Mica or Acrylic (WindowBackdrop's order); it applies to the windows opened after the change.</summary>
     [ObservableProperty]
-    public partial bool WindowMaterial { get; set; } = Preferences.Get("window.material", true);
+    public partial int BackdropIndex { get; set; } = (int)WindowBackdrops.Current;
 
-    partial void OnWindowMaterialChanged(bool value) => Preferences.Set("window.material", value);
+    partial void OnBackdropIndexChanged(int value) => WindowBackdrops.Current = (WindowBackdrop)Math.Clamp(value, 0, 2);
 
     public IReadOnlyList<IconStyleChoice> IconStyles { get; } =
     [
