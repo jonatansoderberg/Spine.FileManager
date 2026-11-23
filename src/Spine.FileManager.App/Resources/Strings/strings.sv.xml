@@ -231,7 +231,8 @@
   <s key="Settings.Backdrop.None">Täckande</s>
   <s key="Settings.Backdrop.Mica">Mica</s>
   <s key="Settings.Backdrop.Acrylic">Akryl</s>
-  <s key="Settings.Backdrop.Note">Bakom sidopanelen. Mica är lugn och tonas av skrivbordet, Akryl visar skrivbordet suddigt. Gäller fönster som öppnas efter ändringen.</s>
+  <s key="Settings.Backdrop.Glass">Glas</s>
+  <s key="Settings.Backdrop.Note">Bakom sidopanelen. Mica är lugn och tonas av skrivbordet, Akryl visar skrivbordet suddigt, Glas gör sidopanelen till en glasruta.</s>
   <s key="Settings.Link">Länkade enheter</s>
   <s key="Settings.Link.Tracker">Tracker</s>
   <s key="Settings.Link.Connected">Ansluten</s>
