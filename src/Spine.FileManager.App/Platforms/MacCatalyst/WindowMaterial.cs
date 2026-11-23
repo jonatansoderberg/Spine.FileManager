@@ -25,10 +25,6 @@ public static class WindowMaterial
     // Each scene window's material view, installed once and then changed or hidden as the choice changes.
     private static readonly Dictionary<IntPtr, IntPtr> Effects = [];
 
-    // With glass, each window's AppKit NSGlassEffectView behind the sidebar (macOS 26), above the material.
-    private static readonly Dictionary<IntPtr, IntPtr> Glasses = [];
-    private const nint Above = 1;
-
     public static void Start()
     {
         NSNotificationCenter.DefaultCenter.AddObserver(new NSString("NSWindowDidBecomeKeyNotification"), notification =>
@@ -75,46 +71,10 @@ public static class WindowMaterial
             }
             SendNint(effect, "setMaterial:", WindowBackdrops.Current is Backdrop.Acrylic ? Sidebar : WindowBackground);
             SendBool(effect, "setHidden:", !WindowBackdrops.IsOn);
-            if (Glasses.TryGetValue(window, out var glass))
-                SendBool(glass, "setHidden:", !ShowsGlass);
         }
         catch (Exception e)
         {
             System.Diagnostics.Debug.WriteLine($"[WindowMaterial] {e.GetType().Name}: {e.Message}");
-        }
-    }
-
-    private static bool ShowsGlass => WindowBackdrops.IsOn && WindowBackdrops.Current is Backdrop.Glass;
-
-    /// <summary>
-    /// Puts the window's glass at <paramref name="rect"/>, in <paramref name="uiWindow"/>'s points (empty: no glass). UIKit
-    /// knows no NSWindow, so the window is the one whose scene has the UIKit window's shape; with the iPad idiom UIKit's
-    /// points are scaled, so the scale comes from the two widths.
-    /// </summary>
-    public static void SetGlassFrame(UIWindow uiWindow, CGRect rect)
-    {
-        if (uiWindow.Bounds.Width <= 0 || Class.GetHandle("NSGlassEffectView") == IntPtr.Zero)
-            return;
-        foreach (var (window, effect) in Effects)
-        {
-            var frame = Send(Send(window, "contentView"), "superview");
-            var bounds = Bounds(frame, Selector.GetHandle("bounds"));
-            var scale = bounds.Width / uiWindow.Bounds.Width;
-            if (Math.Abs(bounds.Height - uiWindow.Bounds.Height * scale) > 2)
-                continue;
-            var appKit = new CGRect(rect.X * scale, 0, rect.Width * scale, rect.Height * scale);
-            appKit.Y = Bool_objc_msgSend(frame, Selector.GetHandle("isFlipped")) ? rect.Y * scale : bounds.Height - (rect.Y + rect.Height) * scale;
-            if (!Glasses.TryGetValue(window, out var glass))
-            {
-                if (!ShowsGlass || rect.IsEmpty)
-                    continue;
-                glass = Send(Send(Class.GetHandle("NSGlassEffectView"), "alloc"), "initWithFrame:", appKit);
-                AddBelow(frame, Selector.GetHandle("addSubview:positioned:relativeTo:"), glass, Above, effect);
-                Glasses[window] = glass;
-            }
-            Void_objc_msgSend_CGRect(glass, Selector.GetHandle("setFrame:"), appKit);
-            Void_objc_msgSend_nfloat(glass, Selector.GetHandle("setCornerRadius:"), (nfloat)(12 * scale));
-            SendBool(glass, "setHidden:", !ShowsGlass || rect.IsEmpty);
         }
     }
 
@@ -151,16 +111,6 @@ public static class WindowMaterial
 
     [DllImport(ObjC, EntryPoint = "objc_msgSend")]
     private static extern IntPtr IntPtr_objc_msgSend_IntPtr(IntPtr receiver, IntPtr selector, IntPtr value);
-
-    [DllImport(ObjC, EntryPoint = "objc_msgSend")]
-    private static extern void Void_objc_msgSend_CGRect(IntPtr receiver, IntPtr selector, CGRect rect);
-
-    [DllImport(ObjC, EntryPoint = "objc_msgSend")]
-    private static extern void Void_objc_msgSend_nfloat(IntPtr receiver, IntPtr selector, nfloat value);
-
-    [DllImport(ObjC, EntryPoint = "objc_msgSend")]
-    [return: MarshalAs(UnmanagedType.I1)]
-    private static extern bool Bool_objc_msgSend(IntPtr receiver, IntPtr selector);
 
     [DllImport(ObjC, EntryPoint = "objc_msgSend")]
     private static extern void AddBelow(IntPtr receiver, IntPtr selector, IntPtr view, nint place, IntPtr relativeTo);

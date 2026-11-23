@@ -11,11 +11,6 @@ public enum Backdrop
 
     /// <summary>The desktop blurred through the sidebar.</summary>
     Acrylic,
-
-    /// <summary>
-    /// The Mac only (26 and later): the sidebar a pane of Liquid Glass (Spine's <c>Material.Kind="Glass"</c>), over Mica.
-    /// </summary>
-    Glass,
 }
 
 /// <summary>
@@ -31,9 +26,6 @@ public static class WindowBackdrops
 
     public static bool IsDesktop => OperatingSystem.IsMacCatalyst() || OperatingSystem.IsWindows();
 
-    /// <summary>Liquid Glass is the Mac's from macOS 26.</summary>
-    public static bool HasGlass => OperatingSystem.IsMacCatalystVersionAtLeast(26);
-
     /// <summary>Raised on the main thread when the choice changes.</summary>
     public static event Action? Changed;
 
@@ -42,13 +34,12 @@ public static class WindowBackdrops
         get
         {
             var stored = Preferences.Get(Key, null);
-            var backdrop = stored switch
+            return stored switch
             {
                 null => Preferences.Get("window.material", true) ? Backdrop.Mica : Backdrop.Solid, // the Mac's old switch
                 "None" => Backdrop.Solid,
                 _ => Enum.TryParse<Backdrop>(stored, out var b) ? b : Backdrop.Mica,
             };
-            return backdrop is Backdrop.Glass && !HasGlass ? Backdrop.Acrylic : backdrop;
         }
         set
         {
@@ -71,11 +62,11 @@ public static class WindowBackdrops
         }
     }
 
-    /// <summary>Spine's backdrop for Windows: glass is the Mac's, Acrylic there.</summary>
+    /// <summary>Spine's backdrop for Windows.</summary>
     public static WindowBackdrop ForWindows => Current switch
     {
         Backdrop.Mica => WindowBackdrop.Mica,
-        Backdrop.Acrylic or Backdrop.Glass => WindowBackdrop.Acrylic,
+        Backdrop.Acrylic => WindowBackdrop.Acrylic,
         _ => WindowBackdrop.None,
     };
 
@@ -93,4 +84,13 @@ public static class WindowBackdrops
     /// mouse wheel whenever a gap between rows came under a pointer held still. One percent is not seen.
     /// </summary>
     public static Color HitTestableClear { get; } = Color.FromRgba(0, 0, 0, 0.01);
+
+    /// <summary>
+    /// The sidebar's paint over the backdrop in dark mode. Mica on the Mac (the window-background material) is darker
+    /// than the files and was hard to tell from Solid; a 4 % white veil lifts it to Finder's sidebar (measured beside
+    /// Finder, macOS 27: 37,35,41 there). Elsewhere it is clear.
+    /// </summary>
+    public static Color SidebarVeilDark => OperatingSystem.IsMacCatalyst() && Current is Backdrop.Mica
+        ? Color.FromRgba(255, 255, 255, 0.04)
+        : HitTestableClear;
 }

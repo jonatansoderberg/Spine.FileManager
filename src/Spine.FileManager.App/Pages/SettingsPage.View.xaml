@@ -30,14 +30,7 @@
 
             <VerticalStackLayout IsVisible="{Binding HasBackdrop}" Spacing="6" Margin="0,8,0,0">
                 <Label Text="{String Settings.Backdrop}" FontSize="14" />
-                <!-- Glass is the Mac's, from macOS 26: a segment cannot be hidden, so a control with it and one without. -->
-                <SegmentedControl SelectedIndex="{Binding BackdropIndex}" IsVisible="{Binding HasGlass}">
-                    <Segment Title="{String Settings.Backdrop.None}" />
-                    <Segment Title="{String Settings.Backdrop.Mica}" />
-                    <Segment Title="{String Settings.Backdrop.Acrylic}" />
-                    <Segment Title="{String Settings.Backdrop.Glass}" />
-                </SegmentedControl>
-                <SegmentedControl SelectedIndex="{Binding BackdropIndex}" IsVisible="{Binding HasNoGlass}">
+                <SegmentedControl SelectedIndex="{Binding BackdropIndex}">
                     <Segment Title="{String Settings.Backdrop.None}" />
                     <Segment Title="{String Settings.Backdrop.Mica}" />
                     <Segment Title="{String Settings.Backdrop.Acrylic}" />

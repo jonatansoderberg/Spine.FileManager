@@ -44,15 +44,11 @@ public partial class SettingsPageViewModel(ISpineStrings strings, IThemeService 
 
     public bool HasBackdrop => WindowBackdrops.IsDesktop;
 
-    public bool HasGlass => WindowBackdrops.HasGlass;
-
-    public bool HasNoGlass => !HasGlass;
-
-    /// <summary>Solid, Mica, Acrylic or (the Mac's) glass, in Backdrop's order; the open windows follow at once.</summary>
+    /// <summary>Solid, Mica or Acrylic, in Backdrop's order; the open windows follow at once.</summary>
     [ObservableProperty]
     public partial int BackdropIndex { get; set; } = (int)WindowBackdrops.Current;
 
-    partial void OnBackdropIndexChanged(int value) => WindowBackdrops.Current = (Backdrop)Math.Clamp(value, 0, HasGlass ? 3 : 2);
+    partial void OnBackdropIndexChanged(int value) => WindowBackdrops.Current = (Backdrop)Math.Clamp(value, 0, 2);
 
     public IReadOnlyList<IconStyleChoice> IconStyles { get; } =
     [

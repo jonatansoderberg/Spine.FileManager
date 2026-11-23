@@ -22,9 +22,6 @@ public partial class ExplorerPage
         InitializeComponent();
         ShowBackdrop();
         WindowBackdrops.Changed += ShowBackdrop;
-        Sidebar.SizeChanged += (_, _) => PlaceGlass();
-        Sidebar.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(IsVisible)) PlaceGlass(); };
-        Loaded += (_, _) => PlaceGlass();
         Unloaded += (_, _) => WindowBackdrops.Changed -= ShowBackdrop;
         void Fit()
         {
@@ -725,15 +722,12 @@ public partial class ExplorerPage
         _resize = null;
     }
 
-    /// <summary>
-    /// The window's backdrop behind the sidebar (<see cref="WindowBackdrops"/>), the files on a solid background; with
-    /// glass the sidebar is clear over a pane of the Mac's own glass, inset from the window's edges as Finder's is.
-    /// </summary>
+    /// <summary>The window's backdrop behind the sidebar (<see cref="WindowBackdrops"/>), the files on a solid background.</summary>
     private void ShowBackdrop()
     {
         if (WindowBackdrops.IsOn)
         {
-            Sidebar.BackgroundColor = WindowBackdrops.HitTestableClear;
+            Sidebar.SetAppThemeColor(BackgroundColorProperty, WindowBackdrops.HitTestableClear, WindowBackdrops.SidebarVeilDark);
             Pane.SetAppThemeColor(BackgroundColorProperty, Colors.White, Color.FromArgb("#1E1E1E"));
         }
         else
@@ -741,31 +735,6 @@ public partial class ExplorerPage
             Sidebar.SetAppThemeColor(BackgroundColorProperty, Color.FromArgb("#F3F4F6"), Color.FromArgb("#1E1F22"));
             Pane.ClearValue(BackgroundColorProperty);
         }
-        // Inside the glass the rows keep their distance from its edges, as Finder's do.
-        var inset = WindowBackdrops.IsOn && WindowBackdrops.Current is Backdrop.Glass ? 8 : 0;
-        foreach (var child in Sidebar.Children.OfType<View>())
-        {
-            _sidebarMargins.TryAdd(child, child.Margin);
-            var m = _sidebarMargins[child];
-            child.Margin = new Thickness(m.Left + inset, m.Top, m.Right + inset, m.Bottom + (child is ScrollView ? 0 : inset));
-        }
-        PlaceGlass();
-    }
-
-    private readonly Dictionary<View, Thickness> _sidebarMargins = [];
-
-    private void PlaceGlass()
-    {
-#if MACCATALYST
-        if (Sidebar.Handler?.PlatformView is UIKit.UIView view && view.Window is { } window)
-        {
-            var frame = view.ConvertRectToView(view.Bounds, window);
-            var rect = Sidebar.IsVisible && WindowBackdrops.Current is Backdrop.Glass
-                ? new CoreGraphics.CGRect(frame.X + 8, frame.Y + 8, frame.Width - 16, frame.Height - 16)
-                : CoreGraphics.CGRect.Empty;
-            WindowMaterial.SetGlassFrame(window, rect);
-        }
-#endif
     }
 
 }
