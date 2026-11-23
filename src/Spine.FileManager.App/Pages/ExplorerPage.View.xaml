@@ -337,6 +337,9 @@
                 <DropGestureRecognizer DragOver="OnFileDragOver" DragLeave="OnFileDragLeave" Drop="OnFileDrop" />
             </Grid.GestureRecognizers>
 
+            <!-- With a backdrop the pane is clear down to the tabs, which stand on the backdrop as the sidebar does; the
+                 rest of the pane is this surface, the active tab's colour (ExplorerPage.ShowBackdrop). -->
+            <BoxView x:Name="PaneSurface" Grid.RowSpan="5" Grid.ColumnSpan="2" IsVisible="False" InputTransparent="True" />
             <KeySink x:Name="Keys" WidthRequest="1" HeightRequest="1" Opacity="0" HorizontalOptions="Start" VerticalOptions="Start" />
             <VerticalStackLayout Grid.ColumnSpan="2">
             <!-- In Dual Pane, a line marks the pane the menus and the sidebar act on. -->

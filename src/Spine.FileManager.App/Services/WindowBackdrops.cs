@@ -86,11 +86,12 @@ public static class WindowBackdrops
     public static Color HitTestableClear { get; } = Color.FromRgba(0, 0, 0, 0.01);
 
     /// <summary>
-    /// The sidebar's paint over the backdrop in dark mode. Mica on the Mac (the window-background material) is darker
-    /// than the files and was hard to tell from Solid; a 4 % white veil lifts it to Finder's sidebar (measured beside
-    /// Finder, macOS 27: 37,35,41 there). Elsewhere it is clear.
+    /// The sidebar's and the tab strip's paint over the backdrop in dark mode. On the Mac, Mica and Acrylic share the
+    /// see-through sidebar material, and Mica darkens it to Finder's sidebar: the desktop's colour still comes through,
+    /// as in Finder, where the window-background material (and a white veil over it) looked solid. Measured beside
+    /// Finder, macOS 27: 37,36,39 against 37,36,41.
     /// </summary>
     public static Color SidebarVeilDark => OperatingSystem.IsMacCatalyst() && Current is Backdrop.Mica
-        ? Color.FromRgba(255, 255, 255, 0.04)
+        ? Color.FromRgba(0, 0, 0, 0.4)
         : HitTestableClear;
 }

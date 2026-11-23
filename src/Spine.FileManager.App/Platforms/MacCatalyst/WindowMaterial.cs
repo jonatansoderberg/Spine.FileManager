@@ -15,11 +15,10 @@ namespace Spine.FileManager;
 /// </summary>
 public static class WindowMaterial
 {
-    // NSVisualEffectMaterial.WindowBackground (Mica: tinted by the desktop picture and nearly opaque, as Finder's sidebar
-    // is) and .Sidebar (Acrylic: the desktop clearly through it; .UnderWindowBackground draws the same on macOS 27),
+    // NSVisualEffectMaterial.Sidebar (the desktop clearly through it; Mica darkens it in the sidebar, WindowBackdrops),
     // NSVisualEffectBlendingMode.BehindWindow, NSVisualEffectState.Active, NSViewWidthSizable | NSViewHeightSizable,
     // NSWindowBelow.
-    private const nint WindowBackground = 12, Sidebar = 7, BehindWindow = 0, Active = 1, Below = -1;
+    private const nint Sidebar = 7, BehindWindow = 0, Active = 1, Below = -1;
     private const nuint FillsSuperview = 2 | 16;
 
     // Each scene window's material view, installed once and then changed or hidden as the choice changes.
@@ -69,7 +68,7 @@ public static class WindowMaterial
                             view.BackgroundColor = Microsoft.Maui.Platform.ColorExtensions.ToPlatform(WindowBackdrops.HitTestableClear);
                 Effects[window] = effect;
             }
-            SendNint(effect, "setMaterial:", WindowBackdrops.Current is Backdrop.Acrylic ? Sidebar : WindowBackground);
+            SendNint(effect, "setMaterial:", Sidebar);
             SendBool(effect, "setHidden:", !WindowBackdrops.IsOn);
         }
         catch (Exception e)

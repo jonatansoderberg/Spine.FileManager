@@ -22,6 +22,7 @@ public partial class ExplorerPage
         InitializeComponent();
         ShowBackdrop();
         WindowBackdrops.Changed += ShowBackdrop;
+        TabBar.SizeChanged += (_, _) => PaneSurface.Margin = new Thickness(0, TabBar.Y + TabBar.Height, 0, 0);
         Unloaded += (_, _) => WindowBackdrops.Changed -= ShowBackdrop;
         void Fit()
         {
@@ -722,18 +723,26 @@ public partial class ExplorerPage
         _resize = null;
     }
 
-    /// <summary>The window's backdrop behind the sidebar (<see cref="WindowBackdrops"/>), the files on a solid background.</summary>
+    /// <summary>
+    /// The window's backdrop (<see cref="WindowBackdrops"/>) behind the sidebar and the tabs, so the active tab stands out
+    /// from them; the files below on a solid surface the active tab's colour.
+    /// </summary>
     private void ShowBackdrop()
     {
         if (WindowBackdrops.IsOn)
         {
             Sidebar.SetAppThemeColor(BackgroundColorProperty, WindowBackdrops.HitTestableClear, WindowBackdrops.SidebarVeilDark);
-            Pane.SetAppThemeColor(BackgroundColorProperty, Colors.White, Color.FromArgb("#1E1E1E"));
+            TabBar.SetAppThemeColor(BackgroundColorProperty, WindowBackdrops.HitTestableClear, WindowBackdrops.SidebarVeilDark);
+            Pane.BackgroundColor = WindowBackdrops.HitTestableClear;
+            PaneSurface.SetAppThemeColor(BoxView.ColorProperty, Colors.White, Color.FromArgb("#1E1E1E"));
+            PaneSurface.IsVisible = true;
         }
         else
         {
             Sidebar.SetAppThemeColor(BackgroundColorProperty, Color.FromArgb("#F3F4F6"), Color.FromArgb("#1E1F22"));
+            TabBar.SetAppThemeColor(BackgroundColorProperty, Color.FromArgb("#E9EAEE"), Color.FromArgb("#16171A"));
             Pane.ClearValue(BackgroundColorProperty);
+            PaneSurface.IsVisible = false;
         }
     }
 
