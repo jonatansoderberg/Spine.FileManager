@@ -24,7 +24,7 @@ public partial class ExplorerPage
         // With the window's material the sidebar shows the desktop through it; the files keep a solid background.
         if (WindowMaterial.IsOn)
         {
-            Sidebar.BackgroundColor = Colors.Transparent;
+            Sidebar.BackgroundColor = WindowMaterial.HitTestableClear;
             Pane.SetAppThemeColor(BackgroundColorProperty, Colors.White, Color.FromArgb("#1E1E1E"));
         }
 #endif
