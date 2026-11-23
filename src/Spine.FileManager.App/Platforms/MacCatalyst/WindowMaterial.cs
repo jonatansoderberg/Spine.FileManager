@@ -23,6 +23,14 @@ public static class WindowMaterial
 
     public static bool IsOn => Preferences.Get("window.material", true);
 
+    /// <summary>
+    /// What the views that show the material are painted with instead of clear. Mac Catalyst asks the render server
+    /// which layer is under the pointer before it hands a mouse or scroll event to UIKit; where every UIKit layer is
+    /// fully clear the answer is the AppKit material behind, and the event is dropped. In the sidebar that stopped the
+    /// mouse wheel whenever a gap between rows came under a pointer held still. One percent is not seen.
+    /// </summary>
+    public static Color HitTestableClear { get; } = Color.FromRgba(0, 0, 0, 0.01);
+
     public static void Start()
     {
         if (!IsOn)
@@ -51,11 +59,11 @@ public static class WindowMaterial
             AddBelow(frame, Selector.GetHandle("addSubview:positioned:relativeTo:"), effect, Below, content);
             SendBool(window, "setOpaque:", false);
             SendPtr(window, "setBackgroundColor:", Send(Class.GetHandle("NSColor"), "clearColor"));
-            // UIKit's window and the views MAUI puts under the page are opaque by default.
+            // UIKit's window and the views MAUI puts under the page are opaque by default; clear, but not to the hit test.
             foreach (var scene in UIApplication.SharedApplication.ConnectedScenes.ToArray<UIScene>().OfType<UIWindowScene>())
                 foreach (var uiWindow in scene.Windows)
                     for (UIView? view = uiWindow; view is not null && view is not Microsoft.Maui.Platform.LayoutView; view = view.Subviews.FirstOrDefault())
-                        view.BackgroundColor = UIColor.Clear;
+                        view.BackgroundColor = Microsoft.Maui.Platform.ColorExtensions.ToPlatform(HitTestableClear);
         }
         catch (Exception e)
         {
