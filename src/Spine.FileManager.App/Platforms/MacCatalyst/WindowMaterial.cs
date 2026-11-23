@@ -7,33 +7,26 @@ using UIKit;
 namespace Spine.FileManager;
 
 /// <summary>
-/// The Mac's window material: the desktop shows through the window, blurred, as through Finder's sidebar. Mac Catalyst
+/// The Mac's window material, the user's Mica or Acrylic (<see cref="WindowBackdrops"/>): the desktop shows through the
+/// window, as through Finder's sidebar. Mac Catalyst
 /// has no API for it, so an AppKit NSVisualEffectView goes behind the window's UIKit content and the window stops being
 /// opaque; the views that should show it are transparent (the sidebar), the rest keep their own background. The
 /// NSWindow is found the way Spine finds it: as the object of NSWindowDidBecomeKeyNotification.
 /// </summary>
 public static class WindowMaterial
 {
-    // NSVisualEffectMaterial.Sidebar, NSVisualEffectBlendingMode.BehindWindow, NSVisualEffectState.Active,
-    // NSViewWidthSizable | NSViewHeightSizable, NSWindowBelow.
-    private const nint Sidebar = 7, BehindWindow = 0, Active = 1, Below = -1;
+    // NSVisualEffectMaterial.WindowBackground (Mica: tinted by the desktop picture and nearly opaque, as Finder's sidebar
+    // is) and .Sidebar (Acrylic: the desktop clearly through it; .UnderWindowBackground draws the same on macOS 27),
+    // NSVisualEffectBlendingMode.BehindWindow, NSVisualEffectState.Active, NSViewWidthSizable | NSViewHeightSizable,
+    // NSWindowBelow.
+    private const nint WindowBackground = 12, Sidebar = 7, BehindWindow = 0, Active = 1, Below = -1;
     private const nuint FillsSuperview = 2 | 16;
 
     private static readonly HashSet<IntPtr> Applied = [];
 
-    public static bool IsOn => Preferences.Get("window.material", true);
-
-    /// <summary>
-    /// What the views that show the material are painted with instead of clear. Mac Catalyst asks the render server
-    /// which layer is under the pointer before it hands a mouse or scroll event to UIKit; where every UIKit layer is
-    /// fully clear the answer is the AppKit material behind, and the event is dropped. In the sidebar that stopped the
-    /// mouse wheel whenever a gap between rows came under a pointer held still. One percent is not seen.
-    /// </summary>
-    public static Color HitTestableClear { get; } = Color.FromRgba(0, 0, 0, 0.01);
-
     public static void Start()
     {
-        if (!IsOn)
+        if (!WindowBackdrops.IsOn)
             return;
         NSNotificationCenter.DefaultCenter.AddObserver(new NSString("NSWindowDidBecomeKeyNotification"), notification =>
         {
@@ -52,7 +45,7 @@ public static class WindowMaterial
             if (content == IntPtr.Zero || frame == IntPtr.Zero)
                 return;
             var effect = Send(Send(Class.GetHandle("NSVisualEffectView"), "alloc"), "initWithFrame:", Bounds(frame, Selector.GetHandle("bounds")));
-            SendNint(effect, "setMaterial:", Sidebar);
+            SendNint(effect, "setMaterial:", WindowBackdrops.Current is WindowBackdrop.Mica ? WindowBackground : Sidebar);
             SendNint(effect, "setBlendingMode:", BehindWindow);
             SendNint(effect, "setState:", Active);
             SendNuint(effect, "setAutoresizingMask:", FillsSuperview);
@@ -63,7 +56,7 @@ public static class WindowMaterial
             foreach (var scene in UIApplication.SharedApplication.ConnectedScenes.ToArray<UIScene>().OfType<UIWindowScene>())
                 foreach (var uiWindow in scene.Windows)
                     for (UIView? view = uiWindow; view is not null && view is not Microsoft.Maui.Platform.LayoutView; view = view.Subviews.FirstOrDefault())
-                        view.BackgroundColor = Microsoft.Maui.Platform.ColorExtensions.ToPlatform(HitTestableClear);
+                        view.BackgroundColor = Microsoft.Maui.Platform.ColorExtensions.ToPlatform(WindowBackdrops.HitTestableClear);
         }
         catch (Exception e)
         {

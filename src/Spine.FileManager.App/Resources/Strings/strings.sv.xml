@@ -227,8 +227,11 @@
   <s key="Settings.Title">Inställningar</s>
   <s key="Settings.Open">Inställningar…</s>
   <s key="Settings.Appearance">Utseende</s>
-  <s key="Settings.Material">Genomskinligt fönster</s>
-  <s key="Settings.Material.Note">Skrivbordet syns genom sidopanelen. Gäller fönster som öppnas efter ändringen.</s>
+  <s key="Settings.Backdrop">Fönsterbakgrund</s>
+  <s key="Settings.Backdrop.None">Täckande</s>
+  <s key="Settings.Backdrop.Mica">Mica</s>
+  <s key="Settings.Backdrop.Acrylic">Akryl</s>
+  <s key="Settings.Backdrop.Note">Bakom sidopanelen. Mica är lugn och tonas av skrivbordet, Akryl visar skrivbordet suddigt. Gäller fönster som öppnas efter ändringen.</s>
   <s key="Settings.Link">Länkade enheter</s>
   <s key="Settings.Link.Tracker">Tracker</s>
   <s key="Settings.Link.Connected">Ansluten</s>
