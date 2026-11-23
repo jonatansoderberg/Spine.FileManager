@@ -35,6 +35,9 @@
                 </VisualStateGroupList>
             </Setter>
         </Style>
+        <!-- A sidebar row's selection stops short of the scroll bar, which stays at the sidebar's edge (with scroll bars
+             always shown, as with a mouse, it overlapped the selected row). -->
+        <Thickness x:Key="SidebarRowMargin">8,1,18,1</Thickness>
         <!-- A sidebar entry's glyph, tinted with the accent; Spine's SVG tint works on an ImageButton. The row takes the taps. -->
         <Style x:Key="SidebarGlyph" TargetType="ImageButton">
             <!-- Spine's glyphs leave room inside their view box; the button is larger than the glyph looks. -->
@@ -104,7 +107,7 @@
         </Style>
         <!-- A place in This Device or Cloud: a click opens it, files dropped on it go there, right-click hides it. -->
         <DataTemplate x:Key="PlaceTemplate" x:DataType="PlaceRow">
-                        <Border Padding="8,0" Margin="8,1" HeightRequest="{DynamicResource SidebarItemHeight}" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent"
+                        <Border Padding="8,0" Margin="{StaticResource SidebarRowMargin}" HeightRequest="{DynamicResource SidebarItemHeight}" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent"
                 ContextMenu.Items="{Binding PlaceMenu, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" ContextMenu.CommandParameter="{Binding .}">
                             <Border.Triggers>
                                 <DataTrigger TargetType="Border" Binding="{Binding IsCurrent}" Value="True">
@@ -188,7 +191,7 @@
             <!-- Everything but Settings scrolls when the window is lower than the sidebar. -->
             <ScrollView VerticalScrollBarVisibility="Never">
             <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
-            <Border Padding="8,0" Margin="8,10,8,1" HeightRequest="{DynamicResource SidebarItemHeight}" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent">
+            <Border Padding="8,0" Margin="8,10,18,1" HeightRequest="{DynamicResource SidebarItemHeight}" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent">
                 <Border.Triggers>
                     <DataTrigger TargetType="Border" Binding="{Binding IsHome}" Value="True">
                         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SelectionLight}, Dark={StaticResource SelectionDark}}" />
@@ -210,7 +213,7 @@
                                  Reorder.Mode="LongPress" Reorder.Command="{Binding SaveFavoriteOrderCommand}">
                 <BindableLayout.ItemTemplate>
                     <DataTemplate x:DataType="FavoriteRow">
-                        <Border Padding="8,0" Margin="8,1" HeightRequest="{DynamicResource SidebarItemHeight}" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent" Opacity="{Binding Dimmed}"
+                        <Border Padding="8,0" Margin="{StaticResource SidebarRowMargin}" HeightRequest="{DynamicResource SidebarItemHeight}" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent" Opacity="{Binding Dimmed}"
                               ContextMenu.Items="{Binding FavoriteMenu, Source={RelativeSource AncestorType={x:Type ExplorerPageViewModel}}}" ContextMenu.CommandParameter="{Binding .}">
                             <Border.Triggers>
                                 <DataTrigger TargetType="Border" Binding="{Binding IsCurrent}" Value="True">
@@ -235,7 +238,7 @@
 
             <!-- The trash closes This Device, as in Finder's Dock and Explorer's desktop. -->
             <VerticalStackLayout Grid.Row="6">
-                <Border Padding="8,0" Margin="8,1" HeightRequest="{DynamicResource SidebarItemHeight}" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent">
+                <Border Padding="8,0" Margin="{StaticResource SidebarRowMargin}" HeightRequest="{DynamicResource SidebarItemHeight}" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent">
                     <Border.Triggers>
                         <DataTrigger TargetType="Border" Binding="{Binding IsTrashCurrent}" Value="True">
                             <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SelectionLight}, Dark={StaticResource SelectionDark}}" />
@@ -264,7 +267,7 @@
             <VerticalStackLayout Grid.Row="10" BindableLayout.ItemsSource="{Binding Devices}">
                 <BindableLayout.ItemTemplate>
                     <DataTemplate x:DataType="DeviceRow">
-                        <Border Padding="8,0" Margin="8,1" HeightRequest="{DynamicResource SidebarItemHeight}" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent"
+                        <Border Padding="8,0" Margin="{StaticResource SidebarRowMargin}" HeightRequest="{DynamicResource SidebarItemHeight}" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent"
                               ContextMenu.Items="{Binding Menu}" ContextMenu.CommandParameter="{Binding .}"
                               ToolTipProperties.Text="{Binding StatusLine}">
                             <Border.Triggers>
