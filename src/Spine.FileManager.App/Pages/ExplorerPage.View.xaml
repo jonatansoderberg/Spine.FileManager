@@ -233,20 +233,25 @@
             </CollectionView>
 
             <!-- The trash closes This Device, as in Finder's Dock and Explorer's desktop. -->
-            <Border Grid.Row="6" Padding="8,0" Margin="8,1" HeightRequest="{DynamicResource SidebarItemHeight}" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent">
-                <Border.Triggers>
-                    <DataTrigger TargetType="Border" Binding="{Binding IsTrashCurrent}" Value="True">
-                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SelectionLight}, Dark={StaticResource SelectionDark}}" />
-                    </DataTrigger>
-                </Border.Triggers>
-                <Border.GestureRecognizers>
-                    <TapGestureRecognizer Command="{Binding OpenTrashCommand}" />
-                </Border.GestureRecognizers>
-                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                    <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="Delete.svg" />
-                    <Label Grid.Column="1" Text="{Binding TrashName}" FontSize="{DynamicResource SidebarFontSize}" VerticalTextAlignment="Center" />
-                </Grid>
-            </Border>
+            <VerticalStackLayout Grid.Row="6">
+                <Border Padding="8,0" Margin="8,1" HeightRequest="{DynamicResource SidebarItemHeight}" StrokeThickness="0" StrokeShape="RoundRectangle 6" BackgroundColor="Transparent">
+                    <Border.Triggers>
+                        <DataTrigger TargetType="Border" Binding="{Binding IsTrashCurrent}" Value="True">
+                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SelectionLight}, Dark={StaticResource SelectionDark}}" />
+                        </DataTrigger>
+                    </Border.Triggers>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding OpenTrashCommand}" />
+                    </Border.GestureRecognizers>
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                        <ImageButton Style="{StaticResource SidebarGlyph}" SvgImageSource.Svg="Delete.svg" />
+                        <Label Grid.Column="1" Text="{Binding TrashName}" FontSize="{DynamicResource SidebarFontSize}" VerticalTextAlignment="Center" />
+                    </Grid>
+                </Border>
+                <!-- The phone reaches its files through folders picked in the system's picker. -->
+                <Button Text="{String Places.Add}" Command="{Binding AddLocationCommand}" IsVisible="{Binding CanAddLocation}" FontSize="12" Padding="12,0" HeightRequest="26" CornerRadius="13"
+                        Margin="16,6,16,0" HorizontalOptions="Start" BackgroundColor="{AppThemeBinding Light=#E4ECFD, Dark=#25324D}" TextColor="{AppThemeBinding Light=#2F6FEB, Dark=#9BB9F7}" />
+            </VerticalStackLayout>
 
             <!-- Cloud: iCloud Drive and the other providers, apart from the disks of This Device. -->
             <Label Grid.Row="7" Text="{String Places.Cloud}" Style="{StaticResource SidebarSection}" IsVisible="{Binding HasCloud}" />
@@ -867,6 +872,9 @@
                     <!-- Without a sidebar (a phone) This Device's places are here: Documents holds what other devices send. -->
                     <VerticalStackLayout IsVisible="{Binding ShowsSidebar, Converter={StaticResource Not}}" Margin="-8,0,0,12">
                         <VerticalStackLayout BindableLayout.ItemsSource="{Binding Places}" BindableLayout.ItemTemplate="{StaticResource PlaceTemplate}" />
+                        <Button Text="{String Places.Add}" Command="{Binding AddLocationCommand}" IsVisible="{Binding CanAddLocation}" FontSize="12" Padding="12,0" HeightRequest="28" CornerRadius="14"
+                                Margin="16,8,16,2" HorizontalOptions="Start" BackgroundColor="{AppThemeBinding Light=#E4ECFD, Dark=#25324D}" TextColor="{AppThemeBinding Light=#2F6FEB, Dark=#9BB9F7}" />
+                        <Label Text="{String Places.Add.Hint}" IsVisible="{Binding CanAddLocation}" FontSize="12" Opacity="0.6" Margin="16,0,16,8" />
                         <!-- Settings live at the foot of the sidebar; without one they come after the places. -->
                         <Border Padding="8,0" Margin="8,1" HeightRequest="{DynamicResource SidebarItemHeight}" StrokeThickness="0" BackgroundColor="Transparent">
                             <Border.GestureRecognizers>

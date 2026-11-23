@@ -346,8 +346,62 @@ public partial class ExplorerPageViewModel : ViewModelBase
         CloudHeight = CloudPlaces.Count * SidebarRowHeight;
     }
 
+    // This Device and Cloud from every provider's roots, built again when the phone is given another folder.
+    private async Task LoadPlaces()
+    {
+        var places = new List<PlaceRow>();
+        foreach (var provider in _providers.All)
+            foreach (var root in await provider.GetRootsAsync())
+                places.Add(new(root));
+        // The photo library follows the Pictures folder.
+        if (places.FirstOrDefault(p => p.Root.Kind == StorageRootKind.PhotoLibrary) is { } photos
+            && places.FindIndex(p => p.Root.Kind == StorageRootKind.Pictures) is >= 0 and var pictures)
+        {
+            places.Remove(photos);
+            places.Insert(Math.Min(pictures + 1, places.Count), photos);
+        }
+        // This Device ends with the disks, as in the concept image, unless the provider already lists one. Not on the
+        // phone: its disk is a card on Home, and nothing at its root can be read.
+        if (!OperatingSystem.IsIOS())
+            foreach (var disk in await Task.Run(ListDisks))
+                if (!places.Any(p => p.Root.Location.Equals(disk.Location)))
+                    places.Add(new(new StorageRoot(disk.Location, disk.Name, disk.Kind switch
+                    {
+                        DiskKind.Network => StorageRootKind.NetworkVolume,
+                        DiskKind.External => StorageRootKind.RemovableVolume,
+                        _ => StorageRootKind.Volume,
+                    })));
+        _allPlaces.Clear();
+        _allPlaces.AddRange(places);
+        ShowPlaces();
+    }
+
     [RelayCommand]
-    private void HidePlace(PlaceRow place) => HiddenPlaces.Hide(place.Root.Location, place.Name);
+    private void HidePlace(PlaceRow place)
+    {
+#if IOS
+        // A folder picked on the phone is let go of: its access is given back, and it can be added again.
+        if (place.Root.Location.NativePath is { } path && FolderGrants.Contains(path))
+        {
+            FolderGrants.Remove(path);
+            return;
+        }
+#endif
+        HiddenPlaces.Hide(place.Root.Location, place.Name);
+    }
+
+    /// <summary>Whether places can be added through the system's folder picker: the phone's way to reach its files.</summary>
+    public bool CanAddLocation => OperatingSystem.IsIOS();
+
+    [RelayCommand]
+    private async Task AddLocation()
+    {
+#if IOS
+        await FolderGrants.PickAsync();
+#else
+        await Task.CompletedTask;
+#endif
+    }
 
     private readonly DeviceService _devices;
 
@@ -1782,26 +1836,10 @@ public partial class ExplorerPageViewModel : ViewModelBase
             session.Register(this);
         UpdateInterrupted();
         await LoadFavorites();
-        foreach (var provider in _providers.All)
-            foreach (var root in await provider.GetRootsAsync())
-                _allPlaces.Add(new(root));
-        // The photo library follows the Pictures folder.
-        if (_allPlaces.FirstOrDefault(p => p.Root.Kind == StorageRootKind.PhotoLibrary) is { } photos
-            && _allPlaces.FindIndex(p => p.Root.Kind == StorageRootKind.Pictures) is >= 0 and var pictures)
-        {
-            _allPlaces.Remove(photos);
-            _allPlaces.Insert(Math.Min(pictures + 1, _allPlaces.Count), photos);
-        }
-        // This Device ends with the disks, as in the concept image, unless the provider already lists one.
-        foreach (var disk in await Task.Run(ListDisks))
-            if (!_allPlaces.Any(p => p.Root.Location.Equals(disk.Location)))
-                _allPlaces.Add(new(new StorageRoot(disk.Location, disk.Name, disk.Kind switch
-                {
-                    DiskKind.Network => StorageRootKind.NetworkVolume,
-                    DiskKind.External => StorageRootKind.RemovableVolume,
-                    _ => StorageRootKind.Volume,
-                })));
-        ShowPlaces();
+        await LoadPlaces();
+#if IOS
+        FolderGrants.Changed += () => MainThread.BeginInvokeOnMainThread(() => _ = LoadPlaces());
+#endif
         LoadDevices();
         if (!IsSecondary)
             _devices.StartIfLinked();
