@@ -1,11 +1,24 @@
 namespace Spine.FileManager.Services;
 
+/// <summary>What is behind the sidebar on the desktops.</summary>
+public enum Backdrop
+{
+    /// <summary>A solid sidebar and window.</summary>
+    Solid,
+
+    /// <summary>Tinted by the desktop picture, nearly opaque, as Finder's sidebar is.</summary>
+    Mica,
+
+    /// <summary>The desktop blurred through the sidebar.</summary>
+    Acrylic,
+}
+
 /// <summary>
-/// The window's backdrop on the desktops, the user's choice: solid, Mica or Acrylic. On Windows Spine draws Windows' own
-/// materials (<c>options.Windows.Backdrop</c>); on the Mac <see cref="WindowMaterial"/> puts an AppKit material behind
-/// the window (Mica the calmer under-window one, Acrylic the sidebar one that shows the desktop clearly), as Spine's Mac
-/// backdrop tinted and covered the sidebar. The sidebar is clear to show it, as Finder's and Explorer's are; the files
-/// keep a solid background. Windows opened after a change get it.
+/// The window's backdrop on the desktops, the user's choice, applied at once to the open windows. On Windows Spine draws
+/// Windows' own materials (<c>options.Windows.Backdrop</c>, and the open windows' <c>SystemBackdrop</c>); on the Mac
+/// <see cref="WindowMaterial"/> puts an AppKit material behind the window (Mica the window-background one, Acrylic the
+/// sidebar one), as Spine's Mac backdrop tinted and covered the sidebar. The sidebar is clear to show it, as Finder's and
+/// Explorer's are; the files keep a solid background (<see cref="Pages.ExplorerPage"/> follows <see cref="Changed"/>).
 /// </summary>
 public static class WindowBackdrops
 {
@@ -13,21 +26,52 @@ public static class WindowBackdrops
 
     public static bool IsDesktop => OperatingSystem.IsMacCatalyst() || OperatingSystem.IsWindows();
 
-    public static WindowBackdrop Current
+    /// <summary>Raised on the main thread when the choice changes.</summary>
+    public static event Action? Changed;
+
+    public static Backdrop Current
     {
-        get => Enum.TryParse<WindowBackdrop>(Preferences.Get(Key, null), out var backdrop) ? backdrop
-            // Before the choice there was the Mac's on/off switch.
-            : Preferences.Get("window.material", true) ? WindowBackdrop.Mica : WindowBackdrop.None;
+        get
+        {
+            var stored = Preferences.Get(Key, null);
+            return stored switch
+            {
+                null => Preferences.Get("window.material", true) ? Backdrop.Mica : Backdrop.Solid, // the Mac's old switch
+                "None" => Backdrop.Solid,
+                _ => Enum.TryParse<Backdrop>(stored, out var b) ? b : Backdrop.Mica,
+            };
+        }
         set
         {
+            if (value == Current)
+                return;
             Preferences.Set(Key, value.ToString());
-            if (OperatingSystem.IsWindows() && IPlatformApplication.Current?.Services.GetService<SpineOptions>() is { } options)
-                options.Windows.Backdrop = value;
+            if (IPlatformApplication.Current?.Services.GetService<SpineOptions>() is { } options)
+                options.Windows.Backdrop = ForWindows;
+#if WINDOWS
+            foreach (var window in Application.Current?.Windows ?? [])
+                if (window.Handler?.PlatformView is Microsoft.UI.Xaml.Window native)
+                    native.SystemBackdrop = ForWindows switch
+                    {
+                        WindowBackdrop.Mica => new Microsoft.UI.Xaml.Media.MicaBackdrop(),
+                        WindowBackdrop.Acrylic => new Microsoft.UI.Xaml.Media.DesktopAcrylicBackdrop(),
+                        _ => null,
+                    };
+#endif
+            Changed?.Invoke();
         }
     }
 
+    /// <summary>Spine's backdrop for Windows.</summary>
+    public static WindowBackdrop ForWindows => Current switch
+    {
+        Backdrop.Mica => WindowBackdrop.Mica,
+        Backdrop.Acrylic => WindowBackdrop.Acrylic,
+        _ => WindowBackdrop.None,
+    };
+
     /// <summary>Whether the windows show the backdrop: on a desktop, chosen, and on the Mac not under Reduce Transparency.</summary>
-    public static bool IsOn => IsDesktop && Current is not WindowBackdrop.None
+    public static bool IsOn => IsDesktop && Current is not Backdrop.Solid
 #if MACCATALYST
         && !UIKit.UIAccessibility.IsReduceTransparencyEnabled
 #endif
@@ -40,4 +84,14 @@ public static class WindowBackdrops
     /// mouse wheel whenever a gap between rows came under a pointer held still. One percent is not seen.
     /// </summary>
     public static Color HitTestableClear { get; } = Color.FromRgba(0, 0, 0, 0.01);
+
+    /// <summary>
+    /// The sidebar's and the tab strip's paint over the backdrop in dark mode. On the Mac, Mica and Acrylic share the
+    /// see-through sidebar material, and Mica darkens it to Finder's sidebar: the desktop's colour still comes through,
+    /// as in Finder, where the window-background material (and a white veil over it) looked solid. Measured beside
+    /// Finder, macOS 27: 37,36,39 against 37,36,41.
+    /// </summary>
+    public static Color SidebarVeilDark => OperatingSystem.IsMacCatalyst() && Current is Backdrop.Mica
+        ? Color.FromRgba(0, 0, 0, 0.4)
+        : HitTestableClear;
 }

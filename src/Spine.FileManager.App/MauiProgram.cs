@@ -23,7 +23,7 @@ public static class MauiProgram
                 options.Windows.MinHeight = 360;
                 options.Windows.PersistWindowPosition = true;
                 // Mica or Acrylic behind the window, the user's choice in Settings: Spine's on Windows, WindowMaterial on the Mac.
-                options.Windows.Backdrop = WindowBackdrops.Current;
+                options.Windows.Backdrop = WindowBackdrops.ForWindows;
                 // A tray icon with the shortcuts (ShortcutHandler). Closing the window keeps the app running in the
                 // background, so other devices can still send files and transfers go on.
                 options.Shortcuts.UseHandler<ShortcutHandler>();

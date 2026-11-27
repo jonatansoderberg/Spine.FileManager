@@ -231,7 +231,7 @@
   <s key="Settings.Backdrop.None">Solid</s>
   <s key="Settings.Backdrop.Mica">Mica</s>
   <s key="Settings.Backdrop.Acrylic">Acrylic</s>
-  <s key="Settings.Backdrop.Note">Behind the sidebar. Mica is calm and tinted by the desktop, Acrylic shows the desktop blurred. Applies to windows opened after the change.</s>
+  <s key="Settings.Backdrop.Note">Behind the sidebar. Mica is calm and tinted by the desktop, Acrylic shows the desktop blurred.</s>
   <s key="Settings.Link">Linked devices</s>
   <s key="Settings.Link.Tracker">Tracker</s>
   <s key="Settings.Link.Connected">Connected</s>

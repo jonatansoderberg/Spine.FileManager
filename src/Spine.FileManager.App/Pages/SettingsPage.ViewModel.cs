@@ -44,11 +44,11 @@ public partial class SettingsPageViewModel(ISpineStrings strings, IThemeService 
 
     public bool HasBackdrop => WindowBackdrops.IsDesktop;
 
-    /// <summary>Solid, Mica or Acrylic (WindowBackdrop's order); it applies to the windows opened after the change.</summary>
+    /// <summary>Solid, Mica or Acrylic, in Backdrop's order; the open windows follow at once.</summary>
     [ObservableProperty]
     public partial int BackdropIndex { get; set; } = (int)WindowBackdrops.Current;
 
-    partial void OnBackdropIndexChanged(int value) => WindowBackdrops.Current = (WindowBackdrop)Math.Clamp(value, 0, 2);
+    partial void OnBackdropIndexChanged(int value) => WindowBackdrops.Current = (Backdrop)Math.Clamp(value, 0, 2);
 
     public IReadOnlyList<IconStyleChoice> IconStyles { get; } =
     [

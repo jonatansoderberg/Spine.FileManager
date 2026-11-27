@@ -15,25 +15,30 @@ namespace Spine.FileManager;
 /// </summary>
 public static class WindowMaterial
 {
-    // NSVisualEffectMaterial.WindowBackground (Mica: tinted by the desktop picture and nearly opaque, as Finder's sidebar
-    // is) and .Sidebar (Acrylic: the desktop clearly through it; .UnderWindowBackground draws the same on macOS 27),
+    // NSVisualEffectMaterial.Sidebar (the desktop clearly through it; Mica darkens it in the sidebar, WindowBackdrops),
     // NSVisualEffectBlendingMode.BehindWindow, NSVisualEffectState.Active, NSViewWidthSizable | NSViewHeightSizable,
     // NSWindowBelow.
-    private const nint WindowBackground = 12, Sidebar = 7, BehindWindow = 0, Active = 1, Below = -1;
+    private const nint Sidebar = 7, BehindWindow = 0, Active = 1, Below = -1;
     private const nuint FillsSuperview = 2 | 16;
 
-    private static readonly HashSet<IntPtr> Applied = [];
+    // Each scene window's material view, installed once and then changed or hidden as the choice changes.
+    private static readonly Dictionary<IntPtr, IntPtr> Effects = [];
 
     public static void Start()
     {
-        if (!WindowBackdrops.IsOn)
-            return;
         NSNotificationCenter.DefaultCenter.AddObserver(new NSString("NSWindowDidBecomeKeyNotification"), notification =>
         {
-            if (notification.Object is not { } window || !Applied.Add(window.Handle))
-                return;
-            Apply(window.Handle);
+            if (notification.Object is { } window)
+                Apply(window.Handle);
         });
+        WindowBackdrops.Changed += () =>
+        {
+            var app = Send(Class.GetHandle("NSApplication"), "sharedApplication");
+            if (ObjCRuntime.Runtime.GetNSObject<NSArray>(Send(app, "windows")) is not { } windows)
+                return;
+            for (nuint i = 0; i < windows.Count; i++)
+                Apply(windows.ValueAt(i));
+        };
     }
 
     private static void Apply(IntPtr window)
@@ -42,21 +47,29 @@ public static class WindowMaterial
         {
             var content = Send(window, "contentView");
             var frame = Send(content, "superview");
-            if (content == IntPtr.Zero || frame == IntPtr.Zero)
+            // Only a scene's window: menus, the status item and sheets' own windows have AppKit windows too.
+            if (content == IntPtr.Zero || frame == IntPtr.Zero || ObjCRuntime.Runtime.GetNSObject(content)?.Class.Name != "UINSSceneContainerView")
                 return;
-            var effect = Send(Send(Class.GetHandle("NSVisualEffectView"), "alloc"), "initWithFrame:", Bounds(frame, Selector.GetHandle("bounds")));
-            SendNint(effect, "setMaterial:", WindowBackdrops.Current is WindowBackdrop.Mica ? WindowBackground : Sidebar);
-            SendNint(effect, "setBlendingMode:", BehindWindow);
-            SendNint(effect, "setState:", Active);
-            SendNuint(effect, "setAutoresizingMask:", FillsSuperview);
-            AddBelow(frame, Selector.GetHandle("addSubview:positioned:relativeTo:"), effect, Below, content);
-            SendBool(window, "setOpaque:", false);
-            SendPtr(window, "setBackgroundColor:", Send(Class.GetHandle("NSColor"), "clearColor"));
-            // UIKit's window and the views MAUI puts under the page are opaque by default; clear, but not to the hit test.
-            foreach (var scene in UIApplication.SharedApplication.ConnectedScenes.ToArray<UIScene>().OfType<UIWindowScene>())
-                foreach (var uiWindow in scene.Windows)
-                    for (UIView? view = uiWindow; view is not null && view is not Microsoft.Maui.Platform.LayoutView; view = view.Subviews.FirstOrDefault())
-                        view.BackgroundColor = Microsoft.Maui.Platform.ColorExtensions.ToPlatform(WindowBackdrops.HitTestableClear);
+            if (!Effects.TryGetValue(window, out var effect))
+            {
+                if (!WindowBackdrops.IsOn)
+                    return;
+                effect = Send(Send(Class.GetHandle("NSVisualEffectView"), "alloc"), "initWithFrame:", Bounds(frame, Selector.GetHandle("bounds")));
+                SendNint(effect, "setBlendingMode:", BehindWindow);
+                SendNint(effect, "setState:", Active);
+                SendNuint(effect, "setAutoresizingMask:", FillsSuperview);
+                AddBelow(frame, Selector.GetHandle("addSubview:positioned:relativeTo:"), effect, Below, content);
+                SendBool(window, "setOpaque:", false);
+                SendPtr(window, "setBackgroundColor:", Send(Class.GetHandle("NSColor"), "clearColor"));
+                // UIKit's window and the views MAUI puts under the page are opaque by default; clear, but not to the hit test.
+                foreach (var scene in UIApplication.SharedApplication.ConnectedScenes.ToArray<UIScene>().OfType<UIWindowScene>())
+                    foreach (var uiWindow in scene.Windows)
+                        for (UIView? view = uiWindow; view is not null && view is not Microsoft.Maui.Platform.LayoutView; view = view.Subviews.FirstOrDefault())
+                            view.BackgroundColor = Microsoft.Maui.Platform.ColorExtensions.ToPlatform(WindowBackdrops.HitTestableClear);
+                Effects[window] = effect;
+            }
+            SendNint(effect, "setMaterial:", Sidebar);
+            SendBool(effect, "setHidden:", !WindowBackdrops.IsOn);
         }
         catch (Exception e)
         {
