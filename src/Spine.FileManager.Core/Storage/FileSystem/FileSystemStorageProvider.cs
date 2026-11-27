@@ -268,8 +268,11 @@ public sealed class FileSystemStorageProvider(IFileSystemPlatform platform) : IS
         {
             return await Task.Run(action, cancellationToken);
         }
-        catch (Exception e) when (e is not OperationCanceledException)
+        // No exception filter: in shared generic async code the .NET 11.0.0 Apple interpreter skips it (dotnet/runtime#137632).
+        catch (Exception e)
         {
+            if (e is OperationCanceledException)
+                throw;
             var translated = Translate(e, location);
             if (writes && translated is StorageException { Kind: StorageErrorKind.AccessDenied })
                 _readOnly.TryAdd(Directory.Exists(location.ItemId) ? location.ItemId : Path.GetDirectoryName(location.ItemId) ?? location.ItemId, 0);
